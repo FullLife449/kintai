@@ -1,0 +1,248 @@
+html<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1a1a2e">
+<title>勤怠タッチ Pro</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #1a1a2e; --green: #1D9E75; --green-lt: #E1F5EE; --green-dk: #085041;
+    --purple: #7F77DD; --purple-lt: #EEEDFE; --purple-dk: #3C3489;
+    --red: #E24B4A; --red-lt: #FCEBEB; --amber: #EF9F27; --amber-lt: #FAEEDA;
+    --blue: #378ADD; --blue-lt: #E6F1FB; --gray: #f5f5f3; --border: #e0ddd6;
+    --text: #1a1a18; --text2: #6b6b66;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic', sans-serif; background: var(--gray); color: var(--text); min-height: 100vh; }
+  .header { background: var(--navy); padding: 14px 16px 12px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 100; }
+  .header-title { color: #fff; font-size: 16px; font-weight: 600; flex: 1; }
+  .header-clock { color: rgba(255,255,255,0.8); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .mode-pill { font-size: 11px; padding: 3px 10px; border-radius: 999px; font-weight: 500; }
+  .pill-nfc { background: var(--green-lt); color: var(--green-dk); }
+  .pill-remote { background: var(--purple-lt); color: var(--purple-dk); }
+  .mode-tabs { display: grid; grid-template-columns: 1fr 1fr; background: #fff; border-bottom: 1px solid var(--border); }
+  .mode-tab { padding: 13px 8px; text-align: center; font-size: 13px; font-weight: 500; color: var(--text2); border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; cursor: pointer; transition: all 0.15s; line-height: 1.4; }
+  .mode-tab.active-nfc { color: var(--green-dk); border-bottom-color: var(--green); background: #f6fdf9; }
+  .mode-tab.active-remote { color: var(--purple-dk); border-bottom-color: var(--purple); background: #f8f7ff; }
+  .pad { padding: 14px; }
+  .card { background: #fff; border-radius: 14px; border: 1px solid var(--border); padding: 14px; margin-bottom: 12px; }
+  .card-label { font-size: 11px; font-weight: 600; color: var(--text2); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 10px; }
+  .staff-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
+  .staff-btn { padding: 10px 6px 8px; border-radius: 10px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 12px; font-weight: 500; text-align: center; transition: transform 0.1s; -webkit-tap-highlight-color: transparent; }
+  .staff-btn:active { transform: scale(0.94); }
+  .staff-btn.sel-nfc { background: var(--green-lt); border-color: var(--green); color: var(--green-dk); }
+  .staff-btn.sel-remote { background: var(--purple-lt); border-color: var(--purple); color: var(--purple-dk); }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; font-size: 13px; font-weight: 600; }
+  .av-default { background: var(--blue-lt); color: #0C447C; }
+  .av-nfc { background: var(--green); color: #fff; }
+  .av-remote { background: var(--purple); color: #fff; }
+  .nfc-zone { border: 2px dashed var(--green); border-radius: 16px; padding: 24px 16px; text-align: center; cursor: pointer; background: #f6fdf9; margin-bottom: 12px; -webkit-tap-highlight-color: transparent; transition: background 0.15s; }
+  .nfc-zone:active { background: var(--green-lt); }
+  .nfc-zone.scanning { animation: pulse 0.7s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
+  .nfc-icon { width: 60px; height: 60px; border-radius: 50%; background: var(--green); color: #fff; font-size: 26px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
+  .nfc-title { font-size: 16px; font-weight: 600; color: var(--green-dk); margin-bottom: 4px; }
+  .nfc-sub { font-size: 13px; color: #0F6E56; }
+  .qr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .qr-btn { padding: 14px 8px; border-radius: 10px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 13px; font-weight: 500; text-align: center; line-height: 1.5; -webkit-tap-highlight-color: transparent; transition: background 0.15s; }
+  .qr-btn:active { background: var(--gray); }
+  .term-list { display: flex; flex-direction: column; gap: 6px; }
+  .term-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; background: var(--gray); font-size: 13px; }
+  .term-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-on { background: var(--green); } .dot-off { background: var(--red); }
+  .term-name { font-weight: 500; flex: 1; }
+  .term-loc { font-size: 11px; color: var(--text2); display: block; }
+  .term-status { font-size: 11px; font-weight: 500; }
+  .sec-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; font-size: 12px; margin-bottom: 6px; }
+  .sec-ok { background: var(--green-lt); color: var(--green-dk); }
+  .sec-warn { background: var(--amber-lt); color: #633806; }
+  .sec-icon { font-size: 14px; flex-shrink: 0; }
+  .punch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .punch-btn { padding: 16px 8px; border: none; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 600; transition: transform 0.1s, opacity 0.15s; -webkit-tap-highlight-color: transparent; }
+  .punch-btn:active { transform: scale(0.95); }
+  .punch-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+  .punch-btn.full { grid-column: 1 / -1; padding: 18px 8px; }
+  .pb-in { background: var(--green-lt); color: var(--green-dk); }
+  .pb-out { background: var(--red-lt); color: #791F1F; }
+  .pb-bs { background: var(--amber-lt); color: #633806; }
+  .pb-be { background: var(--blue-lt); color: #0C447C; }
+  .status-bar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--gray); margin-bottom: 10px; }
+  .s-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .sd-none { background: #aaa; } .sd-in { background: var(--green); } .sd-break { background: var(--amber); } .sd-out { background: var(--red); }
+  .s-label { font-size: 13px; font-weight: 500; flex: 1; }
+  .log-list { max-height: 260px; overflow-y: auto; }
+  .log-row { display: flex; align-items: center; gap: 7px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .log-row:last-child { border-bottom: none; }
+  .log-badge { padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; min-width: 56px; text-align: center; flex-shrink: 0; }
+  .lb-in { background: var(--green-lt); color: var(--green-dk); } .lb-out { background: var(--red-lt); color: #791F1F; }
+  .lb-bs { background: var(--amber-lt); color: #633806; } .lb-be { background: var(--blue-lt); color: #0C447C; }
+  .log-mode { font-size: 10px; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+  .lm-nfc { background: var(--green-lt); color: var(--green-dk); }
+  .lm-remote { background: var(--purple-lt); color: var(--purple-dk); }
+  .log-who { font-weight: 500; flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .log-t { color: var(--text2); font-size: 12px; font-variant-numeric: tabular-nums; min-width: 56px; text-align: right; }
+  .stat3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .stat-card { background: var(--gray); border-radius: 10px; padding: 10px 12px; }
+  .stat-label { font-size: 11px; color: var(--text2); margin-bottom: 3px; }
+  .stat-val { font-size: 22px; font-weight: 600; }
+  .bottom-nav { position: sticky; bottom: 0; background: #fff; border-top: 1px solid var(--border); display: flex; }
+  .bnav-btn { flex: 1; padding: 12px 4px 10px; border: none; background: none; cursor: pointer; font-size: 11px; color: var(--text2); font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 3px; -webkit-tap-highlight-color: transparent; transition: color 0.15s; }
+  .bnav-btn.active { color: var(--navy); }
+  .bnav-icon { font-size: 20px; line-height: 1; }
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(60px); background: var(--navy); color: #fff; padding: 10px 20px; border-radius: 999px; font-size: 13px; white-space: nowrap; transition: transform 0.3s, opacity 0.3s; opacity: 0; z-index: 999; pointer-events: none; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .page { display: none; } .page.active { display: block; }
+  .subview { display: none; } .subview.active { display: block; }
+  .nfc-unsupported { background: var(--amber-lt); border: 1px solid var(--amber); border-radius: 10px; padding: 12px 14px; font-size: 13px; color: #412402; margin-bottom: 12px; }
+  .gps-card { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--gray); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+  .gps-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .gps-ok { background: var(--green); animation: glow 2s ease-in-out infinite; }
+  .gps-ng { background: var(--red); }
+  @keyframes glow { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .gps-info { flex: 1; }
+  .gps-lbl { font-size: 11px; color: var(--text2); }
+  .gps-val { font-size: 13px; font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-title">勤怠タッチ Pro</div>
+  <div class="header-clock" id="hclock">--:--</div>
+  <div class="mode-pill pill-nfc" id="mode-pill">施設内</div>
+</div>
+<div id="pg-punch" class="page active">
+  <div class="mode-tabs">
+    <button class="mode-tab active-nfc" id="tab-nfc" onclick="switchMode('nfc')">🏢 施設内打刻<br><span style="font-size:10px;font-weight:400;">NFC / QR 認証</span></button>
+    <button class="mode-tab" id="tab-remote" onclick="switchMode('remote')">🏠 リモート打刻<br><span style="font-size:10px;font-weight:400;">GPS + アプリタッチ</span></button>
+  </div>
+  <div id="nfc-view" class="subview active">
+    <div class="pad">
+      <div class="card">
+        <div class="card-label">スタッフ選択</div>
+        <div class="staff-grid" id="sg-nfc"></div>
+      </div>
+      <div class="card" id="nfc-punch-area" style="display:none">
+        <div id="nfc-unsupported-msg" class="nfc-unsupported" style="display:none">⚠️ このブラウザはWeb NFCに未対応です。ChromeアプリでAndroidをお使いください。または下のQRコードをお使いください。</div>
+        <div class="nfc-zone" id="nfc-zone" onclick="startNFCScan()">
+          <div class="nfc-icon" id="nfc-icon">📲</div>
+          <div class="nfc-title" id="nfc-title">スマホを端末にかざす</div>
+          <div class="nfc-sub" id="nfc-sub">NFC タグに近づけてください</div>
+        </div>
+        <div class="card-label">または QR コードで打刻</div>
+        <div class="qr-grid">
+          <button class="qr-btn" onclick="doQRPunch('in')">📷 QRスキャンで<br><b>出勤</b></button>
+          <button class="qr-btn" onclick="doQRPunch('out')">📷 QRスキャンで<br><b>退勤</b></button>
+        </div>
+        <div class="card-label" style="margin-top:14px;">設置端末</div>
+        <div class="term-list" id="term-list"></div>
+      </div>
+    </div>
+  </div>
+  <div id="remote-view" class="subview">
+    <div class="pad">
+      <div class="card">
+        <div class="card-label">スタッフ選択</div>
+        <div class="staff-grid" id="sg-remote"></div>
+      </div>
+      <div class="card" id="remote-punch-area" style="display:none">
+        <div class="card-label">セキュリティ確認</div>
+        <div class="gps-card">
+          <div class="gps-dot gps-ok" id="gps-dot"></div>
+          <div class="gps-info">
+            <div class="gps-lbl">GPS 位置情報</div>
+            <div class="gps-val" id="gps-val">取得中...</div>
+          </div>
+        </div>
+        <div class="sec-row sec-ok"><span class="sec-icon">🔒</span><span>タイムスタンプ改ざん防止: 有効</span></div>
+        <div class="sec-row sec-ok"><span class="sec-icon">📡</span><span>IPアドレス: 記録済み</span></div>
+        <div class="sec-row sec-warn" id="gps-sec-row"><span class="sec-icon">📍</span><span id="gps-sec-txt">GPS: 取得中...</span></div>
+        <div class="status-bar" id="remote-status-bar" style="display:none">
+          <div class="s-dot sd-none" id="rsdot"></div>
+          <div class="s-label" id="rslabel">未出勤</div>
+        </div>
+        <div class="card-label" style="margin-top:12px;">打刻</div>
+        <div class="punch-grid">
+          <button class="punch-btn full pb-in" id="rb-in" onclick="doRemotePunch('in')">出勤</button>
+          <button class="punch-btn full pb-out" id="rb-out" onclick="doRemotePunch('out')" disabled>退勤</button>
+          <button class="punch-btn pb-bs" id="rb-bs" onclick="doRemotePunch('break')" disabled>休憩開始</button>
+          <button class="punch-btn pb-be" id="rb-be" onclick="doRemotePunch('breakend')" disabled>休憩終了</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="pg-log" class="page">
+  <div class="pad">
+    <div class="card">
+      <div class="card-label">凡例</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:12px;align-items:center;">
+        <span class="log-mode lm-nfc">施設内</span><span style="color:var(--text2);">NFC/QR認証</span>
+        <span class="log-mode lm-remote">リモート</span><span style="color:var(--text2);">GPS記録</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">打刻ログ</div>
+      <div class="log-list" id="log-list"><div style="color:var(--text2);font-size:13px;padding:20px;text-align:center;">まだ打刻がありません</div></div>
+    </div>
+  </div>
+</div>
+<div id="pg-admin" class="page">
+  <div class="pad">
+    <div class="stat3">
+      <div class="stat-card"><div class="stat-label">本日 出勤</div><div class="stat-val" id="adm-total">0</div></div>
+      <div class="stat-card"><div class="stat-label">施設内</div><div class="stat-val" id="adm-nfc">0</div></div>
+      <div class="stat-card"><div class="stat-label">リモート</div><div class="stat-val" id="adm-remote">0</div></div>
+    </div>
+    <div class="card">
+      <div class="card-label">端末管理</div>
+      <div class="term-list" id="adm-term-list"></div>
+      <button onclick="addTerminal()" style="margin-top:10px;width:100%;padding:10px;border-radius:8px;border:1px dashed var(--border);background:none;cursor:pointer;font-size:13px;color:var(--text2);">+ 端末を追加</button>
+    </div>
+    <div class="card">
+      <div class="card-label">スタッフ別 本日状況</div>
+      <div id="adm-staff"></div>
+    </div>
+    <div class="card">
+      <div class="card-label">CSV エクスポート</div>
+      <button onclick="exportCSV()" style="width:100%;padding:14px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">本日分をCSVで出力</button>
+    </div>
+  </div>
+</div>
+<div class="bottom-nav">
+  <button class="bnav-btn active" id="bn-punch" onclick="showPage('punch')"><span class="bnav-icon">👆</span>打刻</button>
+  <button class="bnav-btn" id="bn-log" onclick="showPage('log')"><span class="bnav-icon">📋</span>ログ</button>
+  <button class="bnav-btn" id="bn-admin" onclick="showPage('admin')"><span class="bnav-icon">⚙️</span>管理</button>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const TERMINALS=[{id:'T001',name:'正面玄関',loc:'1F エントランス',on:true},{id:'T002',name:'バックオフィス',loc:'2F 事務室',on:true},{id:'T003',name:'休憩室',loc:'3F ラウンジ',on:false}];
+const STAFF=[{id:1,name:'田中 太郎',dept:'営業部'},{id:2,name:'佐藤 花子',dept:'開発部'},{id:3,name:'鈴木 一郎',dept:'製造部'},{id:4,name:'山田 美穂',dept:'総務部'},{id:5,name:'中村 健二',dept:'開発部'},{id:6,name:'伊藤 さくら',dept:'経理部'}];
+let records=JSON.parse(localStorage.getItem('kintai_records')||'[]'),selNFC=null,selRemote=null,gpsCoords=null;
+function saveRecords(){localStorage.setItem('kintai_records',JSON.stringify(records));}
+function nowStr(){const d=new Date();return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0');}
+function initials(n){const p=n.split(/\s/);return(p[0]?.charAt(0)||'')+(p[1]?.charAt(0)||'');}
+function getStatus(id){const r=records.filter(x=>x.staffId===id&&x.date===todayStr());return r.length?r[r.length-1].type:'none';}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);}
+function showPage(p){['punch','log','admin'].forEach(n=>{document.getElementById('pg-'+n).classList.toggle('active',n===p);document.getElementById('bn-'+n).classList.toggle('active',n===p);});if(p==='log')renderLog();if(p==='admin')renderAdmin();}
+function switchMode(m){document.getElementById('tab-nfc').className='mode-tab'+(m==='nfc'?' active-nfc':'');document.getElementById('tab-remote').className='mode-tab'+(m==='remote'?' active-remote':'');document.getElementById('nfc-view').classList.toggle('active',m==='nfc');document.getElementById('remote-view').classList.toggle('active',m==='remote');const pill=document.getElementById('mode-pill');pill.textContent=m==='nfc'?'施設内':'リモート';pill.className='mode-pill '+(m==='nfc'?'pill-nfc':'pill-remote');if(m==='remote'&&selRemote)getGPS();}
+function renderStaffGrids(){['nfc','remote'].forEach(m=>{const el=document.getElementById('sg-'+m);const sel=m==='nfc'?selNFC:selRemote;el.innerHTML=STAFF.map(s=>{const isSel=sel&&sel.id===s.id;const st=getStatus(s.id);const dot=st==='in'?'🟢':st==='break'?'🟡':st==='out'?'🔴':'';return`<button class="staff-btn ${isSel?(m==='nfc'?'sel-nfc':'sel-remote'):''}" onclick="pickStaff('${m}',${s.id})"><div class="avatar ${isSel?(m==='nfc'?'av-nfc':'av-remote'):'av-default'}">${initials(s.name)}</div>${s.name.split(/\s/)[0]}${dot?'<br><span style="font-size:9px;">'+dot+'</span>':''}</button>`;}).join('');});renderTerminals();}
+function pickStaff(m,id){const s=STAFF.find(x=>x.id===id);if(m==='nfc'){selNFC=s;document.getElementById('nfc-punch-area').style.display='block';if(!('NDEFReader'in window))document.getElementById('nfc-unsupported-msg').style.display='block';}else{selRemote=s;document.getElementById('remote-punch-area').style.display='block';updateRemoteBtns();updateRemoteStatus();getGPS();}renderStaffGrids();}
+function renderTerminals(){['term-list','adm-term-list'].forEach(id=>{const el=document.getElementById(id);if(!el)return;el.innerHTML=TERMINALS.map(t=>`<div class="term-item"><div class="term-dot ${t.on?'dot-on':'dot-off'}"></div><div><div class="term-name">${t.name} <span style="font-size:10px;color:var(--text2);">${t.id}</span></div><span class="term-loc">${t.loc}</span></div><div class="term-status" style="color:${t.on?'var(--green)':'var(--red)'};">${t.on?'稼働中':'停止中'}</div></div>`).join('');});}
+async function startNFCScan(){if(!selNFC){showToast('先にスタッフを選択してください');return;}if('NDEFReader'in window){const z=document.getElementById('nfc-zone'),ti=document.getElementById('nfc-title');try{z.classList.add('scanning');ti.textContent='スキャン中...';const n=new NDEFReader();await n.scan();n.onreading=(e)=>{const tid=e.serialNumber||'T001';const term=TERMINALS.find(t=>t.id===tid)||TERMINALS[0];z.classList.remove('scanning');ti.textContent='スマホを端末にかざす';const st=getStatus(selNFC.id);addRecord(selNFC,(st==='none'||st==='out')?'in':'out','nfc','NFC',term.name,tid);n.onreading=null;};}catch(e){z.classList.remove('scanning');ti.textContent='スマホを端末にかざす';showToast('NFCエラー: '+e.message);}}else{const z=document.getElementById('nfc-zone'),ti=document.getElementById('nfc-title');z.classList.add('scanning');ti.textContent='スキャン中...';setTimeout(()=>{z.classList.remove('scanning');ti.textContent='スマホを端末にかざす';const st=getStatus(selNFC.id);addRecord(selNFC,(st==='none'||st==='out')?'in':'out','nfc','NFC(デモ)','正面玄関','T001');},1400);}}
+function doQRPunch(type){if(!selNFC){showToast('先にスタッフを選択してください');return;}addRecord(selNFC,type,'nfc','QR','バックオフィス','T002');}
+function getGPS(){const gv=document.getElementById('gps-val'),gs=document.getElementById('gps-sec-txt'),row=document.getElementById('gps-sec-row');gv.textContent='取得中...';row.className='sec-row sec-warn';gs.textContent='GPS: 精度確認中...';if(navigator.geolocation){navigator.geolocation.getCurrentPosition(p=>{gpsCoords={lat:p.coords.latitude.toFixed(5),lng:p.coords.longitude.toFixed(5),acc:Math.round(p.coords.accuracy)};gv.textContent=gpsCoords.lat+'N, '+gpsCoords.lng+'E (±'+gpsCoords.acc+'m)';row.className='sec-row sec-ok';gs.textContent='GPS: 取得済み';},e=>{gv.textContent='位置情報の取得を許可してください';document.getElementById('gps-dot').className='gps-dot gps-ng';row.className='sec-row sec-warn';gs.textContent='GPS: 未取得';},{enableHighAccuracy:true,timeout:8000});}else gv.textContent='非対応ブラウザ';}
+function updateRemoteStatus(){if(!selRemote)return;document.getElementById('remote-status-bar').style.display='flex';const st=getStatus(selRemote.id);document.getElementById('rsdot').className='s-dot '+(st==='in'?'sd-in':st==='break'?'sd-break':st==='out'?'sd-out':'sd-none');document.getElementById('rslabel').textContent=selRemote.name.split(/\s/)[0]+' — '+(st==='in'?'勤務中':st==='break'?'休憩中':st==='out'?'退勤済':'未出勤');}
+function updateRemoteBtns(){if(!selRemote)return;const st=getStatus(selRemote.id);document.getElementById('rb-in').disabled=st==='in'||st==='break';document.getElementById('rb-out').disabled=st!=='in';document.getElementById('rb-bs').disabled=st!=='in';document.getElementById('rb-be').disabled=st!=='break';}
+function doRemotePunch(type){if(!selRemote){showToast('先にスタッフを選択してください');return;}addRecord(selRemote,type,'remote','APP',gpsCoords?gpsCoords.lat+','+gpsCoords.lng:'位置情報なし','REMOTE');updateRemoteBtns();updateRemoteStatus();}
+function addRecord(staff,type,mode,method,location,termId){const labels={in:'出勤',out:'退勤',break:'休憩開始',breakend:'休憩終了'};records.unshift({id:Date.now(),staffId:staff.id,staffName:staff.name,dept:staff.dept,type,mode,method,location,terminalId:termId||'',date:todayStr(),ts:nowStr(),gps:gpsCoords?`${gpsCoords.lat},${gpsCoords.lng}`:''});saveRecords();showToast(`${staff.name.split(/\s/)[0]} — ${labels[type]}（${mode==='nfc'?'施設内':'リモート'}）`);renderStaffGrids();}
+function renderLog(){const el=document.getElementById('log-list');const lbl={in:'出勤',out:'退勤',break:'休憩開始',breakend:'休憩終了'};const cls={in:'lb-in',out:'lb-out',break:'lb-bs',breakend:'lb-be'};const t=records.filter(r=>r.date===todayStr());el.innerHTML=t.length?t.map(r=>`<div class="log-row"><span class="log-badge ${cls[r.type]}">${lbl[r.type]}</span><span class="log-mode ${r.mode==='nfc'?'lm-nfc':'lm-remote'}">${r.mode==='nfc'?'施設':'リモート'}</span><span class="log-who">${r.staffName}</span><span class="log-t">${r.ts}</span></div>`).join(''):'<div style="color:var(--text2);font-size:13px;padding:20px;text-align:center;">本日の打刻がありません</div>';}
+function renderAdmin(){const today=todayStr();document.getElementById('adm-total').textContent=records.filter(r=>r.date===today&&r.type==='in').length;document.getElementById('adm-nfc').textContent=records.filter(r=>r.date===today&&r.mode==='nfc'&&r.type==='in').length;document.getElementById('adm-remote').textContent=records.filter(r=>r.date===today&&r.mode==='remote'&&r.type==='in').length;renderTerminals();document.getElementById('adm-staff').innerHTML=STAFF.map(s=>{const st=getStatus(s.id);const ir=records.find(r=>r.staffId===s.id&&r.date===today&&r.type==='in');const stc=st==='in'?'var(--green)':st==='break'?'var(--amber)':st==='out'?'var(--red)':'var(--text2)';const stl=st==='in'?'勤務中':st==='break'?'休憩中':st==='out'?'退勤済':'未出勤';const ml=ir?`<span class="log-mode ${ir.mode==='nfc'?'lm-nfc':'lm-remote'}">${ir.mode==='nfc'?'施設':'リモート'}</span>`:'';return`<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;"><div class="avatar av-default" style="width:28px;height:28px;font-size:11px;">${initials(s.name)}</div><span style="font-weight:500;flex:1;">${s.name}</span>${ml}<span style="color:${stc};font-weight:600;">${stl}</span></div>`;}).join('');}
+function addTerminal(){const n=prompt('端末名');if(!n)return;const l=prompt('設置場所')||'要設定';TERMINALS.push({id:'T'+String(TERMINALS.length+1).padStart(3,'0'),name:n,loc:l,on:true});renderTerminals();showToast(n+' を追加しました');}
+function exportCSV(){const t=records.filter(r=>r.date===todayStr());if(!t.length){showToast('打刻データがありません');return;}const lbl={in:'出勤',out:'退勤',break:'休憩開始',breakend:'休憩終了'};const b=new Blob(['\uFEFF日付,スタッフ名,部署,種別,モード,時刻\n'+[...t].reverse().map(r=>`${r.date},${r.staffName},${r.dept},${lbl[r.type]},${r.mode==='nfc'?'施設内':'リモート'},${r.ts}`).join('\n')],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='勤怠_'+todayStr()+'.csv';a.click();showToast('CSVをダウンロードしました');}
+function tick(){const d=new Date();document.getElementById('hclock').textContent=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}
+setInterval(tick,1000);tick();renderStaffGrids();
+</script>
+</body>
+</html>
