@@ -389,6 +389,28 @@ function getEffShifts(sid,date){
   return getShifts(DB.staff.find(s=>s.id===sid),date);
 }
 
+// シフト時間からその日の所定労働時間（ms）を自動計算
+// シフトの合計時間 - 休憩時間 = 所定時間
+function getStdMsForDate(sid,date){
+  const staff=DB.staff.find(s=>s.id===sid);
+  if(!staff)return 480*60000;
+  const shifts=getEffShifts(sid,date);
+  if(!shifts||!shifts.length){
+    // シフトなしの日はstdMinをそのまま使用
+    return (staff.stdMin||480)*60000;
+  }
+  // シフトの合計時間を計算
+  let shiftTotalMin=0;
+  shifts.forEach(sh=>{
+    const s=parseHM(sh.s),e=parseHM(sh.e);
+    if(s!==null&&e!==null&&e>s)shiftTotalMin+=e-s;
+  });
+  // 休憩時間を引く
+  const netMin=Math.max(0,shiftTotalMin-(staff.breakMin||0));
+  // 最小1時間、最大8時間（法定）
+  return Math.min(Math.max(netMin,60),480)*60000;
+}
+
 // ═══ 深夜時間計算 ═══
 function calcNight(segs){
   let ms=0;
@@ -466,7 +488,8 @@ function calcWork(sid,date){
   let rem=(staff.breakMin||0)*60000;
   Object.keys(result).filter(k=>k!=='時間外'&&k!=='休日勤務').forEach(k=>{if(rem<=0)return;const d=Math.min(result[k],rem);result[k]-=d;rem-=d;if(result[k]<=0)delete result[k];});
   const total=Object.values(result).reduce((s,v)=>s+v,0);
-  const stdMs=(staff.stdMin||480)*60000;const legalMs=8*60*60000;
+  const stdMs=getStdMsForDate(sid,date); // シフト時間から自動計算
+  const legalMs=8*60*60000;
   const otA=isLegal?0:Math.max(0,Math.min(total,legalMs)-Math.min(total,stdMs));
   const otB=isLegal?0:Math.max(0,total-legalMs);
   const otC=isLegal?(result['休日勤務']||0):0;
