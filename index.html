@@ -30,8 +30,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 .sn{font-size:10px;font-weight:600;color:var(--tx);margin-bottom:3px;line-height:1.3;}
 .ss{font-size:9px;font-weight:600;padding:2px 5px;border-radius:999px;display:inline-block;}
 .sn-none .av{background:var(--bll);color:#0C447C;}.sn-none .ss{background:var(--gy);color:var(--t2);}
-.sn-in{background:var(--gl);border-color:var(--gn);}.sn-in .av{background:var(--gn);color:#fff;}.sn-in .ss{background:var(--gn);color:#fff;}
-.sn-break{background:var(--al);border-color:var(--am);}.sn-break .av{background:var(--am);color:#fff;}.sn-break .ss{background:var(--am);color:#fff;}
+.sn-in{background:#C8F5E2;border:2px solid var(--gn);box-shadow:0 2px 8px rgba(29,158,117,0.25);}.sn-in .av{background:var(--gn);color:#fff;}.sn-in .ss{background:var(--gn);color:#fff;}.sn-in .sn{color:var(--gd);font-weight:700;}
+.sn-break{background:#FFE5B0;border:2px solid var(--am);box-shadow:0 2px 8px rgba(239,159,39,0.25);}.sn-break .av{background:var(--am);color:#fff;}.sn-break .ss{background:var(--am);color:#fff;}.sn-break .sn{color:#633806;font-weight:700;}
 .sn-out .av{background:#ccc;color:#666;}.sn-out .ss{background:var(--gy);color:var(--t2);}
 .sn-paid .av{background:var(--pul);color:var(--pu);}.sn-paid .ss{background:var(--pul);color:var(--pu);}
 .ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.55);z-index:200;display:flex;align-items:flex-end;justify-content:center;}
@@ -131,20 +131,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 <div id="ms">
   <div class="hd">
     <div><div class="hco">医療法人</div><div class="ht">香庸会 勤怠タッチ Pro</div></div>
-    <div class="hk" id="hk">--:--</div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">β v1.0</div></div>
   </div>
   <div class="tabs">
     <button class="tab active" id="tab-punch" onclick="showPg('punch')">打刻</button>
     <button class="tab" id="tab-log" onclick="showPg('log')">ログ</button>
     <button class="tab" id="tab-report" onclick="showPg('report')">レポート</button>
-    <button class="tab" id="tab-admin" onclick="showPg('admin')">管理</button>
+    <button class="tab" id="tab-admin" onclick="checkAdminPw()">管理</button>
   </div>
   <div id="pg-punch" class="pg active"><div class="pad"><div class="card">
     <div class="cl" id="dlbl">スタッフを選択</div>
     <div class="sg" id="sg"></div>
   </div></div></div>
   <div id="pg-log" class="pg"><div class="pad"><div class="card">
-    <div class="cl">本日の打刻ログ</div>
+    <div style="margin-bottom:9px;">
+      <div class="cl" style="margin-bottom:6px;">出力月を選択</div>
+      <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+        <select id="log-ym" onchange="updateLogTermLabel()" style="flex:1;padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"></select>
+        <button class="bg" style="font-size:10px;padding:7px 10px;white-space:nowrap;" onclick="exportLogCSV()">📄 ログCSV</button>
+        <button class="bn" style="font-size:10px;padding:7px 10px;white-space:nowrap;" onclick="exportMonthLog()">📊 月次XLSX</button>
+      </div>
+      <div style="font-size:9px;color:var(--t2);margin-top:4px;" id="log-term-label"></div>
+    </div>
+    <div class="cl" style="margin-bottom:6px;">本日の打刻ログ</div>
     <div class="ll" id="ll"><div style="color:var(--t2);font-size:12px;padding:14px;text-align:center;">まだ打刻がありません</div></div>
   </div></div></div>
   <div id="pg-report" class="pg"><div class="pad">
@@ -242,7 +251,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
     <button class="nb active" id="bn-punch" onclick="showPg('punch')"><span class="ni">👆</span>打刻</button>
     <button class="nb" id="bn-log" onclick="showPg('log')"><span class="ni">📋</span>ログ</button>
     <button class="nb" id="bn-report" onclick="showPg('report')"><span class="ni">📊</span>レポート</button>
-    <button class="nb" id="bn-admin" onclick="showPg('admin')"><span class="ni">⚙️</span>管理</button>
+    <button class="nb" id="bn-admin" onclick="checkAdminPw()"><span class="ni">⚙️</span>管理</button>
   </div>
 </div>
 <!-- 打刻モーダル -->
@@ -258,6 +267,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
     <select class="fsl" id="ft" onchange="onTC()">
       <option value="contract">契約型（契約時間から算出）</option>
       <option value="free">フリー型（打刻時刻そのまま）</option>
+      <option value="free1">フリー①型（XX:45自動切り上げ）</option>
       <option value="annual">年俸型（総勤務時間のみ）</option>
     </select>
   </div>
@@ -311,6 +321,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
     </label>
   </div>
   <input type="hidden" id="fft" value="0">
+  <div id="free1-opt" style="display:none;margin-top:9px;padding:10px;background:#FFF8E1;border-radius:8px;">
+    <label style="font-size:11px;font-weight:600;color:#5D4037;display:block;margin-bottom:5px;">フリー①：開始基準「分」</label>
+    <div style="display:flex;align-items:center;gap:7px;">
+      <span style="font-size:12px;color:var(--t2);">XX:</span>
+      <select class="fsl" id="ff1min" style="width:80px;">
+        <option value="0">00分</option>
+        <option value="15">15分</option>
+        <option value="30">30分</option>
+        <option value="45" selected>45分</option>
+      </select>
+      <span style="font-size:10px;color:var(--t2);">からの1時間内に打刻→XX:MM起点</span>
+    </div>
+    <div style="font-size:10px;color:#795548;margin-top:4px;">例：基準45分→11:00〜11:44打刻→11:45から計算</div>
+  </div>
   </div>
   <div class="frw"><label class="fl">交通費（円/日）</label><input class="fi" id="ff" type="number" value="0"></div>
   <div class="btr"><button class="fc" onclick="closeSTM()">キャンセル</button><button class="fb" onclick="saveSt()">保存</button></div>
@@ -323,6 +347,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
   </div>
   <div class="rw" id="indm-body"></div>
   <div style="margin-top:10px;font-size:10px;color:var(--t2);">個人XLSXには「個人明細」（合計行あり）＋「給与取り込み」（28列）の2シートが含まれます</div>
+</div></div>
+<!-- 管理PW認証モーダル -->
+<div class="ov hidden" id="pwm" onclick="closePWM(event)"><div class="mo" onclick="event.stopPropagation()" style="max-height:50vh;">
+  <div class="mt">管理画面</div>
+  <div id="pw-setup-area" style="display:none;margin-bottom:11px;">
+    <div class="fs2">初回設定：管理パスワード（数字4桁）を設定してください</div>
+  </div>
+  <div class="frw"><label class="fl" id="pw-label">パスワードを入力</label>
+    <input class="fi" type="password" id="pw-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="0000" style="font-size:24px;letter-spacing:8px;text-align:center;">
+  </div>
+  <div id="pw-error" style="color:var(--rd);font-size:11px;text-align:center;height:16px;margin-bottom:7px;"></div>
+  <div class="btr">
+    <button class="fc" onclick="closePWM()">キャンセル</button>
+    <button class="fb" id="pw-btn" onclick="submitPW()">確認</button>
+  </div>
+  <div style="margin-top:11px;border-top:1px solid var(--br);padding-top:10px;">
+    <button onclick="showPWChange()" style="width:100%;padding:8px;border:1px solid var(--br);border-radius:7px;background:#fff;font-size:11px;cursor:pointer;font-family:inherit;color:var(--t2);">パスワードを変更する</button>
+  </div>
 </div></div>
 <!-- 有給モーダル -->
 <div class="ov hidden" id="pdm" onclick="closePD(event)"><div class="mo" onclick="event.stopPropagation()">
@@ -356,10 +398,21 @@ let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lu
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
+const STAFF_VER='v1930'; // 19:30変更バージョン
 function lDB(){
-  try{const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]},d);}catch(e){}
+  try{
+    const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
+    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]},d);
+  }catch(e){}
+  // スタッフデータのバージョンが古い（17:45が含まれる）場合はスタッフのみリセット
+  const staffVer=localStorage.getItem('kintai_staff_ver');
+  if(staffVer!==STAFF_VER){
+    // 打刻・有給などのデータは保持し、スタッフシフトのみ初期化
+    DB.staff=[];
+    localStorage.setItem('kintai_staff_ver',STAFF_VER);
+  }
   if(!DB.staff.length){
-    DB.staff=[{id:1,name:'壹岐 伸弥',employeeId:3,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:2,name:'宮浦 幸湖',employeeId:4,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:3,name:'髙木 綾子',employeeId:5,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:4,name:'亀田 雅子',employeeId:6,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:5,name:'前田 美香',employeeId:7,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:6,name:'岡田 美鈴',employeeId:8,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:7,name:'矢野 恵夢',employeeId:12,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:8,name:'内藤 敏',employeeId:14,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:9,name:'森田 晴彦',employeeId:19,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:10,name:'大橋 章弘',employeeId:23,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:11,name:'寺嶋 真由美',employeeId:24,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:12,name:'寺岡 優希',employeeId:25,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:13,name:'加藤 慶紀',employeeId:27,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:14,name:'関 亜矢子',employeeId:28,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:15,name:'中野 拓哉',employeeId:33,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:16,name:'髙岡 夏実',employeeId:36,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:17,name:'西田 圭一郎',employeeId:38,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:18,name:'吉村 晋一',employeeId:43,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:19,name:'中 功',employeeId:46,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'17:45'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0}];
+    DB.staff=[{id:1,name:'壹岐 伸弥',employeeId:3,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:2,name:'宮浦 幸湖',employeeId:4,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:3,name:'髙木 綾子',employeeId:5,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:4,name:'亀田 雅子',employeeId:6,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:5,name:'前田 美香',employeeId:7,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:6,name:'岡田 美鈴',employeeId:8,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:7,name:'矢野 恵夢',employeeId:12,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:8,name:'内藤 敏',employeeId:14,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:9,name:'森田 晴彦',employeeId:19,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:10,name:'大橋 章弘',employeeId:23,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:11,name:'寺嶋 真由美',employeeId:24,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:12,name:'寺岡 優希',employeeId:25,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:13,name:'加藤 慶紀',employeeId:27,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:14,name:'関 亜矢子',employeeId:28,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:15,name:'中野 拓哉',employeeId:33,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:16,name:'髙岡 夏実',employeeId:36,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:17,name:'西田 圭一郎',employeeId:38,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:18,name:'吉村 晋一',employeeId:43,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:19,name:'中 功',employeeId:46,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0}];
     sDB();
   }
 }
@@ -372,10 +425,36 @@ function fmtMin(min){if(!min||min<=0)return'';return Math.floor(min/60)>0?Math.f
 function parseHM(s){if(!s||s==='-')return null;const[h,m]=s.split(':').map(Number);return h*60+m;}
 function ini(n){return(n||'?').charAt(0);}
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2700);}
-function makeTimeOpts(sel=''){let h='<option value="">-</option>';for(let i=0;i<24;i++)for(let j=0;j<60;j+=5){const v=pad(i)+':'+pad(j);h+=`<option value="${v}"${v===sel?' selected':''}>${v}</option>`;}return h;}
+function makeTimeOpts(sel=''){
+  let h='<option value="">-</option>';
+  for(let i=0;i<24;i++)for(let j=0;j<60;j+=15){
+    const v=pad(i)+':'+pad(j);
+    h+=`<option value="${v}"${v===sel?' selected':''}>${v}</option>`;
+  }
+  return h;
+}
 function dowKey(n){return['sun','mon','tue','wed','thu','fri','sat'][n];}
 function nthSat(d){const dt=new Date(d);return dt.getDay()===6?Math.ceil(dt.getDate()/7):null;}
 function getDIM(ym){const[y,m]=ym.split('-').map(Number);return new Date(y,m,0).getDate();}
+
+// ═══ 集計期間：前月16日〜当月15日 ═══
+function getTermDates(ym){
+  const[yr,mo]=ym.split('-').map(Number);
+  // 開始: 前月16日
+  const startDt=new Date(yr,mo-2,16); // mo-2 because months are 0-indexed
+  // 終了: 当月15日
+  const endDt=new Date(yr,mo-1,15);
+  const dates=[];
+  for(let d=new Date(startDt);d<=endDt;d.setDate(d.getDate()+1)){
+    dates.push(d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()));
+  }
+  return{start:dates[0],end:dates[dates.length-1],dates};
+}
+function getTermLabel(ym){
+  const t=getTermDates(ym);
+  return t.start+' 〜 '+t.end;
+}
+
 
 function getShifts(staff,date){
   if(!staff||staff.type!=='contract'||!staff.dowShifts)return[];
@@ -454,9 +533,32 @@ function calcWork(sid,date){
   if((last.type==='in'||last.type==='resume'||last.type==='early')&&inT)segs.push({start:inT,end:Date.now()});
   const rawMs=segs.reduce((s,sg)=>s+(sg.end-sg.start),0);
   const nightMs=calcNight(segs);
-  if(staff.type==='free'||(staff.type==='annual'&&!isSp)){
-    const net=Math.max(0,rawMs-(staff.breakMin||0)*60000);
-    return{total:net,breakdown:{[staff.type==='annual'?'年俸勤務':'総勤務']:net},otA:0,otB:0,otC:0,otD:nightMs,otE:0,lateMin:0,earlyLeaveMin:0};
+  if(staff.type==='free'||staff.type==='free1'||(staff.type==='annual'&&!isSp)){
+    let net=Math.max(0,rawMs-(staff.breakMin||0)*60000);
+    // free1: XX:45自動切り上げ
+    if(staff.type==='free1'&&inRec){
+      const basMin=staff.free1Min!==undefined?staff.free1Min:45;
+      const inDt=new Date(inRec.tsISO);
+      const inM=inDt.getHours()*60+inDt.getMinutes();
+      const prevBase=Math.floor(inM/60)*60+basMin; // 同一時間のXX:basMin
+      const nextBase=prevBase+60; // 1時間後のXX:basMin
+      // inMがprevBase〜nextBase-1の範囲→nextBaseから開始
+      // inMがbasMin〜basMin+59の範囲内ならnextBaseから
+      let effectStart;
+      if(inM>=prevBase&&inM<nextBase){
+        // prevBase以降に打刻→nextBaseから開始
+        effectStart=nextBase;
+      } else {
+        // prevBaseより前に打刻→prevBaseから開始  
+        effectStart=prevBase>=0?prevBase:0;
+      }
+      // 打刻時刻がeffectStartより前ならeffectStartまでの分を引く
+      if(inM<effectStart){
+        const cutMs=(effectStart-inM)*60000;
+        net=Math.max(0,net-cutMs);
+      }
+    }
+    return{total:net,breakdown:{[staff.type==='annual'?'年俸勤務':staff.type==='free1'?'フリー①勤務':'総勤務']:net},otA:0,otB:0,otC:0,otD:nightMs,otE:0,lateMin:0,earlyLeaveMin:0};
   }
   if(isSp){const net=Math.max(0,rawMs-(staff.breakMin||0)*60000);return{total:net,breakdown:{'バイト枠':net},otA:0,otB:0,otC:0,otD:nightMs,otE:0,lateMin:0,earlyLeaveMin:0};}
   const inRec=recs.find(r=>r.type==='in'||r.type==='early');
@@ -527,15 +629,16 @@ function applyWeeklyOT(weekDayResults){
 }
 
 function calcMonthSummary(sid,ym){
-  const[yr,mo]=ym.split('-').map(Number);const days=getDIM(ym);
+  // 集計期間: 前月16日〜当月15日
+  const term=getTermDates(ym);
+  const termDates=term.dates;
   let weekdays=0,holdays=0,totalMs=0,paidDays=0,fareCount=0,lunchCount=0;
   let otA=0,otB=0,otC=0,otD=0,totalLateMin=0,totalEarlyMin=0;
   let p1Ms=0,p2Ms=0,p3Ms=0,p4Ms=0;const bd_total={};
 
-  // 日次計算を先に全部実行
+  // 日次計算を先に全部実行（期間内）
   const allDayResults={};
-  for(let d=1;d<=days;d++){
-    const date=yr+'-'+pad(mo)+'-'+pad(d);
+  for(const date of termDates){
     allDayResults[date]=calcWork(sid,date);
   }
 
@@ -543,21 +646,15 @@ function calcMonthSummary(sid,ym){
   // 月の1日の曜日を取得し、週ごとに区切る
   const weekGroups=[];
   let currentWeek={};
-  for(let d=1;d<=days;d++){
-    const date=yr+'-'+pad(mo)+'-'+pad(d);
-    const dow=new Date(yr,mo-1,d).getDay(); // 0=日,1=月...6=土
+  for(let di=0;di<termDates.length;di++){
+    const date=termDates[di];
+    const dow=new Date(date).getDay();
     currentWeek[date]=allDayResults[date];
-    // 土曜（6）または月末で週を締める
-    if(dow===6||d===days){
+    if(dow===6||di===termDates.length-1){
       weekGroups.push({...currentWeek});
       currentWeek={};
     }
-    // 日曜の前（土曜が既に処理済み）は新週開始だが
-    // 月曜(1)で前の週が終わっていない場合も考慮
-    // → 土曜 or 月末で締めるシンプルな方式
   }
-  // 月初の日曜が残っている場合の考慮（月の1日が日曜の場合）
-  // → 上記ロジックで月末で締めるため問題なし
 
   // 各週にOT振り替えを適用
   const adjustedResults={};
@@ -566,10 +663,9 @@ function calcMonthSummary(sid,ym){
     Object.assign(adjustedResults,adjusted);
   });
 
-  // 月次集計
-  for(let d=1;d<=days;d++){
-    const date=yr+'-'+pad(mo)+'-'+pad(d);
-    const dow=new Date(yr,mo-1,d).getDay();
+  // 集計（期間内）
+  for(const date of termDates){
+    const dow=new Date(date).getDay();
     const r=adjustedResults[date]||{};
     if(r.total>0){if(isLegalHoliday(date)||dow===6)holdays++;else weekdays++;totalMs+=r.total;}
     if(r.breakdown)Object.entries(r.breakdown).forEach(([k,v])=>bd_total[k]=(bd_total[k]||0)+v);
@@ -595,7 +691,15 @@ function stLbl(s){return{none:'未出勤',in:'勤務中',out:'退勤済',break:'
 
 // ═══ 起動・ページ ═══
 function start(){document.getElementById('cs').style.display='none';document.getElementById('ms').style.display='flex';showPg('punch');}
-function showPg(p){['punch','log','report','admin'].forEach(n=>{document.getElementById('pg-'+n).classList.toggle('active',n===p);document.getElementById('tab-'+n).classList.toggle('active',n===p);document.getElementById('bn-'+n).classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='log')renderLog();if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();}}
+function autoStart(){
+  // 既にDBデータがあれば起動画面をスキップして直接一覧へ
+  if(DB.staff&&DB.staff.length>0){
+    document.getElementById('cs').style.display='none';
+    document.getElementById('ms').style.display='flex';
+    showPg('punch');
+  }
+}
+function showPg(p){['punch','log','report','admin'].forEach(n=>{document.getElementById('pg-'+n).classList.toggle('active',n===p);document.getElementById('tab-'+n).classList.toggle('active',n===p);document.getElementById('bn-'+n).classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();}}
 function showAS(sub){['staff','shift','rec','paid','lunch','special'].forEach(s=>{document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid')initPH();if(sub==='lunch')initLunch();}
 
 // ═══ 打刻グリッド ═══
@@ -669,6 +773,32 @@ function closePD(e){if(!e||e.target===document.getElementById('pdm'))document.ge
 function savePD(){const s=DB.staff.find(x=>x.id===pPaid);const date=document.getElementById('pd-dt').value;const type=document.getElementById('pd-tp').value;DB.paid.push({id:Date.now(),staffId:pPaid,staffName:s.name,company:CO,date,type,memo:document.getElementById('pd-mo').value});sDB();document.getElementById('pdm').classList.add('hidden');showToast(s.name+' — 有給申請（'+{full:'全日',am:'午前半日',pm:'午後半日'}[type]+'）');renderSG();}
 
 // ═══ ログ ═══
+
+function initLogYM(){
+  const sel=document.getElementById('log-ym');
+  if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='';
+  const n=new Date();
+  for(let i=0;i<12;i++){
+    const d=new Date(n.getFullYear(),n.getMonth()-i,1);
+    const val=d.getFullYear()+'-'+pad(d.getMonth()+1);
+    const lbl=d.getFullYear()+'年'+(d.getMonth()+1)+'月';
+    sel.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${lbl}</option>`;
+  }
+  if(cur)sel.value=cur;
+  updateLogTermLabel();
+}
+function updateLogTermLabel(){
+  const sel=document.getElementById('log-ym');
+  const lbl=document.getElementById('log-term-label');
+  if(!sel||!lbl)return;
+  const ym=sel.value;
+  if(!ym)return;
+  const t=getTermDates(ym);
+  lbl.textContent='集計期間: '+t.start+' 〜 '+t.end;
+}
+
 function renderLog(){
   const el=document.getElementById('ll');const t=todayStr();
   const all=[...DB.records.filter(r=>r.date===t&&r.company===CO),...DB.fare.filter(f=>f.date===t&&f.company===CO).map(f=>({...f,type:'fare',ts:'--:--:--'})),...DB.paid.filter(p=>p.date===t&&p.company===CO).map(p=>({...p,type:'paid',ts:'--:--:--'}))].sort((a,b)=>a.ts<b.ts?1:-1);
@@ -731,9 +861,10 @@ function renderRep(){
   });
   // 合計行なし（月次XLSXの仕様通り）
   document.getElementById('rtb').innerHTML=html;
+  const termInfo=getTermDates(ym);
   document.getElementById('rs').innerHTML=`
     <div class="sc"><div class="slb">スタッフ数</div><div class="sv">${list.length}名</div></div>
-    <div class="sc"><div class="slb">集計月</div><div class="sv" style="font-size:11px;">${ym}</div></div>
+    <div class="sc"><div class="slb">集計期間</div><div class="sv" style="font-size:9px;color:var(--gd);">${termInfo.start}<br>〜${termInfo.end}</div></div>
     <div class="sc"><div class="slb">合計行</div><div class="sv" style="font-size:11px;color:var(--gd);">なし✓</div></div>`;
 }
 
@@ -744,16 +875,17 @@ function renderIndPreview(){
   const ym=document.getElementById('im').value;
   if(!sid||!ym)return;
   const staff=DB.staff.find(s=>s.id===sid);if(!staff)return;
-  const[yr,mo]=ym.split('-').map(Number);const days=getDIM(ym);
   const dows=['日','月','火','水','木','金','土'];
+  // 集計期間: 前月16日〜当月15日
+  const term=getTermDates(ym);const termDates=term.dates;
   const allDay={};
-  for(let d=1;d<=days;d++){const date=yr+'-'+pad(mo)+'-'+pad(d);allDay[date]=calcWork(sid,date);}
+  for(const date of termDates){allDay[date]=calcWork(sid,date);}
   const wg=[];let cw={};
-  for(let d=1;d<=days;d++){const date=yr+'-'+pad(mo)+'-'+pad(d);cw[date]=allDay[date];if(new Date(yr,mo-1,d).getDay()===6||d===days){wg.push({...cw});cw={};}}
+  for(let di=0;di<termDates.length;di++){const date=termDates[di];cw[date]=allDay[date];if(new Date(date).getDay()===6||di===termDates.length-1){wg.push({...cw});cw={};}}
   const adj={};wg.forEach(wk=>{Object.assign(adj,applyWeeklyOT(wk));});
   let rows='',grand=0,wkD=0,lT=0,eT=0,pT=0,fT=0,lcT=0;
-  for(let d=1;d<=days;d++){
-    const date=yr+'-'+pad(mo)+'-'+pad(d);const dt=new Date(yr,mo-1,d);
+  for(const date of termDates){
+    const dt=new Date(date);
     const dow=dows[dt.getDay()];const isSun=dt.getDay()===0,isSat=dt.getDay()===6,isLeg=isLegalHoliday(date);
     const r=adj[date]||{};const bd=r.breakdown||{};
     const recs=DB.records.filter(x=>x.staffId===sid&&x.date===date).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
@@ -785,7 +917,7 @@ function renderIndPreview(){
   const H=['日','曜','出勤','休憩','再開','退勤','平日AM','平日PM','土曜AM','土曜PM','遅刻','早退','時間外','日合計','有給','交通費','🍱'];
   const thS=(i)=>i>=6&&i<=9?'background:#E8F5E9;color:var(--gd);':i===13?'background:#E1F5EE;color:#085041;':i>=2&&i<=5?'background:#FFF8E1;color:#5D4037;':'background:var(--gy);color:var(--t2);';
   const tbl=`<table style="border-collapse:collapse;min-width:500px;width:100%;"><thead><tr>${H.map((h,i)=>`<th style="${thS(i)}padding:4px 2px;border:1px solid var(--br);font-size:9px;font-weight:600;white-space:nowrap;">${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
-  document.getElementById('indm-title').textContent=staff.name+' '+yr+'年'+mo+'月 個人明細';
+  document.getElementById('indm-title').textContent=staff.name+' '+ym+' （'+term.start+' 〜 '+term.end+'）';
   document.getElementById('indm-body').innerHTML=tbl;
   document.getElementById('indm').classList.remove('hidden');
 }
@@ -812,10 +944,13 @@ function exportXLSX(){const ym=document.getElementById('rm').value;if(!ym){showT
 function doExportMonthly(ym){
   const list=DB.staff.filter(s=>s.company===CO);
   const payAoa=[PAY_HDR];
+  const termM=getTermDates(ym);
   list.forEach(s=>{
     const m=calcMonthSummary(s.id,ym);
-    const lunchCount=DB.lunch.filter(l=>l.staffId===s.id&&l.date.startsWith(ym)&&l.company===CO).length;
-    payAoa.push(makePayRow(s,m,lunchCount));
+    const lunchCount=DB.lunch.filter(l=>l.staffId===s.id&&termM.dates.includes(l.date)&&l.company===CO).length;
+    const fareCount=DB.fare.filter(f=>f.staffId===s.id&&termM.dates.includes(f.date)).length;
+    const mForRow={...m,fareCount};
+    payAoa.push(makePayRow(s,mForRow,lunchCount));
   });
   // 合計行なし（月次XLSXは合計行不要）
   const wb=XLSX.utils.book_new();
@@ -828,19 +963,22 @@ function doExportMonthly(ym){
 
 function exportIndXLSX(){const sid=parseInt(document.getElementById('isel').value);const ym=document.getElementById('im').value;if(!sid||!ym){showToast('スタッフと月を選択してください');return;}showToast('XLSXを生成中...');loadXLSX(()=>doExportInd(sid,ym));}
 function doExportInd(sid,ym){
-  const staff=DB.staff.find(s=>s.id===sid);const[yr,mo]=ym.split('-').map(Number);const days=getDIM(ym);
+  const staff=DB.staff.find(s=>s.id===sid);
   const dows=['日','月','火','水','木','金','土'];
+  // 集計期間: 前月16日〜当月15日
+  const term=getTermDates(ym);const termDates=term.dates;
+  const[yr,mo]=ym.split('-').map(Number);
   const IND_HDR=['日付','曜日','祝','出勤','休憩開始','勤務再開','退勤','早出','平日AM','平日PM','土曜AM','土曜PM','休日勤務','時間外(A+B)','深夜','遅刻(分)','早退(分)','日合計','有給','交通費','ランチデリ'];
-  const aoa=[[staff.name+' 個人勤務時間明細 '+yr+'年'+mo+'月'],[],IND_HDR];
+  const aoa=[[staff.name+' 個人勤務時間明細 '+ym+' （'+term.start+' 〜 '+term.end+'）'],[],IND_HDR];
   let grand=0,wkDays=0,pTotal=0,fTotal=0,lTotal=0,lateTotal=0,earlyTotal=0;
   // 週次OT振り替え込みで計算
   const allDay={};
-  for(let d=1;d<=days;d++){const date=yr+'-'+pad(mo)+'-'+pad(d);allDay[date]=calcWork(sid,date);}
+  for(const date of termDates){allDay[date]=calcWork(sid,date);}
   const weekGroups=[];let cw={};
-  for(let d=1;d<=days;d++){const date=yr+'-'+pad(mo)+'-'+pad(d);cw[date]=allDay[date];if(new Date(yr,mo-1,d).getDay()===6||d===days){weekGroups.push({...cw});cw={};}}
+  for(let di=0;di<termDates.length;di++){const date=termDates[di];cw[date]=allDay[date];if(new Date(date).getDay()===6||di===termDates.length-1){weekGroups.push({...cw});cw={};}}
   const adjusted={};weekGroups.forEach(wk=>{Object.assign(adjusted,applyWeeklyOT(wk));});
-  for(let d=1;d<=days;d++){
-    const date=yr+'-'+pad(mo)+'-'+pad(d);const dt=new Date(yr,mo-1,d);
+  for(const date of termDates){
+    const dt=new Date(date);
     const dow=dows[dt.getDay()];const hol=isHoliday(date)?'祝':'';
     const recs=DB.records.filter(r=>r.staffId===sid&&r.date===date).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
     const inRec=recs.find(r=>r.type==='in'||r.type==='early');const outRec=[...recs].reverse().find(r=>r.type==='out');const earlyRec=recs.find(r=>r.type==='early');
@@ -877,8 +1015,9 @@ function doExportInd(sid,ym){
   XLSX.utils.book_append_sheet(wb,ws1,'個人明細');
   // 給与取り込みシート（28列固定）
   const m=calcMonthSummary(sid,ym);
-  const lunchCount=DB.lunch.filter(l=>l.staffId===sid&&l.date.startsWith(ym)&&l.company===CO).length;
-  const fareCount=DB.fare.filter(f=>f.staffId===sid&&f.date.startsWith(ym)).length;
+  const lunchCount=lunchCntInd;
+  const fareCount=DB.fare.filter(f=>f.staffId===sid&&termDates.includes(f.date)).length;
+  const lunchCntInd=DB.lunch.filter(l=>l.staffId===sid&&termDates.includes(l.date)&&l.company===CO).length;
   const mForRow={...m,fareCount};
   const ws2=XLSX.utils.aoa_to_sheet([PAY_HDR,makePayRow(staff,mForRow,lunchCount)]);
   ws2['!cols']=PAY_HDR.map((_,i)=>({wch:i<2?14:10}));
@@ -898,13 +1037,60 @@ function renderAL(){
 }
 function selDow(dow,btn){document.querySelectorAll('.dow-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.dow-panel').forEach(p=>p.classList.remove('active'));document.getElementById('dp-'+dow).classList.add('active');}
 function selSat(n,btn){document.querySelectorAll('.sat-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.sat-panel').forEach(p=>p.classList.remove('active'));document.getElementById('sp-'+n).classList.add('active');}
-function addShiftRow(cid,s='',e=''){const c=document.getElementById(cid);const row=document.createElement('div');row.className='shift-row';row.innerHTML=`<div><label class="fl">開始</label><select class="tsel">${makeTimeOpts(s)}</select></div><div><label class="fl">終了</label><select class="tsel">${makeTimeOpts(e)}</select></div><button class="del-btn" onclick="this.parentElement.remove()">削除</button>`;c.appendChild(row);}
+function makeTimeList(){
+  let opts='';
+  for(let i=0;i<24;i++)for(let j=0;j<60;j+=15){
+    opts+=`<option value="${pad(i)+':'+pad(j)}">`;
+  }
+  return opts;
+}
+function addShiftRow(cid,s='',e=''){
+  const uid='sr'+Date.now()+Math.random().toString(36).slice(2,5);
+  const el=document.getElementById(cid);
+  const row=document.createElement('div');
+  row.className='shift-row';
+  row.innerHTML=`
+    <div>
+      <label class="fl">開始</label>
+      <input class="tsel" type="text" list="tl-${uid}-s" value="${s}" placeholder="例: 08:45" pattern="[0-9]{1,2}:[0-9]{2}" style="width:100%;">
+      <datalist id="tl-${uid}-s">${makeTimeList()}</datalist>
+    </div>
+    <div>
+      <label class="fl">終了</label>
+      <input class="tsel" type="text" list="tl-${uid}-e" value="${e}" placeholder="例: 17:45" pattern="[0-9]{1,2}:[0-9]{2}" style="width:100%;">
+      <datalist id="tl-${uid}-e">${makeTimeList()}</datalist>
+    </div>
+    <button class="del-btn" onclick="this.parentElement.remove()">削除</button>`;
+  el.appendChild(row);
+}
 function readRows(cid){const rows=document.querySelectorAll('#'+cid+' .shift-row');const r=[];rows.forEach(row=>{const ss=row.querySelectorAll('.tsel');const s=ss[0].value,e=ss[1].value;if(s&&e&&s!=='-'&&e!=='-')r.push({s,e});});return r;}
-function initPanels(ds){['mon','tue','wed','thu','fri'].forEach(d=>{const el=document.getElementById('dp-'+d);el.innerHTML=`<div id="sh-${d}"></div><button class="fa" onclick="addShiftRow('sh-${d}')">＋ 時間枠を追加</button>`;(ds&&ds[d]||[]).forEach(sh=>addShiftRow('sh-'+d,sh.s,sh.e));});for(let n=1;n<=5;n++){const el=document.getElementById('sp-'+n);el.innerHTML=`<div id="sh-sat${n}"></div><button class="fa" onclick="addShiftRow('sh-sat${n}')">＋ 時間枠を追加</button>`;(ds&&ds.sat&&ds.sat[n]||[]).forEach(sh=>addShiftRow('sh-sat'+n,sh.s,sh.e));}const se=document.getElementById('dp-sun');se.innerHTML=`<div id="sh-sun"></div><button class="fa" onclick="addShiftRow('sh-sun')">＋ 時間枠を追加</button>`;(ds&&ds.sun||[]).forEach(sh=>addShiftRow('sh-sun',sh.s,sh.e));}
-function openAdd(){eSid=null;document.getElementById('stm-t').textContent='スタッフを追加';setFft(false);document.getElementById('fn').value='';document.getElementById('feid').value='';document.getElementById('ft').value='contract';document.getElementById('fstd').value='480';document.getElementById('fbk').value='60';document.getElementById('ff').value='0';onTC();initPanels(null);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));setFft(s.freeEnd||false);document.getElementById('stm').classList.remove('hidden');}
+function initPanels(ds){
+  // dsがnull（新規追加時）はデフォルトシフトを設定
+  const defaultAM={s:'08:45',e:'12:45'};
+  const defaultPM={s:'15:45',e:'19:30'};
+  ['mon','tue','wed','thu','fri'].forEach(d=>{
+    const el=document.getElementById('dp-'+d);
+    el.innerHTML=`<div id="sh-${d}"></div><button class="fa" onclick="addShiftRow('sh-${d}')">＋ 時間枠を追加</button>`;
+    const shifts=ds&&ds[d]?ds[d]:[defaultAM,defaultPM];
+    shifts.forEach(sh=>addShiftRow('sh-'+d,sh.s,sh.e));});for(let n=1;n<=5;n++){
+    const el=document.getElementById('sp-'+n);
+    el.innerHTML=`<div id="sh-sat${n}"></div><button class="fa" onclick="addShiftRow('sh-sat${n}')">＋ 時間枠を追加</button>`;
+    const satShifts=ds&&ds.sat&&ds.sat[n]?ds.sat[n]:(n===1?[{s:'13:45',e:'17:00'}]:[]);
+    satShifts.forEach(sh=>addShiftRow('sh-sat'+n,sh.s,sh.e));
+  }const se=document.getElementById('dp-sun');se.innerHTML=`<div id="sh-sun"></div><button class="fa" onclick="addShiftRow('sh-sun')">＋ 時間枠を追加</button>`;(ds&&ds.sun||[]).forEach(sh=>addShiftRow('sh-sun',sh.s,sh.e));}
+function openAdd(){eSid=null;document.getElementById('stm-t').textContent='スタッフを追加';setFft(false);document.getElementById('fn').value='';document.getElementById('feid').value='';document.getElementById('ft').value='contract';document.getElementById('fstd').value='480';document.getElementById('fbk').value='60';document.getElementById('ff').value='0';onTC();initPanels(null);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));setFft(s.freeEnd||false);
+  const f1el=document.getElementById('ff1min');
+  if(f1el)f1el.value=s.free1Min!==undefined?s.free1Min:45;
+  onTC();
+  document.getElementById('stm').classList.remove('hidden');}
 function openEdit(id){const s=DB.staff.find(x=>x.id===id);if(!s)return;eSid=id;document.getElementById('stm-t').textContent='スタッフを編集';document.getElementById('fn').value=s.name;document.getElementById('feid').value=s.employeeId||'';document.getElementById('ft').value=s.type;document.getElementById('fstd').value=s.stdMin||480;document.getElementById('fbk').value=s.breakMin||60;document.getElementById('ff').value=s.fare||0;onTC();initPanels(s.dowShifts);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));document.getElementById('stm').classList.remove('hidden');}
 function closeSTM(e){if(!e||e.target===document.getElementById('stm'))document.getElementById('stm').classList.add('hidden');}
-function onTC(){document.getElementById('fca').style.display=document.getElementById('ft').value==='contract'?'':'none';}
+function onTC(){
+  const t=document.getElementById('ft').value;
+  document.getElementById('fca').style.display=t==='contract'?'':'none';
+  const f1=document.getElementById('free1-opt');
+  if(f1)f1.style.display=t==='free1'?'block':'none';
+}
 function toggleFft(){
   const cur=document.getElementById('fft').value==='1';
   const newVal=cur?'0':'1';
@@ -929,7 +1115,9 @@ function setFft(val){
     box.innerHTML='';
   }
 }
-function saveSt(){const name=document.getElementById('fn').value.trim();if(!name){showToast('名前を入力してください');return;}const eid=parseInt(document.getElementById('feid').value)||null;const type=document.getElementById('ft').value;const stdMin=parseInt(document.getElementById('fstd').value)||480;const bk=parseInt(document.getElementById('fbk').value)||60;const fare=parseInt(document.getElementById('ff').value)||0;const freeEnd=document.getElementById('fft').value==='1';let ds=null;if(type==='contract'){ds={mon:readRows('sh-mon'),tue:readRows('sh-tue'),wed:readRows('sh-wed'),thu:readRows('sh-thu'),fri:readRows('sh-fri'),sat:{1:readRows('sh-sat1'),2:readRows('sh-sat2'),3:readRows('sh-sat3'),4:readRows('sh-sat4'),5:readRows('sh-sat5')},sun:readRows('sh-sun')};}if(eSid){const idx=DB.staff.findIndex(s=>s.id===eSid);if(idx>=0)DB.staff[idx]={...DB.staff[idx],name,employeeId:eid,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd};}else{const nid=Math.max(0,...DB.staff.map(s=>s.id))+1;DB.staff.push({id:nid,name,employeeId:eid,company:CO,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd});}sDB();document.getElementById('stm').classList.add('hidden');showToast(name+'を保存しました');renderAL();renderSG();}
+function saveSt(){const name=document.getElementById('fn').value.trim();if(!name){showToast('名前を入力してください');return;}const eid=parseInt(document.getElementById('feid').value)||null;const type=document.getElementById('ft').value;const stdMin=parseInt(document.getElementById('fstd').value)||480;const bk=parseInt(document.getElementById('fbk').value)||60;const fare=parseInt(document.getElementById('ff').value)||0;const freeEnd=document.getElementById('fft').value==='1';
+  const free1MinEl=document.getElementById('ff1min');
+  const free1Min=free1MinEl?parseInt(free1MinEl.value):45;let ds=null;if(type==='contract'){ds={mon:readRows('sh-mon'),tue:readRows('sh-tue'),wed:readRows('sh-wed'),thu:readRows('sh-thu'),fri:readRows('sh-fri'),sat:{1:readRows('sh-sat1'),2:readRows('sh-sat2'),3:readRows('sh-sat3'),4:readRows('sh-sat4'),5:readRows('sh-sat5')},sun:readRows('sh-sun')};}if(eSid){const idx=DB.staff.findIndex(s=>s.id===eSid);if(idx>=0)DB.staff[idx]={...DB.staff[idx],name,employeeId:eid,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min};}else{const nid=Math.max(0,...DB.staff.map(s=>s.id))+1;DB.staff.push({id:nid,name,employeeId:eid,company:CO,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min});}sDB();document.getElementById('stm').classList.add('hidden');showToast(name+'を保存しました');renderAL();renderSG();}
 function delSt(id){const s=DB.staff.find(x=>x.id===id);if(!s||!confirm(s.name+'を削除しますか？'))return;DB.staff=DB.staff.filter(x=>x.id!==id);sDB();showToast(s.name+'を削除しました');renderAL();renderSG();}
 
 // ═══ 日次シフト ═══
@@ -1110,9 +1298,106 @@ function saveSP(){const sid=parseInt(document.getElementById('sp-s').value);cons
 function renderSPL(){const el=document.getElementById('spl');const list=DB.specials.filter(s=>{const st=DB.staff.find(x=>x.id===s.staffId);return st&&st.company===CO;}).sort((a,b)=>a.date<b.date?1:-1);el.innerHTML=list.length?list.map(s=>{const st=DB.staff.find(x=>x.id===s.staffId);return`<div class="spit"><div class="sii"><b>${st?st.name:'?'}</b> ${s.date}${s.memo?' — '+s.memo:''}</div><button class="fd" onclick="delSP(${s.id})">削除</button></div>`;}).join(''):'<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div>';}
 function delSP(id){DB.specials=DB.specials.filter(s=>s.id!==id);sDB();renderSPL();showToast('削除しました');}
 
+
+// ═══ ログ出力 ═══
+function exportLogCSV(){
+  const ym=document.getElementById('log-ym')?document.getElementById('log-ym').value:'';
+  if(!ym){showToast('出力月を選択してください');return;}
+  const term=getTermDates(ym);
+  const termDates=term.dates;
+  const dows=['日','月','火','水','木','金','土'];
+  // 社員番号順でソート
+  const list=[...DB.staff.filter(s=>s.company===CO)].sort((a,b)=>(a.employeeId||0)-(b.employeeId||0));
+  let csv='社員番号,名前,日付,曜日,種別,時刻,実働時間,遅刻(分),早退(分),有給,交通費,ランチデリ\n';
+  list.forEach(s=>{
+    // その人の期間内の日付を日付順に
+    termDates.forEach(date=>{
+      const dt=new Date(date);const dow=dows[dt.getDay()];
+      const recs=DB.records.filter(r=>r.staffId===s.id&&r.date===date).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
+      const pr=DB.paid.find(p=>p.staffId===s.id&&p.date===date);
+      const fr=DB.fare.filter(f=>f.staffId===s.id&&f.date===date);
+      const lc=DB.lunch.filter(l=>l.staffId===s.id&&l.date===date&&l.company===CO);
+      // calcWorkで実働・遅刻・早退
+      const work=calcWork(s.id,date);
+      const hasPunch=recs.length>0||pr;
+      if(!hasPunch)return; // 打刻なし・有給なし日はスキップ
+      if(recs.length===0&&pr){
+        // 有給のみ
+        csv+=`${s.employeeId||''},${s.name},${date},${dow},有給,,,,, ${pr?{full:'全日',am:'午前半日',pm:'午後半日'}[pr.type]:''},,\n`;
+        return;
+      }
+      // 打刻がある日: 各打刻を1行ずつ出力し、最初の行に集計を付ける
+      recs.forEach((r,i)=>{
+        const workH=i===0?msToHHMM(work.total||0):'';
+        const lateM=i===0?(work.lateMin||''):'';
+        const earlyM=i===0?(work.earlyLeaveMin||''):'';
+        const paidStr=i===0?(pr?{full:'全日',am:'午前半日',pm:'午後半日'}[pr.type]:''):'';
+        const fareStr=i===0?(fr.length?'○':''):'';
+        const lunchStr=i===0?(lc.length?lc.length:''):'';
+        csv+=`${s.employeeId||''},${s.name},${date},${dow},${TL[r.type]||r.type},${r.ts},${workH},${lateM},${earlyM},${paidStr},${fareStr},${lunchStr}\n`;
+      });
+    });
+    csv+='\n'; // 社員間に空行
+  });
+  const bom=new Uint8Array([0xEF,0xBB,0xBF]);
+  const blob=new Blob([bom,csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;
+  a.download='打刻ログ_'+ym+'（'+term.start+'〜'+term.end+'）.csv';
+  a.click();URL.revokeObjectURL(url);
+  showToast('ログCSVをダウンロードしました');
+}
+
+function exportMonthLog(){
+  const ym=document.getElementById('log-ym')?document.getElementById('log-ym').value:'';
+  if(!ym){showToast('出力月を選択してください');return;}
+  showToast('月次XLSXを生成中...');loadXLSX(()=>doExportMonthly(ym));
+}
+
 // ═══ 時計 ═══
 function tick(){const d=new Date();const el=document.getElementById('hk');if(el)el.textContent=pad(d.getHours())+':'+pad(d.getMinutes());if(document.getElementById('pg-punch').classList.contains('active'))renderSG();}
-lDB();setInterval(tick,30000);tick();
+
+// ═══ 管理PW ═══
+const DEFAULT_PW='0000';
+function getAdminPw(){return DB.adminPw||DEFAULT_PW;}
+function checkAdminPw(){
+  const pw=getAdminPw();
+  // 初回（デフォルトPWのまま）はセットアップ表示
+  document.getElementById('pw-setup-area').style.display=pw===DEFAULT_PW?'block':'none';
+  document.getElementById('pw-label').textContent=pw===DEFAULT_PW?'新しいパスワードを設定（数字4桁）':'パスワードを入力';
+  document.getElementById('pw-btn').textContent=pw===DEFAULT_PW?'設定する':'確認';
+  document.getElementById('pw-input').value='';
+  document.getElementById('pw-error').textContent='';
+  document.getElementById('pwm').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('pw-input').focus(),100);
+}
+function closePWM(e){if(!e||e.target===document.getElementById('pwm'))document.getElementById('pwm').classList.add('hidden');}
+function submitPW(){
+  const val=document.getElementById('pw-input').value;
+  if(!/^[0-9]{4}$/.test(val)){document.getElementById('pw-error').textContent='数字4桁で入力してください';return;}
+  const pw=getAdminPw();
+  if(pw===DEFAULT_PW){
+    // 初回設定
+    DB.adminPw=val;sDB();document.getElementById('pwm').classList.add('hidden');showToast('パスワードを設定しました');showPg('admin');
+  } else if(val===pw){
+    document.getElementById('pwm').classList.add('hidden');showPg('admin');
+  } else {
+    document.getElementById('pw-error').textContent='パスワードが違います';
+    document.getElementById('pw-input').value='';
+  }
+}
+function showPWChange(){
+  // PW変更: 現在PW確認→新PW入力
+  const newPw=prompt('現在のパスワードを入力してください（数字4桁）:');
+  if(!newPw)return;
+  if(newPw!==getAdminPw()){showToast('パスワードが違います');return;}
+  const next=prompt('新しいパスワードを入力してください（数字4桁）:');
+  if(!next||!/^[0-9]{4}$/.test(next)){showToast('数字4桁で入力してください');return;}
+  DB.adminPw=next;sDB();document.getElementById('pwm').classList.add('hidden');showToast('パスワードを変更しました');
+}
+
+// ═══ onTC拡張（free1オプション表示） ═══
+lDB();autoStart();setInterval(tick,30000);tick();
 </script>
 </body>
 </html>
