@@ -174,6 +174,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
       <button class="at" id="atab-paid" onclick="showAS('paid')">有給履歴</button>
       <button class="at" id="atab-lunch" onclick="showAS('lunch')">ランチデリ</button>
       <button class="at" id="atab-special" onclick="showAS('special')">特別枠</button>
+      <button class="at" id="atab-data" onclick="showAS('data')">データ移行</button>
     </div>
     <div class="asc active" id="asc-staff">
       <div class="card"><div class="cl">スタッフ一覧</div><div class="sl2" id="asl"></div>
@@ -245,6 +246,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
         <button class="fb" style="width:100%;" onclick="saveSP()">登録する</button>
       </div>
       <div class="card"><div class="cl">バイト枠一覧</div><div id="spl"><div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div></div></div>
+    </div>
+    <div class="asc" id="asc-data">
+      <div class="card">
+        <div class="cl">データ移行（PC ⇔ タブレット）</div>
+        <div class="fs2">
+          PCで設定したデータをタブレットに移すには、<b>エクスポート→コピー→タブレットでインポート</b>の手順で行います。
+        </div>
+        <div style="margin-bottom:11px;">
+          <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">① このデバイスからエクスポート</div>
+          <button class="fb" style="width:100%;" onclick="exportData()">📤 データをエクスポート（コピー）</button>
+          <div style="font-size:10px;color:var(--t2);margin-top:5px;">クリップボードにコピーされます。メモ帳・メール等に貼り付けて別端末に送ってください。</div>
+        </div>
+        <div style="border-top:1px solid var(--br);padding-top:11px;">
+          <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">② 別のデバイスでインポート</div>
+          <textarea id="import-data" class="fi" rows="4" placeholder="エクスポートしたデータをここに貼り付け..." style="font-size:10px;font-family:monospace;resize:vertical;"></textarea>
+          <button class="fb" style="width:100%;margin-top:7px;background:#E65100;" onclick="importData()">📥 データをインポート（上書き）</button>
+          <div style="font-size:10px;color:#E65100;margin-top:5px;">⚠ 現在のデータが上書きされます。必要に応じてエクスポートしてから実行してください。</div>
+        </div>
+      </div>
     </div>
   </div></div>
   <div class="bnav">
@@ -700,7 +720,7 @@ function autoStart(){
   }
 }
 function showPg(p){['punch','log','report','admin'].forEach(n=>{document.getElementById('pg-'+n).classList.toggle('active',n===p);document.getElementById('tab-'+n).classList.toggle('active',n===p);document.getElementById('bn-'+n).classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();}}
-function showAS(sub){['staff','shift','rec','paid','lunch','special'].forEach(s=>{document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid')initPH();if(sub==='lunch')initLunch();}
+function showAS(sub){['staff','shift','rec','paid','lunch','special','data'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid')initPH();if(sub==='lunch')initLunch();}
 
 // ═══ 打刻グリッド ═══
 function renderSG(){
@@ -1115,7 +1135,7 @@ function setFft(val){
     box.innerHTML='';
   }
 }
-function saveSt(){const name=document.getElementById('fn').value.trim();if(!name){showToast('名前を入力してください');return;}const eid=parseInt(document.getElementById('feid').value)||null;const type=document.getElementById('ft').value;const stdMin=parseInt(document.getElementById('fstd').value)||480;const bk=parseInt(document.getElementById('fbk').value)||60;const fare=parseInt(document.getElementById('ff').value)||0;const freeEnd=document.getElementById('fft').value==='1';
+function saveSt(){const name=document.getElementById('fn').value.trim();if(!name){showToast('名前を入力してください');return;}const eid=parseInt(document.getElementById('feid').value)||null;const type=document.getElementById('ft').value;const stdMin=parseInt(document.getElementById('fstd').value)||480;const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)?60:Math.max(0,bkRaw);const fareRaw=parseInt(document.getElementById('ff').value);const fare=isNaN(fareRaw)?0:Math.max(0,fareRaw);const freeEnd=document.getElementById('fft').value==='1';
   const free1MinEl=document.getElementById('ff1min');
   const free1Min=free1MinEl?parseInt(free1MinEl.value):45;let ds=null;if(type==='contract'){ds={mon:readRows('sh-mon'),tue:readRows('sh-tue'),wed:readRows('sh-wed'),thu:readRows('sh-thu'),fri:readRows('sh-fri'),sat:{1:readRows('sh-sat1'),2:readRows('sh-sat2'),3:readRows('sh-sat3'),4:readRows('sh-sat4'),5:readRows('sh-sat5')},sun:readRows('sh-sun')};}if(eSid){const idx=DB.staff.findIndex(s=>s.id===eSid);if(idx>=0)DB.staff[idx]={...DB.staff[idx],name,employeeId:eid,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min};}else{const nid=Math.max(0,...DB.staff.map(s=>s.id))+1;DB.staff.push({id:nid,name,employeeId:eid,company:CO,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min});}sDB();document.getElementById('stm').classList.add('hidden');showToast(name+'を保存しました');renderAL();renderSG();}
 function delSt(id){const s=DB.staff.find(x=>x.id===id);if(!s||!confirm(s.name+'を削除しますか？'))return;DB.staff=DB.staff.filter(x=>x.id!==id);sDB();showToast(s.name+'を削除しました');renderAL();renderSG();}
@@ -1352,6 +1372,39 @@ function exportMonthLog(){
   const ym=document.getElementById('log-ym')?document.getElementById('log-ym').value:'';
   if(!ym){showToast('出力月を選択してください');return;}
   showToast('月次XLSXを生成中...');loadXLSX(()=>doExportMonthly(ym));
+}
+
+
+// ═══ データ移行 ═══
+function exportData(){
+  try{
+    const json=JSON.stringify(DB,null,0);
+    // クリップボードにコピー
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(json).then(()=>showToast('データをクリップボードにコピーしました ✓')).catch(()=>fallbackCopy(json));
+    } else {
+      fallbackCopy(json);
+    }
+  }catch(e){showToast('エクスポートに失敗しました');}
+}
+function fallbackCopy(text){
+  const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');showToast('データをコピーしました ✓ メール等で別端末に送ってください');}catch(e){showToast('手動でコピーしてください');}
+  document.body.removeChild(ta);
+}
+function importData(){
+  const text=document.getElementById('import-data').value.trim();
+  if(!text){showToast('データを貼り付けてください');return;}
+  if(!confirm('現在のデータをすべて上書きしますか？\nこの操作は元に戻せません。')){return;}
+  try{
+    const parsed=JSON.parse(text);
+    if(!parsed.staff){showToast('データ形式が正しくありません');return;}
+    DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],adminPw:'0000'},parsed);
+    sDB();
+    document.getElementById('import-data').value='';
+    showToast('インポートが完了しました ✓ リロードしてご確認ください');
+    setTimeout(()=>location.reload(),2000);
+  }catch(e){showToast('データの解析に失敗しました。正しいデータを貼り付けてください');}
 }
 
 // ═══ 時計 ═══
