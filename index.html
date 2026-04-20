@@ -421,7 +421,7 @@ let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lu
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
-const STAFF_VER='v1930b'; // 19:30変更バージョン
+const STAFF_VER='v1930d'; // 19:30変更バージョン
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -1070,22 +1070,10 @@ function makeTimeList(){
   return opts;
 }
 function addShiftRow(cid,s='',e=''){
-  const uid='sr'+Date.now()+Math.random().toString(36).slice(2,5);
   const el=document.getElementById(cid);
   const row=document.createElement('div');
   row.className='shift-row';
-  row.innerHTML=`
-    <div>
-      <label class="fl">開始</label>
-      <input class="tsel" type="text" list="tl-${uid}-s" value="${s}" placeholder="例: 08:45" pattern="[0-9]{1,2}:[0-9]{2}" style="width:100%;">
-      <datalist id="tl-${uid}-s">${makeTimeList()}</datalist>
-    </div>
-    <div>
-      <label class="fl">終了</label>
-      <input class="tsel" type="text" list="tl-${uid}-e" value="${e}" placeholder="例: 17:45" pattern="[0-9]{1,2}:[0-9]{2}" style="width:100%;">
-      <datalist id="tl-${uid}-e">${makeTimeList()}</datalist>
-    </div>
-    <button class="del-btn" onclick="this.parentElement.remove()">削除</button>`;
+  row.innerHTML=`<div><label class="fl">開始</label><select class="tsel">${makeTimeOpts(s)}</select></div><div><label class="fl">終了</label><select class="tsel">${makeTimeOpts(e)}</select></div><button class="del-btn" onclick="this.parentElement.remove()">削除</button>`;
   el.appendChild(row);
 }
 function readRows(cid){const rows=document.querySelectorAll('#'+cid+' .shift-row');const r=[];rows.forEach(row=>{const ss=row.querySelectorAll('.tsel');const s=ss[0].value,e=ss[1].value;if(s&&e&&s!=='-'&&e!=='-')r.push({s,e});});return r;}
@@ -1464,13 +1452,31 @@ async function syncFromGitHub(){
     const localFare=DB.fare;
     const localLunch=DB.lunch;
     const localLunchEnabled=DB.lunchEnabled;
+    const localStaff=DB.staff; // ローカルの現在スタッフ
     DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]},remote);
+    // STAFF_VERチェック: リモートのスタッフが古い場合はローカルを優先
+    if(remote.staffVer!==STAFF_VER){
+      DB.staff=localStaff; // ローカル初期データを保持
+      DB.staffVer=STAFF_VER;
+    }
     // 打刻データはローカルを保持
     DB.records=localRecords;
     DB.paid=localPaid;
     DB.fare=localFare;
     DB.lunch=localLunch;
     DB.lunchEnabled=localLunchEnabled;
+    // 古いデータ補正: breakMin:60→0、土曜シフト空
+    DB.staff.forEach(s=>{
+      if(s.breakMin===60||s.breakMin===undefined)s.breakMin=0;
+      if(s.dowShifts&&s.dowShifts.sat){
+        [1,2,3,4,5].forEach(n=>{if(!Array.isArray(s.dowShifts.sat[n]))s.dowShifts.sat[n]=[];
+          else{
+            // 土曜に13:45-17:00が入っていたら空に
+            s.dowShifts.sat[n]=s.dowShifts.sat[n].filter(sh=>!(sh.s==='13:45'&&sh.e==='17:00'));
+          }
+        });
+      }
+    });
     sDB();
     setSyncStatus('✓ 同期済み '+new Date().toLocaleTimeString('ja'),'var(--gd)');
     renderSG();
@@ -1486,6 +1492,7 @@ async function syncToGitHub(){
   // 打刻以外のデータを送信
   const dataToSync={
     staff:DB.staff,
+    staffVer:STAFF_VER,
     dayShifts:DB.dayShifts,
     specials:DB.specials,
     lunchEnabled:DB.lunchEnabled,
