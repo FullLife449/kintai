@@ -419,33 +419,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 </div></div>
 <div class="toast" id="toast"></div>
 <script>
-// \u2550\u2550\u2550 \u795d\u65e5\u30c7\u30fc\u30bf(2024-2026) \u2550\u2550\u2550
+// ═══ 祝日データ(2024-2026) ═══
 const JP_HOL=new Set(['2024-01-01','2024-01-08','2024-02-11','2024-02-12','2024-02-23','2024-03-20','2024-04-29','2024-05-03','2024-05-04','2024-05-05','2024-05-06','2024-07-15','2024-08-11','2024-08-12','2024-09-16','2024-09-22','2024-09-23','2024-10-14','2024-11-03','2024-11-04','2024-11-23','2025-01-01','2025-01-13','2025-02-11','2025-02-23','2025-02-24','2025-03-20','2025-04-29','2025-05-03','2025-05-04','2025-05-05','2025-05-06','2025-07-21','2025-08-11','2025-09-15','2025-09-22','2025-09-23','2025-10-13','2025-11-03','2025-11-23','2025-11-24','2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06','2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23','2026-10-12','2026-11-03','2026-11-23']);
 function isHoliday(d){return JP_HOL.has(d);}
 function isLegalHoliday(d){return new Date(d).getDay()===0||isHoliday(d);}
 
 const CO='koyokai';
-const TL={in:'\u51fa\u52e4',out:'\u9000\u52e4',break:'\u4f11\u61a9\u958b\u59cb',resume:'\u52e4\u52d9\u518d\u958b',early:'\u65e9\u51fa',fare:'\u4ea4\u901a\u8cbb',paid:'\u6709\u7d66',lunch:'\u30e9\u30f3\u30c1\u30c7\u30ea'};
+const TL={in:'出勤',out:'退勤',break:'休憩開始',resume:'勤務再開',early:'早出',fare:'交通費',paid:'有給',lunch:'ランチデリ'};
 
 let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]};
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
-const STAFF_VER='v1930c'; // 19:30\u5909\u66f4\u30d0\u30fc\u30b8\u30e7\u30f3
+const STAFF_VER='v1930c'; // 19:30変更バージョン
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
     if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]},d);
   }catch(e){}
-  // \u30b9\u30bf\u30c3\u30d5\u30c7\u30fc\u30bf\u306e\u30d0\u30fc\u30b8\u30e7\u30f3\u304c\u53e4\u3044\uff0817:45\u304c\u542b\u307e\u308c\u308b\uff09\u5834\u5408\u306f\u30b9\u30bf\u30c3\u30d5\u306e\u307f\u30ea\u30bb\u30c3\u30c8
+  // スタッフデータのバージョンが古い（17:45が含まれる）場合はスタッフのみリセット
   const staffVer=localStorage.getItem('kintai_staff_ver');
   if(staffVer!==STAFF_VER){
-    // \u6253\u523b\u30fb\u6709\u7d66\u306a\u3069\u306e\u30c7\u30fc\u30bf\u306f\u4fdd\u6301\u3057\u3001\u30b9\u30bf\u30c3\u30d5\u30b7\u30d5\u30c8\u306e\u307f\u521d\u671f\u5316
+    // 打刻・有給などのデータは保持し、スタッフシフトのみ初期化
     DB.staff=[];
     localStorage.setItem('kintai_staff_ver',STAFF_VER);
   }
   if(!DB.staff.length){
-    DB.staff=[{id:1,name:'\u58f9\u5c90 \u4f38\u5f25',employeeId:3,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:2,name:'\u5bae\u6d66 \u5e78\u6e56',employeeId:4,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:3,name:'\u9ad9\u6728 \u7dbe\u5b50',employeeId:5,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:4,name:'\u4e80\u7530 \u96c5\u5b50',employeeId:6,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:5,name:'\u524d\u7530 \u7f8e\u9999',employeeId:7,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:6,name:'\u5ca1\u7530 \u7f8e\u9234',employeeId:8,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:7,name:'\u77e2\u91ce \u6075\u5922',employeeId:12,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:8,name:'\u5185\u85e4 \u654f',employeeId:14,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:9,name:'\u68ee\u7530 \u6674\u5f66',employeeId:19,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:10,name:'\u5927\u6a4b \u7ae0\u5f18',employeeId:23,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:11,name:'\u5bfa\u5d8b \u771f\u7531\u7f8e',employeeId:24,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:12,name:'\u5bfa\u5ca1 \u512a\u5e0c',employeeId:25,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:13,name:'\u52a0\u85e4 \u6176\u7d00',employeeId:27,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:14,name:'\u95a2 \u4e9c\u77e2\u5b50',employeeId:28,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:15,name:'\u4e2d\u91ce \u62d3\u54c9',employeeId:33,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:16,name:'\u9ad9\u5ca1 \u590f\u5b9f',employeeId:36,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:17,name:'\u897f\u7530 \u572d\u4e00\u90ce',employeeId:38,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:18,name:'\u5409\u6751 \u664b\u4e00',employeeId:43,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:19,name:'\u4e2d \u529f',employeeId:46,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0}];
+    DB.staff=[{id:1,name:'壹岐 伸弥',employeeId:3,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:2,name:'宮浦 幸湖',employeeId:4,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:3,name:'髙木 綾子',employeeId:5,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:4,name:'亀田 雅子',employeeId:6,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:5,name:'前田 美香',employeeId:7,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:6,name:'岡田 美鈴',employeeId:8,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:7,name:'矢野 恵夢',employeeId:12,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:8,name:'内藤 敏',employeeId:14,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:9,name:'森田 晴彦',employeeId:19,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:10,name:'大橋 章弘',employeeId:23,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:11,name:'寺嶋 真由美',employeeId:24,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:12,name:'寺岡 優希',employeeId:25,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:13,name:'加藤 慶紀',employeeId:27,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:14,name:'関 亜矢子',employeeId:28,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:15,name:'中野 拓哉',employeeId:33,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:16,name:'髙岡 夏実',employeeId:36,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:17,name:'西田 圭一郎',employeeId:38,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:18,name:'吉村 晋一',employeeId:43,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:19,name:'中 功',employeeId:46,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0}];
     sDB();
   }
 }
@@ -454,7 +454,7 @@ function pad(n){return String(n).padStart(2,'0');}
 function nowStr(){const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());}
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
 function fmtHM(ms){if(!ms||ms<=0)return'';const m=Math.floor(ms/60000);return Math.floor(m/60)+':'+pad(m%60);}
-function fmtMin(min){if(!min||min<=0)return'';return Math.floor(min/60)>0?Math.floor(min/60)+'\u6642\u9593'+((min%60)>0?(min%60)+'\u5206':''):(min%60)+'\u5206';}
+function fmtMin(min){if(!min||min<=0)return'';return Math.floor(min/60)>0?Math.floor(min/60)+'時間'+((min%60)>0?(min%60)+'分':''):(min%60)+'分';}
 function parseHM(s){if(!s||s==='-')return null;const[h,m]=s.split(':').map(Number);return h*60+m;}
 function ini(n){return(n||'?').charAt(0);}
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2700);}
@@ -471,12 +471,12 @@ function dowKey(n){return['sun','mon','tue','wed','thu','fri','sat'][n];}
 function nthSat(d){const dt=new Date(d);return dt.getDay()===6?Math.ceil(dt.getDate()/7):null;}
 function getDIM(ym){const[y,m]=ym.split('-').map(Number);return new Date(y,m,0).getDate();}
 
-// \u2550\u2550\u2550 \u96c6\u8a08\u671f\u9593\uff1a\u524d\u670816\u65e5\u301c\u5f53\u670815\u65e5 \u2550\u2550\u2550
+// ═══ 集計期間：前月16日〜当月15日 ═══
 function getTermDates(ym){
   const[yr,mo]=ym.split('-').map(Number);
-  // \u958b\u59cb: \u524d\u670816\u65e5
+  // 開始: 前月16日
   const startDt=new Date(yr,mo-2,16); // mo-2 because months are 0-indexed
-  // \u7d42\u4e86: \u5f53\u670815\u65e5
+  // 終了: 当月15日
   const endDt=new Date(yr,mo-1,15);
   const dates=[];
   for(let d=new Date(startDt);d<=endDt;d.setDate(d.getDate()+1)){
@@ -486,7 +486,7 @@ function getTermDates(ym){
 }
 function getTermLabel(ym){
   const t=getTermDates(ym);
-  return t.start+' \u301c '+t.end;
+  return t.start+' 〜 '+t.end;
 }
 
 
@@ -502,29 +502,29 @@ function getEffShifts(sid,date){
   return getShifts(DB.staff.find(s=>s.id===sid),date);
 }
 
-// \u30b7\u30d5\u30c8\u6642\u9593\u304b\u3089\u305d\u306e\u65e5\u306e\u6240\u5b9a\u52b4\u50cd\u6642\u9593\uff08ms\uff09\u3092\u81ea\u52d5\u8a08\u7b97
-// \u30b7\u30d5\u30c8\u306e\u5408\u8a08\u6642\u9593 - \u4f11\u61a9\u6642\u9593 = \u6240\u5b9a\u6642\u9593
+// シフト時間からその日の所定労働時間（ms）を自動計算
+// シフトの合計時間 - 休憩時間 = 所定時間
 function getStdMsForDate(sid,date){
   const staff=DB.staff.find(s=>s.id===sid);
   if(!staff)return 480*60000;
   const shifts=getEffShifts(sid,date);
   if(!shifts||!shifts.length){
-    // \u30b7\u30d5\u30c8\u306a\u3057\u306e\u65e5\u306fstdMin\u3092\u305d\u306e\u307e\u307e\u4f7f\u7528
+    // シフトなしの日はstdMinをそのまま使用
     return (staff.stdMin||480)*60000;
   }
-  // \u30b7\u30d5\u30c8\u306e\u5408\u8a08\u6642\u9593\u3092\u8a08\u7b97
+  // シフトの合計時間を計算
   let shiftTotalMin=0;
   shifts.forEach(sh=>{
     const s=parseHM(sh.s),e=parseHM(sh.e);
     if(s!==null&&e!==null&&e>s)shiftTotalMin+=e-s;
   });
-  // \u4f11\u61a9\u6642\u9593\u3092\u5f15\u304f
+  // 休憩時間を引く
   const netMin=Math.max(0,shiftTotalMin-(staff.breakMin||0));
-  // \u6700\u5c0f1\u6642\u9593\u3001\u6700\u59278\u6642\u9593\uff08\u6cd5\u5b9a\uff09
+  // 最小1時間、最大8時間（法定）
   return Math.min(Math.max(netMin,60),480)*60000;
 }
 
-// \u2550\u2550\u2550 \u6df1\u591c\u6642\u9593\u8a08\u7b97 \u2550\u2550\u2550
+// ═══ 深夜時間計算 ═══
 function calcNight(segs){
   let ms=0;
   segs.forEach(seg=>{
@@ -535,20 +535,20 @@ function calcNight(segs){
   return ms;
 }
 
-// \u2550\u2550\u2550 \u9045\u523b\u30fb\u65e9\u9000\u8a08\u7b97 \u2550\u2550\u2550
+// ═══ 遅刻・早退計算 ═══
 function calcLateEarly(sid,date,inMin,outMin,shifts,earlyRec){
   if(!shifts||!shifts.length||isLegalHoliday(date)) return{lateMin:0,earlyLeaveMin:0};
   const staff=DB.staff.find(s=>s.id===sid);
-  // \u65e9\u51fa\u30dc\u30bf\u30f3\u306e\u5834\u5408\u306f\u9045\u523b\u306a\u3057
+  // 早出ボタンの場合は遅刻なし
   const lateMin = earlyRec ? 0 : Math.max(0, inMin - parseHM(shifts[0].s));
-  // \u7d42\u4e86\u6642\u523b\u30d5\u30ea\u30fc\u306e\u5834\u5408\u306f\u65e9\u9000\u306a\u3057
+  // 終了時刻フリーの場合は早退なし
   if(staff&&staff.freeEnd) return{lateMin,earlyLeaveMin:0};
   const lastEnd = parseHM(shifts[shifts.length-1].e);
   const earlyLeaveMin = outMin!==null ? Math.max(0, lastEnd - outMin) : 0;
   return{lateMin,earlyLeaveMin};
 }
 
-// \u2550\u2550\u2550 \u52e4\u52d9\u6642\u9593\u8a08\u7b97\uff08\u9045\u523b\u30fb\u65e9\u9000\u542b\u3080\uff09 \u2550\u2550\u2550
+// ═══ 勤務時間計算（遅刻・早退含む） ═══
 function calcWork(sid,date){
   const staff=DB.staff.find(s=>s.id===sid);if(!staff)return{};
   const recs=DB.records.filter(r=>r.staffId===sid&&r.date===date).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
@@ -569,32 +569,32 @@ function calcWork(sid,date){
   const nightMs=calcNight(segs);
   if(staff.type==='free'||staff.type==='free1'||(staff.type==='annual'&&!isSp)){
     let net=Math.max(0,rawMs-(staff.breakMin||0)*60000);
-    // free1: XX:45\u81ea\u52d5\u5207\u308a\u4e0a\u3052
+    // free1: XX:45自動切り上げ
     if(staff.type==='free1'&&inRec){
       const basMin=staff.free1Min!==undefined?staff.free1Min:45;
       const inDt=new Date(inRec.tsISO);
       const inM=inDt.getHours()*60+inDt.getMinutes();
-      const prevBase=Math.floor(inM/60)*60+basMin; // \u540c\u4e00\u6642\u9593\u306eXX:basMin
-      const nextBase=prevBase+60; // 1\u6642\u9593\u5f8c\u306eXX:basMin
-      // inM\u304cprevBase\u301cnextBase-1\u306e\u7bc4\u56f2\u2192nextBase\u304b\u3089\u958b\u59cb
-      // inM\u304cbasMin\u301cbasMin+59\u306e\u7bc4\u56f2\u5185\u306a\u3089nextBase\u304b\u3089
+      const prevBase=Math.floor(inM/60)*60+basMin; // 同一時間のXX:basMin
+      const nextBase=prevBase+60; // 1時間後のXX:basMin
+      // inMがprevBase〜nextBase-1の範囲→nextBaseから開始
+      // inMがbasMin〜basMin+59の範囲内ならnextBaseから
       let effectStart;
       if(inM>=prevBase&&inM<nextBase){
-        // prevBase\u4ee5\u964d\u306b\u6253\u523b\u2192nextBase\u304b\u3089\u958b\u59cb
+        // prevBase以降に打刻→nextBaseから開始
         effectStart=nextBase;
       } else {
-        // prevBase\u3088\u308a\u524d\u306b\u6253\u523b\u2192prevBase\u304b\u3089\u958b\u59cb  
+        // prevBaseより前に打刻→prevBaseから開始  
         effectStart=prevBase>=0?prevBase:0;
       }
-      // \u6253\u523b\u6642\u523b\u304ceffectStart\u3088\u308a\u524d\u306a\u3089effectStart\u307e\u3067\u306e\u5206\u3092\u5f15\u304f
+      // 打刻時刻がeffectStartより前ならeffectStartまでの分を引く
       if(inM<effectStart){
         const cutMs=(effectStart-inM)*60000;
         net=Math.max(0,net-cutMs);
       }
     }
-    return{total:net,breakdown:{[staff.type==='annual'?'\u5e74\u4ff8\u52e4\u52d9':staff.type==='free1'?'\u30d5\u30ea\u30fc\u2460\u52e4\u52d9':'\u7dcf\u52e4\u52d9']:net},otA:0,otB:0,otC:0,otD:nightMs,otE:0,lateMin:0,earlyLeaveMin:0};
+    return{total:net,breakdown:{[staff.type==='annual'?'年俸勤務':staff.type==='free1'?'フリー①勤務':'総勤務']:net},otA:0,otB:0,otC:0,otD:nightMs,otE:0,lateMin:0,earlyLeaveMin:0};
   }
-  if(isSp){const net=Math.max(0,rawMs-(staff.breakMin||0)*60000);return{total:net,breakdown:{'\u30d0\u30a4\u30c8\u67a0':net},otA:0,otB:0,otC:0,otD:nightMs,otE:0,lateMin:0,earlyLeaveMin:0};}
+  if(isSp){const net=Math.max(0,rawMs-(staff.breakMin||0)*60000);return{total:net,breakdown:{'バイト枠':net},otA:0,otB:0,otC:0,otD:nightMs,otE:0,lateMin:0,earlyLeaveMin:0};}
   const inRec=recs.find(r=>r.type==='in'||r.type==='early');
   const outRec=[...recs].reverse().find(r=>r.type==='out');
   if(!inRec)return{};
@@ -602,51 +602,51 @@ function calcWork(sid,date){
   const outMin=outRec?new Date(outRec.tsISO).getHours()*60+new Date(outRec.tsISO).getMinutes():null;
   const shifts=getEffShifts(sid,date).sort((a,b)=>parseHM(a.s)-parseHM(b.s));
   const dk=dowKey(new Date(date).getDay());
-  const lb=isLegal?'\u4f11\u65e5':dk==='sat'?'\u571f\u66dc':'\u5e73\u65e5';
+  const lb=isLegal?'休日':dk==='sat'?'土曜':'平日';
   const result={};
   shifts.forEach((sh,i)=>{
     const shS=parseHM(sh.s),shE=parseHM(sh.e);if(!shS||!shE)return;
     const eS=earlyRec?inMin:Math.max(inMin,shS);
     const eE=outMin!==null?(staff&&staff.freeEnd?outMin:Math.min(outMin,shE)):shE;
     if(eE<=eS)return;
-    const label=isLegal?'\u4f11\u65e5\u52e4\u52d9':shifts.length>1?lb+(i===0?'\u5348\u524d':'\u5348\u5f8c'):lb+'\u52e4\u52d9';
+    const label=isLegal?'休日勤務':shifts.length>1?lb+(i===0?'午前':'午後'):lb+'勤務';
     result[label]=(result[label]||0)+(eE-eS)*60000;
   });
   if(outMin!==null&&shifts.length>0){
     const lE=parseHM(shifts[shifts.length-1].e);
-    if(lE&&outMin>lE)result['\u6642\u9593\u5916']=(result['\u6642\u9593\u5916']||0)+(outMin-lE)*60000;
+    if(lE&&outMin>lE)result['時間外']=(result['時間外']||0)+(outMin-lE)*60000;
     for(let i=0;i<shifts.length-1;i++){
       const cE=parseHM(shifts[i].e),nS=parseHM(shifts[i+1].s);if(!cE||!nS)continue;
-      if(outMin>cE&&outMin<nS)result['\u6642\u9593\u5916']=(result['\u6642\u9593\u5916']||0)+(outMin-cE)*60000;
-      else if(outMin>=nS){const g=segs.reduce((s,sg)=>{const sM=new Date(sg.start).getHours()*60+new Date(sg.start).getMinutes();const eM=new Date(sg.end).getHours()*60+new Date(sg.end).getMinutes();return s+Math.max(0,Math.min(eM,nS)-Math.max(sM,cE))*60000;},0);if(g>0)result['\u6642\u9593\u5916']=(result['\u6642\u9593\u5916']||0)+g;}
+      if(outMin>cE&&outMin<nS)result['時間外']=(result['時間外']||0)+(outMin-cE)*60000;
+      else if(outMin>=nS){const g=segs.reduce((s,sg)=>{const sM=new Date(sg.start).getHours()*60+new Date(sg.start).getMinutes();const eM=new Date(sg.end).getHours()*60+new Date(sg.end).getMinutes();return s+Math.max(0,Math.min(eM,nS)-Math.max(sM,cE))*60000;},0);if(g>0)result['時間外']=(result['時間外']||0)+g;}
     }
   }
   let rem=(staff.breakMin||0)*60000;
-  Object.keys(result).filter(k=>k!=='\u6642\u9593\u5916'&&k!=='\u4f11\u65e5\u52e4\u52d9').forEach(k=>{if(rem<=0)return;const d=Math.min(result[k],rem);result[k]-=d;rem-=d;if(result[k]<=0)delete result[k];});
+  Object.keys(result).filter(k=>k!=='時間外'&&k!=='休日勤務').forEach(k=>{if(rem<=0)return;const d=Math.min(result[k],rem);result[k]-=d;rem-=d;if(result[k]<=0)delete result[k];});
   const total=Object.values(result).reduce((s,v)=>s+v,0);
-  const stdMs=getStdMsForDate(sid,date); // \u30b7\u30d5\u30c8\u6642\u9593\u304b\u3089\u81ea\u52d5\u8a08\u7b97
+  const stdMs=getStdMsForDate(sid,date); // シフト時間から自動計算
   const legalMs=8*60*60000;
   const otA=isLegal?0:Math.max(0,Math.min(total,legalMs)-Math.min(total,stdMs));
   const otB=isLegal?0:Math.max(0,total-legalMs);
-  const otC=isLegal?(result['\u4f11\u65e5\u52e4\u52d9']||0):0;
-  // \u2500 \u9045\u523b\u30fb\u65e9\u9000 \u2500
+  const otC=isLegal?(result['休日勤務']||0):0;
+  // ─ 遅刻・早退 ─
   const{lateMin,earlyLeaveMin}=calcLateEarly(sid,date,inMin,outMin,shifts,earlyRec);
   return{total,breakdown:result,otA,otB,otC,otD:nightMs,otE:0,lateMin,earlyLeaveMin};
 }
 
-// \u2550\u2550\u2550 \u6708\u6b21\u96c6\u8a08\uff08\u9031\u6b2140\u6642\u9593\u8d85OT\u632f\u308a\u66ff\u3048\u5bfe\u5fdc\uff09 \u2550\u2550\u2550
+// ═══ 月次集計（週次40時間超OT振り替え対応） ═══
 
-// \u9031\u6b21OT\u632f\u308a\u66ff\u3048\uff1a\u903140\u6642\u9593\u8d85\u306e\u5206\u3092A\u304b\u3089B\u3078\u632f\u308a\u66ff\u3048\u308b
+// 週次OT振り替え：週40時間超の分をAからBへ振り替える
 function applyWeeklyOT(weekDayResults){
   const legalLimit=40*3600000;
-  // \u6cd5\u5b9a\u4f11\u65e5\uff08\u65e5\u66dc\u30fb\u795d\u65e5\uff09\u3092\u9664\u3044\u305f\u5b9f\u52b4\u50cd\u5408\u8a08
+  // 法定休日（日曜・祝日）を除いた実労働合計
   let weekActual=0;
   Object.entries(weekDayResults).forEach(([date,r])=>{
     if(r&&r.total&&!isLegalHoliday(date)) weekActual+=r.total;
   });
   if(weekActual<=legalLimit) return weekDayResults;
   let overflow=weekActual-legalLimit;
-  // \u9031\u306e\u65e5\u4ed8\u3092\u5f8c\u65e5\u9806\u306b\u51e6\u7406\uff08\u5f8c\u65e5\u306eA\u304b\u3089\u5148\u306bB\u3078\u632f\u308a\u66ff\u3048\uff09
+  // 週の日付を後日順に処理（後日のAから先にBへ振り替え）
   const dates=Object.keys(weekDayResults).sort().reverse();
   const updated={};
   Object.keys(weekDayResults).forEach(d=>updated[d]={...weekDayResults[d]});
@@ -663,21 +663,21 @@ function applyWeeklyOT(weekDayResults){
 }
 
 function calcMonthSummary(sid,ym){
-  // \u96c6\u8a08\u671f\u9593: \u524d\u670816\u65e5\u301c\u5f53\u670815\u65e5
+  // 集計期間: 前月16日〜当月15日
   const term=getTermDates(ym);
   const termDates=term.dates;
   let weekdays=0,holdays=0,totalMs=0,paidDays=0,fareCount=0,lunchCount=0;
   let otA=0,otB=0,otC=0,otD=0,totalLateMin=0,totalEarlyMin=0;
   let p1Ms=0,p2Ms=0,p3Ms=0,p4Ms=0;const bd_total={};
 
-  // \u65e5\u6b21\u8a08\u7b97\u3092\u5148\u306b\u5168\u90e8\u5b9f\u884c\uff08\u671f\u9593\u5185\uff09
+  // 日次計算を先に全部実行（期間内）
   const allDayResults={};
   for(const date of termDates){
     allDayResults[date]=calcWork(sid,date);
   }
 
-  // \u9031\u3054\u3068\u306b\u30b0\u30eb\u30fc\u30d7\u5316\uff08\u6708\u66dc\u59cb\u307e\u308a\uff09\u3057\u3066\u9031\u6b21OT\u632f\u308a\u66ff\u3048\u3092\u9069\u7528
-  // \u6708\u306e1\u65e5\u306e\u66dc\u65e5\u3092\u53d6\u5f97\u3057\u3001\u9031\u3054\u3068\u306b\u533a\u5207\u308b
+  // 週ごとにグループ化（月曜始まり）して週次OT振り替えを適用
+  // 月の1日の曜日を取得し、週ごとに区切る
   const weekGroups=[];
   let currentWeek={};
   for(let di=0;di<termDates.length;di++){
@@ -690,14 +690,14 @@ function calcMonthSummary(sid,ym){
     }
   }
 
-  // \u5404\u9031\u306bOT\u632f\u308a\u66ff\u3048\u3092\u9069\u7528
+  // 各週にOT振り替えを適用
   const adjustedResults={};
   weekGroups.forEach(week=>{
     const adjusted=applyWeeklyOT(week);
     Object.assign(adjustedResults,adjusted);
   });
 
-  // \u96c6\u8a08\uff08\u671f\u9593\u5185\uff09
+  // 集計（期間内）
   for(const date of termDates){
     const dow=new Date(date).getDay();
     const r=adjustedResults[date]||{};
@@ -706,10 +706,10 @@ function calcMonthSummary(sid,ym){
     otA+=(r.otA||0);otB+=(r.otB||0);otC+=(r.otC||0);otD+=(r.otD||0);
     totalLateMin+=(r.lateMin||0);totalEarlyMin+=(r.earlyLeaveMin||0);
     if(r.breakdown){
-      p1Ms+=(r.breakdown['\u5e73\u65e5\u5348\u524d']||0);
-      p2Ms+=(r.breakdown['\u5e73\u65e5\u5348\u5f8c']||r.breakdown['\u5e73\u65e5\u52e4\u52d9']||0);
-      p3Ms+=(r.breakdown['\u571f\u66dc\u5348\u524d']||0); // \u652f\u7d66\u9805\u76ee3=\u571f\u66dcAM
-      p4Ms+=(r.breakdown['\u571f\u66dc\u5348\u5f8c']||r.breakdown['\u571f\u66dc\u52e4\u52d9']||r.breakdown['\u30d0\u30a4\u30c8\u67a0']||0); // \u652f\u7d66\u9805\u76ee4=\u571f\u66dcPM/\u30d0\u30a4\u30c8\u67a0
+      p1Ms+=(r.breakdown['平日午前']||0);
+      p2Ms+=(r.breakdown['平日午後']||r.breakdown['平日勤務']||0);
+      p3Ms+=(r.breakdown['土曜午前']||0); // 支給項目3=土曜AM
+      p4Ms+=(r.breakdown['土曜午後']||r.breakdown['土曜勤務']||r.breakdown['バイト枠']||0); // 支給項目4=土曜PM/バイト枠
     }
     const pr=DB.paid.find(p=>p.staffId===sid&&p.date===date);if(pr)paidDays+=(pr.type==='full'?1:0.5);
     fareCount+=DB.fare.filter(f=>f.staffId===sid&&f.date===date).length;
@@ -719,14 +719,14 @@ function calcMonthSummary(sid,ym){
   return{weekdays,holdays,totalMs,paidDays,fareCount,lunchCount,otA,otB,otC,otD,otE,totalLateMin,totalEarlyMin,p1Ms,p2Ms,p3Ms,p4Ms,bd_total};
 }
 
-// \u2550\u2550\u2550 \u30b9\u30c6\u30fc\u30bf\u30b9 \u2550\u2550\u2550
+// ═══ ステータス ═══
 function getSt(sid,date){if(DB.paid.find(p=>p.staffId===sid&&p.date===date))return'paid';const r=DB.records.filter(x=>x.staffId===sid&&x.date===date);if(!r.length)return'none';return r.sort((a,b)=>a.tsISO<b.tsISO?1:-1)[0].type;}
-function stLbl(s){return{none:'\u672a\u51fa\u52e4',in:'\u52e4\u52d9\u4e2d',out:'\u9000\u52e4\u6e08',break:'\u4f11\u61a9\u4e2d',resume:'\u52e4\u52d9\u4e2d',early:'\u65e9\u51fa\u52e4\u52d9\u4e2d',paid:'\u6709\u7d66'}[s]||'\u672a\u51fa\u52e4';}
+function stLbl(s){return{none:'未出勤',in:'勤務中',out:'退勤済',break:'休憩中',resume:'勤務中',early:'早出勤務中',paid:'有給'}[s]||'未出勤';}
 
-// \u2550\u2550\u2550 \u8d77\u52d5\u30fb\u30da\u30fc\u30b8 \u2550\u2550\u2550
+// ═══ 起動・ページ ═══
 function start(){document.getElementById('cs').style.display='none';document.getElementById('ms').style.display='flex';showPg('punch');}
 function autoStart(){
-  // \u65e2\u306bDB\u30c7\u30fc\u30bf\u304c\u3042\u308c\u3070\u8d77\u52d5\u753b\u9762\u3092\u30b9\u30ad\u30c3\u30d7\u3057\u3066\u76f4\u63a5\u4e00\u89a7\u3078
+  // 既にDBデータがあれば起動画面をスキップして直接一覧へ
   if(DB.staff&&DB.staff.length>0){
     document.getElementById('cs').style.display='none';
     document.getElementById('ms').style.display='flex';
@@ -736,77 +736,77 @@ function autoStart(){
 function showPg(p){['punch','log','report','admin'].forEach(n=>{document.getElementById('pg-'+n).classList.toggle('active',n===p);document.getElementById('tab-'+n).classList.toggle('active',n===p);document.getElementById('bn-'+n).classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();}}
 function showAS(sub){['staff','shift','rec','paid','lunch','special','data'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid')initPH();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();}
 
-// \u2550\u2550\u2550 \u6253\u523b\u30b0\u30ea\u30c3\u30c9 \u2550\u2550\u2550
+// ═══ 打刻グリッド ═══
 function renderSG(){
-  const t=todayStr();const dw=new Date();const days=['\u65e5','\u6708','\u706b','\u6c34','\u6728','\u91d1','\u571f'];
+  const t=todayStr();const dw=new Date();const days=['日','月','火','水','木','金','土'];
   const isLeg=isLegalHoliday(t);
-  let lbl=dw.getFullYear()+'\u5e74'+(dw.getMonth()+1)+'\u6708'+dw.getDate()+'\u65e5\uff08'+days[dw.getDay()]+'\uff09';
-  if(isLeg)lbl+=' \u1f534\u6cd5\u5b9a\u4f11\u65e5';
+  let lbl=dw.getFullYear()+'年'+(dw.getMonth()+1)+'月'+dw.getDate()+'日（'+days[dw.getDay()]+'）';
+  if(isLeg)lbl+=' 🔴法定休日';
   document.getElementById('dlbl').textContent=lbl;
   const list=DB.staff.filter(s=>s.company===CO);const el=document.getElementById('sg');
-  if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:12px;padding:18px;text-align:center;grid-column:1/-1;">\u7ba1\u7406\u30bf\u30d6\u304b\u3089\u30b9\u30bf\u30c3\u30d5\u3092\u8ffd\u52a0\u3057\u3066\u304f\u3060\u3055\u3044</div>';return;}
+  if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:12px;padding:18px;text-align:center;grid-column:1/-1;">管理タブからスタッフを追加してください</div>';return;}
   el.innerHTML=list.map(s=>{
     const st=getSt(s.id,t);const{total,lateMin}=calcWork(s.id,t);const wStr=total?fmtHM(total):'';
     const stc=st==='early'?'sn-in':st==='paid'?'sn-paid':'sn-'+st;
     const isSp=DB.specials.some(sp=>sp.staffId===s.id&&sp.date===t);
     const hF=DB.fare.some(f=>f.staffId===s.id&&f.date===t);const hP=DB.paid.some(p=>p.staffId===s.id&&p.date===t);
-    let tags='';if(isSp)tags+='<span class="tag tp">\u30d0\u30a4\u30c8</span>';if(hP)tags+='<span class="tag tpd">\u6709\u7d66</span>';if(hF)tags+='<span class="tag tp">\u4ea4\u901a\u8cbb\u2713</span>';
-    // \u30e9\u30f3\u30c1\u30c7\u30ea\u30c1\u30a7\u30c3\u30af\u6e08\u307f\u30bf\u30b0
-    if(isLunchEnabled(t)&&hasLunchCheck(s.id,t))tags+='<span class="tag" style="background:#FFF8E1;color:#F57F17;">\u1f371\u2713</span>';
-    if(lateMin>0)tags+='<span class="tag tlate">\u9045\u523b'+lateMin+'\u5206</span>';
+    let tags='';if(isSp)tags+='<span class="tag tp">バイト</span>';if(hP)tags+='<span class="tag tpd">有給</span>';if(hF)tags+='<span class="tag tp">交通費✓</span>';
+    // ランチデリチェック済みタグ
+    if(isLunchEnabled(t)&&hasLunchCheck(s.id,t))tags+='<span class="tag" style="background:#FFF8E1;color:#F57F17;">🍱✓</span>';
+    if(lateMin>0)tags+='<span class="tag tlate">遅刻'+lateMin+'分</span>';
     return`<button class="sb ${stc}" onclick="tapS(${s.id})"><div class="av">${ini(s.name)}</div><div class="sn">${s.name}${tags}</div><div class="ss">${stLbl(st)}${wStr?' '+wStr:''}</div></button>`;
   }).join('');
 }
 
-// \u2550\u2550\u2550 \u6253\u523b\u30e2\u30fc\u30c0\u30eb \u2550\u2550\u2550
+// ═══ 打刻モーダル ═══
 function tapS(sid){
   const t=todayStr();const staff=DB.staff.find(s=>s.id===sid);const st=getSt(sid,t);
   const{total,breakdown,otA,otB,otC,otD,lateMin,earlyLeaveMin}=calcWork(sid,t);pSid=sid;
   document.getElementById('mn').textContent=staff.name;
-  let info='\u73fe\u5728\u6642\u523b: <b>'+nowStr()+'</b>';
-  if(isLegalHoliday(t))info+='<br><span style="color:#E24B4A;">\u26a0 \u6cd5\u5b9a\u4f11\u65e5\uff08\u4f11\u65e5\u5272\u5897\u5bfe\u8c61\uff09</span>';
-  if(total){info+='<br>\u5b9f\u50cd: <b>'+fmtHM(total)+'</b>';if(breakdown)Object.entries(breakdown).forEach(([k,v])=>{if(v>0)info+='<br>'+k+': <b>'+fmtHM(v)+'</b>';});}
-  if(lateMin>0)info+='<br><span style="color:#C62828;font-weight:600;">\u9045\u523b: '+fmtMin(lateMin)+'</span>';
-  if(earlyLeaveMin>0)info+='<br><span style="color:#E65100;font-weight:600;">\u65e9\u9000: '+fmtMin(earlyLeaveMin)+'</span>';
-  if(otA>0)info+='<br>\u6642\u9593\u5916A(\u6cd5\u5b9a\u5185): <b>'+fmtHM(otA)+'</b>';
-  if(otB>0)info+='<br>\u6642\u9593\u5916B(\u6cd5\u5b9a\u5916): <b>'+fmtHM(otB)+'</b>';
-  if(otC>0)info+='<br>\u6642\u9593\u5916C(\u4f11\u65e5): <b>'+fmtHM(otC)+'</b>';
-  if(otD>0)info+='<br>\u6642\u9593\u5916D(\u6df1\u591c): <b>'+fmtHM(otD)+'</b>';
-  if(DB.specials.some(s=>s.staffId===sid&&s.date===t))info+='<br><span style="color:#BA7517;">\u30d0\u30a4\u30c8\u67a0\uff08\u652f\u7d66\u9805\u76ee4\uff09\u3068\u3057\u3066\u96c6\u8a08</span>';
+  let info='現在時刻: <b>'+nowStr()+'</b>';
+  if(isLegalHoliday(t))info+='<br><span style="color:#E24B4A;">⚠ 法定休日（休日割増対象）</span>';
+  if(total){info+='<br>実働: <b>'+fmtHM(total)+'</b>';if(breakdown)Object.entries(breakdown).forEach(([k,v])=>{if(v>0)info+='<br>'+k+': <b>'+fmtHM(v)+'</b>';});}
+  if(lateMin>0)info+='<br><span style="color:#C62828;font-weight:600;">遅刻: '+fmtMin(lateMin)+'</span>';
+  if(earlyLeaveMin>0)info+='<br><span style="color:#E65100;font-weight:600;">早退: '+fmtMin(earlyLeaveMin)+'</span>';
+  if(otA>0)info+='<br>時間外A(法定内): <b>'+fmtHM(otA)+'</b>';
+  if(otB>0)info+='<br>時間外B(法定外): <b>'+fmtHM(otB)+'</b>';
+  if(otC>0)info+='<br>時間外C(休日): <b>'+fmtHM(otC)+'</b>';
+  if(otD>0)info+='<br>時間外D(深夜): <b>'+fmtHM(otD)+'</b>';
+  if(DB.specials.some(s=>s.staffId===sid&&s.date===t))info+='<br><span style="color:#BA7517;">バイト枠（支給項目4）として集計</span>';
   document.getElementById('mi').innerHTML=info;
   const hF=DB.fare.some(f=>f.staffId===sid&&f.date===t);const hP=DB.paid.some(p=>p.staffId===sid&&p.date===t);
   let btns='';
-  if(st==='paid'){document.getElementById('ma').textContent='\u6709\u7d66\u53d6\u5f97\u4e2d';btns=`<button class="mc mi-in" onclick="doP(${sid},'in')">\u51fa\u52e4\uff08\u6709\u7d66\u53d6\u6d88\uff09</button>`;}
-  else if(st==='none'||st==='out'){document.getElementById('ma').textContent='\u6253\u523b\u3057\u3066\u304f\u3060\u3055\u3044';btns=`<button class="mc mi-in" onclick="doP(${sid},'in')">\u51fa\u52e4</button><button class="mc mi-early" onclick="doP(${sid},'early')" style="margin-top:7px;">\u65e9\u51fa\uff08\u3053\u306e\u6642\u523b\u304b\u3089\u52e4\u52d9\uff09</button>`;}
-  else if(st==='in'||st==='resume'||st==='early'){document.getElementById('ma').textContent='\u4f11\u61a9\u958b\u59cb \u307e\u305f\u306f \u9000\u52e4\u3057\u307e\u3059\u304b\uff1f';btns=`<button class="mc mi-break" onclick="doP(${sid},'break')">\u4f11\u61a9\u958b\u59cb</button><button class="mc mi-out" onclick="doP(${sid},'out')" style="margin-top:7px;">\u9000\u52e4</button>`;}
-  else if(st==='break'){document.getElementById('ma').textContent='\u52e4\u52d9\u518d\u958b\u3057\u307e\u3059\u304b\uff1f';btns=`<button class="mc mi-resume" onclick="doP(${sid},'resume')">\u52e4\u52d9\u518d\u958b</button>`;}
-  if(!hF&&staff.fare>0)btns+=`<button class="mc mi-fare" onclick="doFare(${sid})" style="margin-top:7px;">\u4ea4\u901a\u8cbb\u7533\u8acb\uff08\u672c\u65e5\u5206\uff09</button>`;
-  else if(hF)btns+=`<div style="text-align:center;color:var(--gd);font-size:11px;margin-top:7px;">\u4ea4\u901a\u8cbb\u7533\u8acb\u6e08\u307f \u25cb</div>`;
-  if(!hP)btns+=`<button class="mc mi-paid" onclick="openPD(${sid})" style="margin-top:7px;">\u6709\u7d66\u7533\u8acb</button>`;
-  // \u30e9\u30f3\u30c1\u30c7\u30ea\u30c1\u30a7\u30c3\u30af\u30dc\u30c3\u30af\u30b9\uff08\u7ba1\u7406\u8005\u304c\u30ab\u30ec\u30f3\u30c0\u30fc\u3067\u6709\u52b9\u306b\u3057\u305f\u65e5\u306e\u307f\u8868\u793a\uff09
+  if(st==='paid'){document.getElementById('ma').textContent='有給取得中';btns=`<button class="mc mi-in" onclick="doP(${sid},'in')">出勤（有給取消）</button>`;}
+  else if(st==='none'||st==='out'){document.getElementById('ma').textContent='打刻してください';btns=`<button class="mc mi-in" onclick="doP(${sid},'in')">出勤</button><button class="mc mi-early" onclick="doP(${sid},'early')" style="margin-top:7px;">早出（この時刻から勤務）</button>`;}
+  else if(st==='in'||st==='resume'||st==='early'){document.getElementById('ma').textContent='休憩開始 または 退勤しますか？';btns=`<button class="mc mi-break" onclick="doP(${sid},'break')">休憩開始</button><button class="mc mi-out" onclick="doP(${sid},'out')" style="margin-top:7px;">退勤</button>`;}
+  else if(st==='break'){document.getElementById('ma').textContent='勤務再開しますか？';btns=`<button class="mc mi-resume" onclick="doP(${sid},'resume')">勤務再開</button>`;}
+  if(!hF&&staff.fare>0)btns+=`<button class="mc mi-fare" onclick="doFare(${sid})" style="margin-top:7px;">交通費申請（本日分）</button>`;
+  else if(hF)btns+=`<div style="text-align:center;color:var(--gd);font-size:11px;margin-top:7px;">交通費申請済み ○</div>`;
+  if(!hP)btns+=`<button class="mc mi-paid" onclick="openPD(${sid})" style="margin-top:7px;">有給申請</button>`;
+  // ランチデリチェックボックス（管理者がカレンダーで有効にした日のみ表示）
   if(isLunchEnabled(t)){
     const checked=DB.lunch.some(l=>l.staffId===sid&&l.date===t&&l.company===CO);
     btns+=`<div onclick="toggleLunchCheck(${sid},'${t}')" style="margin-top:9px;padding:13px;background:${checked?'#FFFDE7':'#FFF8E1'};border:${checked?'2px solid #FFD54F':'1px solid #FFD54F'};border-radius:11px;display:flex;align-items:center;gap:12px;cursor:pointer;">
       <div style="width:24px;height:24px;border-radius:6px;border:2px solid ${checked?'var(--gn)':'#FFB300'};background:${checked?'var(--gn)':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        ${checked?'<span style=\"color:#fff;font-size:15px;font-weight:700;line-height:1;\">\u2713</span>':''}
+        ${checked?'<span style=\"color:#fff;font-size:15px;font-weight:700;line-height:1;\">✓</span>':''}
       </div>
       <div>
-        <div style="font-size:14px;font-weight:700;color:#5D4037;">\u1f371 \u30e9\u30f3\u30c1\u30c7\u30ea</div>
-        <div style="font-size:11px;color:${checked?'var(--gd)':'#795548'};">${checked?'\u6ce8\u6587\u3042\u308a\uff08\u30bf\u30c3\u30d7\u3067\u89e3\u9664\uff09':'\u6ce8\u6587\u3059\u308b\u5834\u5408\u306f\u30bf\u30c3\u30d7'}</div>
+        <div style="font-size:14px;font-weight:700;color:#5D4037;">🍱 ランチデリ</div>
+        <div style="font-size:11px;color:${checked?'var(--gd)':'#795548'};">${checked?'注文あり（タップで解除）':'注文する場合はタップ'}</div>
       </div>
     </div>`;
   }
-  btns+=`<button class="mcc" onclick="closePM()" style="margin-top:7px;">\u9589\u3058\u308b</button>`;
+  btns+=`<button class="mcc" onclick="closePM()" style="margin-top:7px;">閉じる</button>`;
   document.getElementById('mb').innerHTML=btns;document.getElementById('pm').classList.remove('hidden');
 }
 function closePM(e){if(!e||e.target===document.getElementById('pm'))document.getElementById('pm').classList.add('hidden');}
-function doP(sid,action){const s=DB.staff.find(x=>x.id===sid);const n=new Date();DB.records.unshift({id:Date.now(),staffId:sid,staffName:s.name,company:CO,type:action,date:todayStr(),ts:nowStr(),tsISO:n.toISOString()});sDB();document.getElementById('pm').classList.add('hidden');showToast(s.name+' \u2014 '+TL[action]);renderSG();}
-function doFare(sid){const s=DB.staff.find(x=>x.id===sid);DB.fare.push({id:Date.now(),staffId:sid,staffName:s.name,company:CO,date:todayStr(),amount:s.fare});sDB();document.getElementById('pm').classList.add('hidden');showToast(s.name+' \u2014 \u4ea4\u901a\u8cbb\u7533\u8acb\uff08'+s.fare.toLocaleString()+'\u5186\uff09');renderSG();}
+function doP(sid,action){const s=DB.staff.find(x=>x.id===sid);const n=new Date();DB.records.unshift({id:Date.now(),staffId:sid,staffName:s.name,company:CO,type:action,date:todayStr(),ts:nowStr(),tsISO:n.toISOString()});sDB();document.getElementById('pm').classList.add('hidden');showToast(s.name+' — '+TL[action]);renderSG();}
+function doFare(sid){const s=DB.staff.find(x=>x.id===sid);DB.fare.push({id:Date.now(),staffId:sid,staffName:s.name,company:CO,date:todayStr(),amount:s.fare});sDB();document.getElementById('pm').classList.add('hidden');showToast(s.name+' — 交通費申請（'+s.fare.toLocaleString()+'円）');renderSG();}
 function openPD(sid){pPaid=sid;document.getElementById('pd-dt').value=todayStr();document.getElementById('pd-tp').value='full';document.getElementById('pd-mo').value='';document.getElementById('pm').classList.add('hidden');document.getElementById('pdm').classList.remove('hidden');}
 function closePD(e){if(!e||e.target===document.getElementById('pdm'))document.getElementById('pdm').classList.add('hidden');}
-function savePD(){const s=DB.staff.find(x=>x.id===pPaid);const date=document.getElementById('pd-dt').value;const type=document.getElementById('pd-tp').value;DB.paid.push({id:Date.now(),staffId:pPaid,staffName:s.name,company:CO,date,type,memo:document.getElementById('pd-mo').value});sDB();document.getElementById('pdm').classList.add('hidden');showToast(s.name+' \u2014 \u6709\u7d66\u7533\u8acb\uff08'+{full:'\u5168\u65e5',am:'\u5348\u524d\u534a\u65e5',pm:'\u5348\u5f8c\u534a\u65e5'}[type]+'\uff09');renderSG();}
+function savePD(){const s=DB.staff.find(x=>x.id===pPaid);const date=document.getElementById('pd-dt').value;const type=document.getElementById('pd-tp').value;DB.paid.push({id:Date.now(),staffId:pPaid,staffName:s.name,company:CO,date,type,memo:document.getElementById('pd-mo').value});sDB();document.getElementById('pdm').classList.add('hidden');showToast(s.name+' — 有給申請（'+{full:'全日',am:'午前半日',pm:'午後半日'}[type]+'）');renderSG();}
 
-// \u2550\u2550\u2550 \u30ed\u30b0 \u2550\u2550\u2550
+// ═══ ログ ═══
 
 function initLogYM(){
   const sel=document.getElementById('log-ym');
@@ -817,7 +817,7 @@ function initLogYM(){
   for(let i=0;i<12;i++){
     const d=new Date(n.getFullYear(),n.getMonth()-i,1);
     const val=d.getFullYear()+'-'+pad(d.getMonth()+1);
-    const lbl=d.getFullYear()+'\u5e74'+(d.getMonth()+1)+'\u6708';
+    const lbl=d.getFullYear()+'年'+(d.getMonth()+1)+'月';
     sel.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${lbl}</option>`;
   }
   if(cur)sel.value=cur;
@@ -830,51 +830,51 @@ function updateLogTermLabel(){
   const ym=sel.value;
   if(!ym)return;
   const t=getTermDates(ym);
-  lbl.textContent='\u96c6\u8a08\u671f\u9593: '+t.start+' \u301c '+t.end;
+  lbl.textContent='集計期間: '+t.start+' 〜 '+t.end;
 }
 
 function renderLog(){
   const el=document.getElementById('ll');const t=todayStr();
   const all=[...DB.records.filter(r=>r.date===t&&r.company===CO),...DB.fare.filter(f=>f.date===t&&f.company===CO).map(f=>({...f,type:'fare',ts:'--:--:--'})),...DB.paid.filter(p=>p.date===t&&p.company===CO).map(p=>({...p,type:'paid',ts:'--:--:--'}))].sort((a,b)=>a.ts<b.ts?1:-1);
   const cls={in:'b-in',out:'b-out',break:'b-break',resume:'b-resume',early:'b-early',fare:'b-fare',paid:'b-paid'};
-  el.innerHTML=all.length?all.map(r=>`<div class="lr"><span class="badge ${cls[r.type]||'b-in'}">${TL[r.type]||r.type}</span><span class="lw">${r.staffName}</span><span class="lt">${r.ts}</span></div>`).join(''):'<div style="color:var(--t2);font-size:12px;padding:14px;text-align:center;">\u672c\u65e5\u306e\u6253\u523b\u304c\u3042\u308a\u307e\u305b\u3093</div>';
+  el.innerHTML=all.length?all.map(r=>`<div class="lr"><span class="badge ${cls[r.type]||'b-in'}">${TL[r.type]||r.type}</span><span class="lw">${r.staffName}</span><span class="lt">${r.ts}</span></div>`).join(''):'<div style="color:var(--t2);font-size:12px;padding:14px;text-align:center;">本日の打刻がありません</div>';
 }
 
-// \u2550\u2550\u2550 \u30ec\u30dd\u30fc\u30c8 \u2550\u2550\u2550
-function initMS(){['rm','im'].forEach(id=>{const sel=document.getElementById(id);if(sel.options.length>1)return;const n=new Date();for(let i=0;i<6;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);sel.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}\u5e74${d.getMonth()+1}\u6708</option>`;}});}
+// ═══ レポート ═══
+function initMS(){['rm','im'].forEach(id=>{const sel=document.getElementById(id);if(sel.options.length>1)return;const n=new Date();for(let i=0;i<6;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);sel.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}});}
 function renderRep(){
   const ym=document.getElementById('rm').value;if(!ym)return;
   const list=DB.staff.filter(s=>s.company===CO);
-  // XLSX\u306e\u5217\u9806\u306b\u5408\u308f\u305b\u305fUI\u8868\u793a\uff08\u4e3b\u8981\u9805\u76ee\u306e\u307f\uff09
+  // XLSXの列順に合わせたUI表示（主要項目のみ）
   const labels=[
-    {k:'weekdays',   lbl:'\u5e73\u65e5\u51fa\u52e4', fmt:'d'},
-    {k:'holdays',    lbl:'\u4f11\u65e5\u51fa\u52e4', fmt:'d'},
-    {k:'totalMs',    lbl:'\u51fa\u52e4\u6642\u9593', fmt:'ms'},
-    {k:'totalLateMin',lbl:'\u9045\u523b',   fmt:'min'},
-    {k:'totalEarlyMin',lbl:'\u65e9\u9000',  fmt:'min'},
-    {k:'paidDays',   lbl:'\u6709\u4f11\u65e5\u6570',fmt:'d'},
-    {k:'otA',        lbl:'\u6642\u9593\u5916A', fmt:'ms'},
-    {k:'otB',        lbl:'\u6642\u9593\u5916B', fmt:'ms'},
-    {k:'otC',        lbl:'\u6642\u9593\u5916C', fmt:'ms'},
-    {k:'otD',        lbl:'\u6642\u9593\u5916D', fmt:'ms'},
-    {k:'p1Ms',       lbl:'\u652f\u7d66\u9805\u76ee1', fmt:'ms'},
-    {k:'p2Ms',       lbl:'\u652f\u7d66\u9805\u76ee2', fmt:'ms'},
-    {k:'p3Ms',       lbl:'\u652f\u7d66\u9805\u76ee3', fmt:'ms'},
-    {k:'p4Ms',       lbl:'\u652f\u7d66\u9805\u76ee4', fmt:'ms'},
-    {k:'fareCount',  lbl:'\u975e\u8ab2\u7a0e\u652f\u7d6620', fmt:'d'},
-    {k:'lunchCount', lbl:'\u63a7\u9664\u9805\u76ee1', fmt:'d'},
+    {k:'weekdays',   lbl:'平日出勤', fmt:'d'},
+    {k:'holdays',    lbl:'休日出勤', fmt:'d'},
+    {k:'totalMs',    lbl:'出勤時間', fmt:'ms'},
+    {k:'totalLateMin',lbl:'遅刻',   fmt:'min'},
+    {k:'totalEarlyMin',lbl:'早退',  fmt:'min'},
+    {k:'paidDays',   lbl:'有休日数',fmt:'d'},
+    {k:'otA',        lbl:'時間外A', fmt:'ms'},
+    {k:'otB',        lbl:'時間外B', fmt:'ms'},
+    {k:'otC',        lbl:'時間外C', fmt:'ms'},
+    {k:'otD',        lbl:'時間外D', fmt:'ms'},
+    {k:'p1Ms',       lbl:'支給項目1', fmt:'ms'},
+    {k:'p2Ms',       lbl:'支給項目2', fmt:'ms'},
+    {k:'p3Ms',       lbl:'支給項目3', fmt:'ms'},
+    {k:'p4Ms',       lbl:'支給項目4', fmt:'ms'},
+    {k:'fareCount',  lbl:'非課税支給20', fmt:'d'},
+    {k:'lunchCount', lbl:'控除項目1', fmt:'d'},
   ];
   const fmtVal=(v,fmt)=>{
     if(!v&&v!==0)return'';
     if(fmt==='ms')return fmtHM(v)||'';
-    if(fmt==='min')return v?v+'\u5206':'';
+    if(fmt==='min')return v?v+'分':'';
     if(fmt==='d')return v||'';
     return v;
   };
   document.getElementById('rth').innerHTML=`<tr>
-    <th>\u793e\u54e1\u756a\u53f7</th><th>\u540d\u524d</th>
+    <th>社員番号</th><th>名前</th>
     ${labels.map(l=>`<th>${l.lbl}</th>`).join('')}
-    <th>\u51fa\u52e4\u65e5</th>
+    <th>出勤日</th>
   </tr>`;
   let html='';
   list.forEach(s=>{
@@ -893,24 +893,24 @@ function renderRep(){
       <td>${m.weekdays+m.holdays}</td>
     </tr>`;
   });
-  // \u5408\u8a08\u884c\u306a\u3057\uff08\u6708\u6b21XLSX\u306e\u4ed5\u69d8\u901a\u308a\uff09
+  // 合計行なし（月次XLSXの仕様通り）
   document.getElementById('rtb').innerHTML=html;
   const termInfo=getTermDates(ym);
   document.getElementById('rs').innerHTML=`
-    <div class="sc"><div class="slb">\u30b9\u30bf\u30c3\u30d5\u6570</div><div class="sv">${list.length}\u540d</div></div>
-    <div class="sc"><div class="slb">\u96c6\u8a08\u671f\u9593</div><div class="sv" style="font-size:9px;color:var(--gd);">${termInfo.start}<br>\u301c${termInfo.end}</div></div>
-    <div class="sc"><div class="slb">\u5408\u8a08\u884c</div><div class="sv" style="font-size:11px;color:var(--gd);">\u306a\u3057\u2713</div></div>`;
+    <div class="sc"><div class="slb">スタッフ数</div><div class="sv">${list.length}名</div></div>
+    <div class="sc"><div class="slb">集計期間</div><div class="sv" style="font-size:9px;color:var(--gd);">${termInfo.start}<br>〜${termInfo.end}</div></div>
+    <div class="sc"><div class="slb">合計行</div><div class="sv" style="font-size:11px;color:var(--gd);">なし✓</div></div>`;
 }
 
-function updIS(){const sel=document.getElementById('isel');sel.innerHTML='<option value="">\u30b9\u30bf\u30c3\u30d5\u3092\u9078\u629e</option>';DB.staff.filter(s=>s.company===CO).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}</option>`);}
+function updIS(){const sel=document.getElementById('isel');sel.innerHTML='<option value="">スタッフを選択</option>';DB.staff.filter(s=>s.company===CO).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}</option>`);}
 
 function renderIndPreview(){
   const sid=parseInt(document.getElementById('isel').value);
   const ym=document.getElementById('im').value;
   if(!sid||!ym)return;
   const staff=DB.staff.find(s=>s.id===sid);if(!staff)return;
-  const dows=['\u65e5','\u6708','\u706b','\u6c34','\u6728','\u91d1','\u571f'];
-  // \u96c6\u8a08\u671f\u9593: \u524d\u670816\u65e5\u301c\u5f53\u670815\u65e5
+  const dows=['日','月','火','水','木','金','土'];
+  // 集計期間: 前月16日〜当月15日
   const term=getTermDates(ym);const termDates=term.dates;
   const allDay={};
   for(const date of termDates){allDay[date]=calcWork(sid,date);}
@@ -936,10 +936,10 @@ function renderIndPreview(){
     const brkR=recs.find(x2=>x2.type==='break');
     const resR=recs.find(x2=>x2.type==='resume');
     const td=(v,x='')=>`<td style="padding:3px 2px;border:1px solid var(--br);font-size:9px;text-align:center;${x}">${v}</td>`;
-    rows+=`<tr style="background:${bg};">${td(d,dc)}${td(dow,dc)}${td(inR?inR.ts.substring(0,5):'')}${td(brkR?brkR.ts.substring(0,5):'')}${td(resR?resR.ts.substring(0,5):'')}${td(outR?outR.ts.substring(0,5):'')}${td(fmtHM(bd['\u5e73\u65e5\u5348\u524d'])||'')}${td(fmtHM(bd['\u5e73\u65e5\u5348\u5f8c']||bd['\u5e73\u65e5\u52e4\u52d9'])||'')}${td(fmtHM(bd['\u571f\u66dc\u5348\u524d'])||'')}${td(fmtHM(bd['\u571f\u66dc\u5348\u5f8c']||bd['\u571f\u66dc\u52e4\u52d9']||bd['\u30d0\u30a4\u30c8\u67a0'])||'')}${td(r.lateMin||'',r.lateMin?'color:#C62828;font-weight:600;':'')}${td(r.earlyLeaveMin||'',r.earlyLeaveMin?'color:#E65100;font-weight:600;':'')}${td(fmtHM(otMs)||'',otMs?'color:#E65100;':'')}${td(fmtHM(r.total)||'',r.total?'font-weight:700;color:var(--gd);':'')}${td(pr?{full:'\u5168\u65e5',am:'\u5348\u524d',pm:'\u5348\u5f8c'}[pr.type]:'')}${td(fr.length?'\u25cb':'')}${td(lcT&&lc.length?lc.length:'','color:#F57F17;')}</tr>`;
+    rows+=`<tr style="background:${bg};">${td(d,dc)}${td(dow,dc)}${td(inR?inR.ts.substring(0,5):'')}${td(brkR?brkR.ts.substring(0,5):'')}${td(resR?resR.ts.substring(0,5):'')}${td(outR?outR.ts.substring(0,5):'')}${td(fmtHM(bd['平日午前'])||'')}${td(fmtHM(bd['平日午後']||bd['平日勤務'])||'')}${td(fmtHM(bd['土曜午前'])||'')}${td(fmtHM(bd['土曜午後']||bd['土曜勤務']||bd['バイト枠'])||'')}${td(r.lateMin||'',r.lateMin?'color:#C62828;font-weight:600;':'')}${td(r.earlyLeaveMin||'',r.earlyLeaveMin?'color:#E65100;font-weight:600;':'')}${td(fmtHM(otMs)||'',otMs?'color:#E65100;':'')}${td(fmtHM(r.total)||'',r.total?'font-weight:700;color:var(--gd);':'')}${td(pr?{full:'全日',am:'午前',pm:'午後'}[pr.type]:'')}${td(fr.length?'○':'')}${td(lcT&&lc.length?lc.length:'','color:#F57F17;')}</tr>`;
   }
   rows+=`<tr style="background:#E8F5E9;font-weight:700;font-size:9px;">
-    <td colspan="6" style="padding:4px 4px;border:1px solid var(--br);color:var(--gd);">\u6708\u5408\u8a08\uff08${wkD}\u65e5\uff09</td>
+    <td colspan="6" style="padding:4px 4px;border:1px solid var(--br);color:var(--gd);">月合計（${wkD}日）</td>
     <td colspan="4" style="padding:4px 2px;border:1px solid var(--br);text-align:center;color:var(--gd);">${fmtHM(grand)}</td>
     <td style="padding:4px 2px;border:1px solid var(--br);text-align:center;color:#C62828;">${lT||''}</td>
     <td style="padding:4px 2px;border:1px solid var(--br);text-align:center;color:#E65100;">${eT||''}</td>
@@ -948,10 +948,10 @@ function renderIndPreview(){
     <td style="padding:4px 2px;border:1px solid var(--br);text-align:center;">${fT||''}</td>
     <td style="padding:4px 2px;border:1px solid var(--br);text-align:center;color:#F57F17;">${lcT||''}</td>
   </tr>`;
-  const H=['\u65e5','\u66dc','\u51fa\u52e4','\u4f11\u61a9','\u518d\u958b','\u9000\u52e4','\u5e73\u65e5AM','\u5e73\u65e5PM','\u571f\u66dcAM','\u571f\u66dcPM','\u9045\u523b','\u65e9\u9000','\u6642\u9593\u5916','\u65e5\u5408\u8a08','\u6709\u7d66','\u4ea4\u901a\u8cbb','\u1f371'];
+  const H=['日','曜','出勤','休憩','再開','退勤','平日AM','平日PM','土曜AM','土曜PM','遅刻','早退','時間外','日合計','有給','交通費','🍱'];
   const thS=(i)=>i>=6&&i<=9?'background:#E8F5E9;color:var(--gd);':i===13?'background:#E1F5EE;color:#085041;':i>=2&&i<=5?'background:#FFF8E1;color:#5D4037;':'background:var(--gy);color:var(--t2);';
   const tbl=`<table style="border-collapse:collapse;min-width:500px;width:100%;"><thead><tr>${H.map((h,i)=>`<th style="${thS(i)}padding:4px 2px;border:1px solid var(--br);font-size:9px;font-weight:600;white-space:nowrap;">${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
-  document.getElementById('indm-title').textContent=staff.name+' '+ym+' \uff08'+term.start+' \u301c '+term.end+'\uff09';
+  document.getElementById('indm-title').textContent=staff.name+' '+ym+' （'+term.start+' 〜 '+term.end+'）';
   document.getElementById('indm-body').innerHTML=tbl;
   document.getElementById('indm').classList.remove('hidden');
 }
@@ -961,7 +961,7 @@ function loadXLSX(cb){if(window.XLSX){cb();return;}const sc=document.createEleme
 function msToHHMM(ms){if(!ms||ms<=0)return'';const m=Math.floor(ms/60000);return Math.floor(m/60)+':'+pad(m%60);}
 function minToHHMM(min){if(!min||min<=0)return'';return Math.floor(min/60)+':'+pad(min%60);}
 
-const PAY_HDR=['\u793e\u54e1\u756a\u53f7','\u793e\u54e1\u6c0f\u540d','\u5e73\u65e5\u51fa\u52e4','\u4f11\u65e5\u51fa\u52e4','\u51fa\u52e4\u6642\u9593','\u9045\u523b','\u65e9\u9000','\u6709\u4f11\u65e5\u6570','\u305d\u306e\u4ed6\u4f11\u65e5','\u751f\u7406\u4f11\u6687','\u4f11\u8077\u65e5\u6570','\u6b20\u52e4\u65e5\u6570','\u63a7\u9664\u65e5\u6570','\u63a7\u9664\u6642\u9593','\u6642\u9593\u5916\u624b\u5f53\u6642\u9593A','\u6642\u9593\u5916\u624b\u5f53\u6642\u9593B','\u6642\u9593\u5916\u624b\u5f53\u6642\u9593C','\u6642\u9593\u5916\u624b\u5f53\u6642\u9593D','\u6642\u9593\u5916\u624b\u5f53\u6642\u9593E','\u56de\u6570\u624b\u5f531','\u56de\u6570\u624b\u5f532','\u56de\u6570\u624b\u5f533','\u652f\u7d66\u9805\u76ee1','\u652f\u7d66\u9805\u76ee2','\u652f\u7d66\u9805\u76ee3','\u652f\u7d66\u9805\u76ee4','\u975e\u8ab2\u7a0e\u652f\u7d6620','\u63a7\u9664\u9805\u76ee1'];
+const PAY_HDR=['社員番号','社員氏名','平日出勤','休日出勤','出勤時間','遅刻','早退','有休日数','その他休日','生理休暇','休職日数','欠勤日数','控除日数','控除時間','時間外手当時間A','時間外手当時間B','時間外手当時間C','時間外手当時間D','時間外手当時間E','回数手当1','回数手当2','回数手当3','支給項目1','支給項目2','支給項目3','支給項目4','非課税支給20','控除項目1'];
 
 function makePayRow(s,m,lunchCount){
   const otE=Math.max(0,(m.otB+m.otC)-60*3600000);
@@ -974,7 +974,7 @@ function makePayRow(s,m,lunchCount){
     m.fareCount||'',lunchCount||''];
 }
 
-function exportXLSX(){const ym=document.getElementById('rm').value;if(!ym){showToast('\u6708\u3092\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044');return;}showToast('XLSX\u3092\u751f\u6210\u4e2d...');loadXLSX(()=>doExportMonthly(ym));}
+function exportXLSX(){const ym=document.getElementById('rm').value;if(!ym){showToast('月を選択してください');return;}showToast('XLSXを生成中...');loadXLSX(()=>doExportMonthly(ym));}
 function doExportMonthly(ym){
   const list=DB.staff.filter(s=>s.company===CO);
   const payAoa=[PAY_HDR];
@@ -986,26 +986,26 @@ function doExportMonthly(ym){
     const mForRow={...m,fareCount};
     payAoa.push(makePayRow(s,mForRow,lunchCount));
   });
-  // \u5408\u8a08\u884c\u306a\u3057\uff08\u6708\u6b21XLSX\u306f\u5408\u8a08\u884c\u4e0d\u8981\uff09
+  // 合計行なし（月次XLSXは合計行不要）
   const wb=XLSX.utils.book_new();
   const ws1=XLSX.utils.aoa_to_sheet(payAoa);
   ws1['!cols']=PAY_HDR.map((_,i)=>({wch:i<2?14:10}));
-  XLSX.utils.book_append_sheet(wb,ws1,'\u7d66\u4e0e\u53d6\u308a\u8fbc\u307f');
-  XLSX.writeFile(wb,'\u9999\u5eb8\u4f1a_\u7d66\u4e0e\u53d6\u8fbc_'+ym+'.xlsx');
-  showToast('\u6708\u6b21XLSX\u3092\u30c0\u30a6\u30f3\u30ed\u30fc\u30c9\u3057\u307e\u3057\u305f');
+  XLSX.utils.book_append_sheet(wb,ws1,'給与取り込み');
+  XLSX.writeFile(wb,'香庸会_給与取込_'+ym+'.xlsx');
+  showToast('月次XLSXをダウンロードしました');
 }
 
-function exportIndXLSX(){const sid=parseInt(document.getElementById('isel').value);const ym=document.getElementById('im').value;if(!sid||!ym){showToast('\u30b9\u30bf\u30c3\u30d5\u3068\u6708\u3092\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044');return;}showToast('XLSX\u3092\u751f\u6210\u4e2d...');loadXLSX(()=>doExportInd(sid,ym));}
+function exportIndXLSX(){const sid=parseInt(document.getElementById('isel').value);const ym=document.getElementById('im').value;if(!sid||!ym){showToast('スタッフと月を選択してください');return;}showToast('XLSXを生成中...');loadXLSX(()=>doExportInd(sid,ym));}
 function doExportInd(sid,ym){
   const staff=DB.staff.find(s=>s.id===sid);
-  const dows=['\u65e5','\u6708','\u706b','\u6c34','\u6728','\u91d1','\u571f'];
-  // \u96c6\u8a08\u671f\u9593: \u524d\u670816\u65e5\u301c\u5f53\u670815\u65e5
+  const dows=['日','月','火','水','木','金','土'];
+  // 集計期間: 前月16日〜当月15日
   const term=getTermDates(ym);const termDates=term.dates;
   const[yr,mo]=ym.split('-').map(Number);
-  const IND_HDR=['\u65e5\u4ed8','\u66dc\u65e5','\u795d','\u51fa\u52e4','\u4f11\u61a9\u958b\u59cb','\u52e4\u52d9\u518d\u958b','\u9000\u52e4','\u65e9\u51fa','\u5e73\u65e5AM','\u5e73\u65e5PM','\u571f\u66dcAM','\u571f\u66dcPM','\u4f11\u65e5\u52e4\u52d9','\u6642\u9593\u5916(A+B)','\u6df1\u591c','\u9045\u523b(\u5206)','\u65e9\u9000(\u5206)','\u65e5\u5408\u8a08','\u6709\u7d66','\u4ea4\u901a\u8cbb','\u30e9\u30f3\u30c1\u30c7\u30ea'];
-  const aoa=[[staff.name+' \u500b\u4eba\u52e4\u52d9\u6642\u9593\u660e\u7d30 '+ym+' \uff08'+term.start+' \u301c '+term.end+'\uff09'],[],IND_HDR];
+  const IND_HDR=['日付','曜日','祝','出勤','休憩開始','勤務再開','退勤','早出','平日AM','平日PM','土曜AM','土曜PM','休日勤務','時間外(A+B)','深夜','遅刻(分)','早退(分)','日合計','有給','交通費','ランチデリ'];
+  const aoa=[[staff.name+' 個人勤務時間明細 '+ym+' （'+term.start+' 〜 '+term.end+'）'],[],IND_HDR];
   let grand=0,wkDays=0,pTotal=0,fTotal=0,lTotal=0,lateTotal=0,earlyTotal=0;
-  // \u9031\u6b21OT\u632f\u308a\u66ff\u3048\u8fbc\u307f\u3067\u8a08\u7b97
+  // 週次OT振り替え込みで計算
   const allDay={};
   for(const date of termDates){allDay[date]=calcWork(sid,date);}
   const weekGroups=[];let cw={};
@@ -1013,7 +1013,7 @@ function doExportInd(sid,ym){
   const adjusted={};weekGroups.forEach(wk=>{Object.assign(adjusted,applyWeeklyOT(wk));});
   for(const date of termDates){
     const dt=new Date(date);
-    const dow=dows[dt.getDay()];const hol=isHoliday(date)?'\u795d':'';
+    const dow=dows[dt.getDay()];const hol=isHoliday(date)?'祝':'';
     const recs=DB.records.filter(r=>r.staffId===sid&&r.date===date).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
     const inRec=recs.find(r=>r.type==='in'||r.type==='early');const outRec=[...recs].reverse().find(r=>r.type==='out');const earlyRec=recs.find(r=>r.type==='early');
     const r=adjusted[date]||{};const bd=r.breakdown||{};
@@ -1023,7 +1023,7 @@ function doExportInd(sid,ym){
     if(r.total>0)wkDays++;grand+=r.total||0;
     if(pr)pTotal+=(pr.type==='full'?1:0.5);fTotal+=fr.length;lTotal+=lc.length;
     lateTotal+=(r.lateMin||0);earlyTotal+=(r.earlyLeaveMin||0);
-        // \u6253\u523b\u4e00\u89a7\uff08\u5168\u30bf\u30a4\u30d7\u3092\u6642\u523b\u9806\u306b\u53d6\u5f97\uff09
+        // 打刻一覧（全タイプを時刻順に取得）
     const brkRec=recs.find(r2=>r2.type==='break');
     const resRec=recs.find(r2=>r2.type==='resume');
     aoa.push([mo+'/'+d,dow,hol,
@@ -1031,23 +1031,23 @@ function doExportInd(sid,ym){
       brkRec?brkRec.ts.substring(0,5):'',
       resRec?resRec.ts.substring(0,5):'',
       outRec?outRec.ts.substring(0,5):'',
-      earlyRec?'\u25cb':'',
-      msToHHMM(bd['\u5e73\u65e5\u5348\u524d'])||'',msToHHMM(bd['\u5e73\u65e5\u5348\u5f8c']||bd['\u5e73\u65e5\u52e4\u52d9'])||'',
-      msToHHMM(bd['\u571f\u66dc\u5348\u524d'])||'',msToHHMM(bd['\u571f\u66dc\u5348\u5f8c']||bd['\u571f\u66dc\u52e4\u52d9']||bd['\u30d0\u30a4\u30c8\u67a0'])||'',
-      msToHHMM(bd['\u4f11\u65e5\u52e4\u52d9'])||'',msToHHMM((r.otA||0)+(r.otB||0))||'',msToHHMM(r.otD||0)||'',
+      earlyRec?'○':'',
+      msToHHMM(bd['平日午前'])||'',msToHHMM(bd['平日午後']||bd['平日勤務'])||'',
+      msToHHMM(bd['土曜午前'])||'',msToHHMM(bd['土曜午後']||bd['土曜勤務']||bd['バイト枠'])||'',
+      msToHHMM(bd['休日勤務'])||'',msToHHMM((r.otA||0)+(r.otB||0))||'',msToHHMM(r.otD||0)||'',
       r.lateMin||'',r.earlyLeaveMin||'',msToHHMM(r.total)||'',
-      pr?{full:'\u5168\u65e5',am:'\u5348\u524d\u534a\u65e5',pm:'\u5348\u5f8c\u534a\u65e5'}[pr.type]:'',
-      fr.length?'\u25cb':'',lc.length?lc.length:'']);
+      pr?{full:'全日',am:'午前半日',pm:'午後半日'}[pr.type]:'',
+      fr.length?'○':'',lc.length?lc.length:'']);
   }
   aoa.push([]);
-  aoa.push(['\u6708\u5408\u8a08','','','','','','','','','','','',lateTotal||'',earlyTotal||'',msToHHMM(grand),pTotal||'',fTotal||'',lTotal||'']);
-  aoa.push(['\u51fa\u52e4\u65e5\u6570: '+wkDays+'\u65e5']);
+  aoa.push(['月合計','','','','','','','','','','','',lateTotal||'',earlyTotal||'',msToHHMM(grand),pTotal||'',fTotal||'',lTotal||'']);
+  aoa.push(['出勤日数: '+wkDays+'日']);
   const wb=XLSX.utils.book_new();
   const ws1=XLSX.utils.aoa_to_sheet(aoa);
   ws1['!cols']=IND_HDR.map((_,i)=>({wch:i===0?7:i<3?5:i<8?7:9}));
   ws1['!merges']=[{s:{r:0,c:0},e:{r:0,c:IND_HDR.length-1}}];
-  XLSX.utils.book_append_sheet(wb,ws1,'\u500b\u4eba\u660e\u7d30');
-  // \u7d66\u4e0e\u53d6\u308a\u8fbc\u307f\u30b7\u30fc\u30c8\uff0828\u5217\u56fa\u5b9a\uff09
+  XLSX.utils.book_append_sheet(wb,ws1,'個人明細');
+  // 給与取り込みシート（28列固定）
   const m=calcMonthSummary(sid,ym);
   const lunchCount=lunchCntInd;
   const fareCount=DB.fare.filter(f=>f.staffId===sid&&termDates.includes(f.date)).length;
@@ -1055,18 +1055,18 @@ function doExportInd(sid,ym){
   const mForRow={...m,fareCount};
   const ws2=XLSX.utils.aoa_to_sheet([PAY_HDR,makePayRow(staff,mForRow,lunchCount)]);
   ws2['!cols']=PAY_HDR.map((_,i)=>({wch:i<2?14:10}));
-  XLSX.utils.book_append_sheet(wb,ws2,'\u7d66\u4e0e\u53d6\u308a\u8fbc\u307f');
-  XLSX.writeFile(wb,staff.name+'_'+ym+'.xlsx');showToast(staff.name+'\u306e\u500b\u4ebaXLSX\u3092\u30c0\u30a6\u30f3\u30ed\u30fc\u30c9\u3057\u307e\u3057\u305f');
+  XLSX.utils.book_append_sheet(wb,ws2,'給与取り込み');
+  XLSX.writeFile(wb,staff.name+'_'+ym+'.xlsx');showToast(staff.name+'の個人XLSXをダウンロードしました');
 }
 
-// \u2550\u2550\u2550 \u30b9\u30bf\u30c3\u30d5\u7ba1\u7406 \u2550\u2550\u2550
+// ═══ スタッフ管理 ═══
 function renderAL(){
-  const el=document.getElementById('asl');const tl={contract:'\u5951\u7d04\u578b',free:'\u30d5\u30ea\u30fc\u578b',annual:'\u5e74\u4ff8\u578b'};
+  const el=document.getElementById('asl');const tl={contract:'契約型',free:'フリー型',annual:'年俸型'};
   const list=DB.staff.filter(s=>s.company===CO);
-  if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:12px;padding:14px;text-align:center;">\u30b9\u30bf\u30c3\u30d5\u304c\u767b\u9332\u3055\u308c\u3066\u3044\u307e\u305b\u3093</div>';return;}
+  if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:12px;padding:14px;text-align:center;">スタッフが登録されていません</div>';return;}
   el.innerHTML=list.map(s=>{
-    let ss='';if(s.type==='contract'&&s.dowShifts){const wds=['mon','tue','wed','thu','fri'];const wdA=wds.map(d=>(s.dowShifts[d]||[]).map(sh=>sh.s+'\u301c'+sh.e).join(',')).filter(Boolean);const uniq=[...new Set(wdA)];if(uniq.length===1)ss='<br><b>\u5e73\u65e5:</b> '+uniq[0];else if(uniq.length>1)ss='<br><b>\u5e73\u65e5:</b> \u66dc\u65e5\u5225\u8a2d\u5b9a\u3042\u308a';if(s.dowShifts.sat){const sa=Object.entries(s.dowShifts.sat).filter(([_,v])=>v&&v.length>0);if(sa.length)ss+='<br><b>\u571f\u66dc:</b> \u7b2c'+sa.map(([k,v])=>k+'('+v.map(x=>x.s+'\u301c'+x.e).join(')')).join(' \u7b2c');}}
-    return`<div class="si"><div class="sh"><div class="sav">${ini(s.name)}</div><div><div class="sni">${s.name}</div><div class="sdp">${tl[s.type]||''} / \u793e\u54e1\u756a\u53f7:${s.employeeId||'-'} / \u6240\u5b9a${Math.floor((s.stdMin||480)/60)}h${(s.stdMin||480)%60?(s.stdMin||480)%60+'m':''}</div></div><button class="fe" onclick="openEdit(${s.id})">\u7de8\u96c6</button><button class="fd" onclick="delSt(${s.id})">\u524a\u9664</button></div><div class="sde"><b>\u30bf\u30a4\u30d7:</b> ${tl[s.type]||''}${s.freeEnd?'<span style="color:var(--bl);font-size:9px;font-weight:600;margin-left:4px;">\u7d42\u4e86\u30d5\u30ea\u30fc</span>':''}${s.type==='contract'?'<br><b>\u4f11\u61a9:</b> '+s.breakMin+'\u5206':''}${ss}<br><b>\u4ea4\u901a\u8cbb:</b> ${s.fare||0}\u5186/\u65e5</div></div>`;
+    let ss='';if(s.type==='contract'&&s.dowShifts){const wds=['mon','tue','wed','thu','fri'];const wdA=wds.map(d=>(s.dowShifts[d]||[]).map(sh=>sh.s+'〜'+sh.e).join(',')).filter(Boolean);const uniq=[...new Set(wdA)];if(uniq.length===1)ss='<br><b>平日:</b> '+uniq[0];else if(uniq.length>1)ss='<br><b>平日:</b> 曜日別設定あり';if(s.dowShifts.sat){const sa=Object.entries(s.dowShifts.sat).filter(([_,v])=>v&&v.length>0);if(sa.length)ss+='<br><b>土曜:</b> 第'+sa.map(([k,v])=>k+'('+v.map(x=>x.s+'〜'+x.e).join(')')).join(' 第');}}
+    return`<div class="si"><div class="sh"><div class="sav">${ini(s.name)}</div><div><div class="sni">${s.name}</div><div class="sdp">${tl[s.type]||''} / 社員番号:${s.employeeId||'-'} / 所定${Math.floor((s.stdMin||480)/60)}h${(s.stdMin||480)%60?(s.stdMin||480)%60+'m':''}</div></div><button class="fe" onclick="openEdit(${s.id})">編集</button><button class="fd" onclick="delSt(${s.id})">削除</button></div><div class="sde"><b>タイプ:</b> ${tl[s.type]||''}${s.freeEnd?'<span style="color:var(--bl);font-size:9px;font-weight:600;margin-left:4px;">終了フリー</span>':''}${s.type==='contract'?'<br><b>休憩:</b> '+s.breakMin+'分':''}${ss}<br><b>交通費:</b> ${s.fare||0}円/日</div></div>`;
   }).join('');
 }
 function selDow(dow,btn){document.querySelectorAll('.dow-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.dow-panel').forEach(p=>p.classList.remove('active'));document.getElementById('dp-'+dow).classList.add('active');}
@@ -1074,7 +1074,7 @@ function selSat(n,btn){document.querySelectorAll('.sat-tab').forEach(b=>b.classL
 function makeTimeList(){
   let opts='';
   for(let i=8;i<=20;i++)for(let j=0;j<60;j+=15){
-    if(i===20&&j>0)break; // 20:00\u307e\u3067
+    if(i===20&&j>0)break; // 20:00まで
     opts+=`<option value="${pad(i)+':'+pad(j)}">`;
   }
   return opts;
@@ -1083,30 +1083,30 @@ function addShiftRow(cid,s='',e=''){
   const el=document.getElementById(cid);
   const row=document.createElement('div');
   row.className='shift-row';
-  row.innerHTML=`<div><label class="fl">\u958b\u59cb</label><select class="tsel">${makeTimeOpts(s)}</select></div><div><label class="fl">\u7d42\u4e86</label><select class="tsel">${makeTimeOpts(e)}</select></div><button class="del-btn" onclick="this.parentElement.remove()">\u524a\u9664</button>`;
+  row.innerHTML=`<div><label class="fl">開始</label><select class="tsel">${makeTimeOpts(s)}</select></div><div><label class="fl">終了</label><select class="tsel">${makeTimeOpts(e)}</select></div><button class="del-btn" onclick="this.parentElement.remove()">削除</button>`;
   el.appendChild(row);
 }
 function readRows(cid){const rows=document.querySelectorAll('#'+cid+' .shift-row');const r=[];rows.forEach(row=>{const ss=row.querySelectorAll('.tsel');const s=ss[0].value,e=ss[1].value;if(s&&e&&s!=='-'&&e!=='-')r.push({s,e});});return r;}
 function initPanels(ds){
-  // ds\u304cnull\uff08\u65b0\u898f\u8ffd\u52a0\u6642\uff09\u306f\u30c7\u30d5\u30a9\u30eb\u30c8\u30b7\u30d5\u30c8\u3092\u8a2d\u5b9a
+  // dsがnull（新規追加時）はデフォルトシフトを設定
   const defaultAM={s:'08:45',e:'12:45'};
   const defaultPM={s:'15:45',e:'19:30'};
   ['mon','tue','wed','thu','fri'].forEach(d=>{
     const el=document.getElementById('dp-'+d);
-    el.innerHTML=`<div id="sh-${d}"></div><button class="fa" onclick="addShiftRow('sh-${d}')">\uff0b \u6642\u9593\u67a0\u3092\u8ffd\u52a0</button>`;
+    el.innerHTML=`<div id="sh-${d}"></div><button class="fa" onclick="addShiftRow('sh-${d}')">＋ 時間枠を追加</button>`;
     const shifts=ds&&ds[d]?ds[d]:[defaultAM,defaultPM];
     shifts.forEach(sh=>addShiftRow('sh-'+d,sh.s,sh.e));});for(let n=1;n<=5;n++){
     const el=document.getElementById('sp-'+n);
-    el.innerHTML=`<div id="sh-sat${n}"></div><button class="fa" onclick="addShiftRow('sh-sat${n}')">\uff0b \u6642\u9593\u67a0\u3092\u8ffd\u52a0</button>`;
+    el.innerHTML=`<div id="sh-sat${n}"></div><button class="fa" onclick="addShiftRow('sh-sat${n}')">＋ 時間枠を追加</button>`;
     const satShifts=ds&&ds.sat&&ds.sat[n]?ds.sat[n]:[];
     satShifts.forEach(sh=>addShiftRow('sh-sat'+n,sh.s,sh.e));
-  }const se=document.getElementById('dp-sun');se.innerHTML=`<div id="sh-sun"></div><button class="fa" onclick="addShiftRow('sh-sun')">\uff0b \u6642\u9593\u67a0\u3092\u8ffd\u52a0</button>`;(ds&&ds.sun||[]).forEach(sh=>addShiftRow('sh-sun',sh.s,sh.e));}
-function openAdd(){eSid=null;document.getElementById('stm-t').textContent='\u30b9\u30bf\u30c3\u30d5\u3092\u8ffd\u52a0';setFft(false);document.getElementById('fn').value='';document.getElementById('feid').value='';document.getElementById('ft').value='contract';document.getElementById('fstd').value='480';document.getElementById('fbk').value='0';document.getElementById('ff').value='0';onTC();initPanels(null);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));setFft(s.freeEnd||false);
+  }const se=document.getElementById('dp-sun');se.innerHTML=`<div id="sh-sun"></div><button class="fa" onclick="addShiftRow('sh-sun')">＋ 時間枠を追加</button>`;(ds&&ds.sun||[]).forEach(sh=>addShiftRow('sh-sun',sh.s,sh.e));}
+function openAdd(){eSid=null;document.getElementById('stm-t').textContent='スタッフを追加';setFft(false);document.getElementById('fn').value='';document.getElementById('feid').value='';document.getElementById('ft').value='contract';document.getElementById('fstd').value='480';document.getElementById('fbk').value='0';document.getElementById('ff').value='0';onTC();initPanels(null);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));setFft(s.freeEnd||false);
   const f1el=document.getElementById('ff1min');
   if(f1el)f1el.value=s.free1Min!==undefined?s.free1Min:45;
   onTC();
   document.getElementById('stm').classList.remove('hidden');}
-function openEdit(id){const s=DB.staff.find(x=>x.id===id);if(!s)return;eSid=id;document.getElementById('stm-t').textContent='\u30b9\u30bf\u30c3\u30d5\u3092\u7de8\u96c6';document.getElementById('fn').value=s.name;document.getElementById('feid').value=s.employeeId||'';document.getElementById('ft').value=s.type;document.getElementById('fstd').value=s.stdMin||480;document.getElementById('fbk').value=s.breakMin!==undefined?s.breakMin:0;document.getElementById('ff').value=s.fare||0;onTC();initPanels(s.dowShifts);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));document.getElementById('stm').classList.remove('hidden');}
+function openEdit(id){const s=DB.staff.find(x=>x.id===id);if(!s)return;eSid=id;document.getElementById('stm-t').textContent='スタッフを編集';document.getElementById('fn').value=s.name;document.getElementById('feid').value=s.employeeId||'';document.getElementById('ft').value=s.type;document.getElementById('fstd').value=s.stdMin||480;document.getElementById('fbk').value=s.breakMin!==undefined?s.breakMin:0;document.getElementById('ff').value=s.fare||0;onTC();initPanels(s.dowShifts);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));document.getElementById('stm').classList.remove('hidden');}
 function closeSTM(e){if(!e||e.target===document.getElementById('stm'))document.getElementById('stm').classList.add('hidden');}
 function onTC(){
   const t=document.getElementById('ft').value;
@@ -1121,7 +1121,7 @@ function toggleFft(){
   const box=document.getElementById('fft-box');
   if(newVal==='1'){
     box.style.background='var(--gn)';box.style.borderColor='var(--gn)';
-    box.innerHTML='<span style="color:#fff;font-size:14px;font-weight:700;">\u2713</span>';
+    box.innerHTML='<span style="color:#fff;font-size:14px;font-weight:700;">✓</span>';
   } else {
     box.style.background='#fff';box.style.borderColor='var(--br)';
     box.innerHTML='';
@@ -1132,61 +1132,61 @@ function setFft(val){
   const box=document.getElementById('fft-box');
   if(val){
     box.style.background='var(--gn)';box.style.borderColor='var(--gn)';
-    box.innerHTML='<span style="color:#fff;font-size:14px;font-weight:700;">\u2713</span>';
+    box.innerHTML='<span style="color:#fff;font-size:14px;font-weight:700;">✓</span>';
   } else {
     box.style.background='#fff';box.style.borderColor='var(--br)';
     box.innerHTML='';
   }
 }
-function saveSt(){const name=document.getElementById('fn').value.trim();if(!name){showToast('\u540d\u524d\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044');return;}const eid=parseInt(document.getElementById('feid').value)||null;const type=document.getElementById('ft').value;const stdMin=parseInt(document.getElementById('fstd').value)||480;const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)?0:Math.max(0,bkRaw);const fareRaw=parseInt(document.getElementById('ff').value);const fare=isNaN(fareRaw)?0:Math.max(0,fareRaw);const freeEnd=document.getElementById('fft').value==='1';
+function saveSt(){const name=document.getElementById('fn').value.trim();if(!name){showToast('名前を入力してください');return;}const eid=parseInt(document.getElementById('feid').value)||null;const type=document.getElementById('ft').value;const stdMin=parseInt(document.getElementById('fstd').value)||480;const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)?0:Math.max(0,bkRaw);const fareRaw=parseInt(document.getElementById('ff').value);const fare=isNaN(fareRaw)?0:Math.max(0,fareRaw);const freeEnd=document.getElementById('fft').value==='1';
   const free1MinEl=document.getElementById('ff1min');
-  const free1Min=free1MinEl?parseInt(free1MinEl.value):45;let ds=null;if(type==='contract'){ds={mon:readRows('sh-mon'),tue:readRows('sh-tue'),wed:readRows('sh-wed'),thu:readRows('sh-thu'),fri:readRows('sh-fri'),sat:{1:readRows('sh-sat1'),2:readRows('sh-sat2'),3:readRows('sh-sat3'),4:readRows('sh-sat4'),5:readRows('sh-sat5')},sun:readRows('sh-sun')};}if(eSid){const idx=DB.staff.findIndex(s=>s.id===eSid);if(idx>=0)DB.staff[idx]={...DB.staff[idx],name,employeeId:eid,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min};}else{const nid=Math.max(0,...DB.staff.map(s=>s.id))+1;DB.staff.push({id:nid,name,employeeId:eid,company:CO,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min});}sDB();document.getElementById('stm').classList.add('hidden');showToast(name+'\u3092\u4fdd\u5b58\u3057\u307e\u3057\u305f');renderAL();renderSG();syncToGitHub();}
-function delSt(id){const s=DB.staff.find(x=>x.id===id);if(!s||!confirm(s.name+'\u3092\u524a\u9664\u3057\u307e\u3059\u304b\uff1f'))return;DB.staff=DB.staff.filter(x=>x.id!==id);sDB();showToast(s.name+'\u3092\u524a\u9664\u3057\u307e\u3057\u305f');renderAL();renderSG();}
+  const free1Min=free1MinEl?parseInt(free1MinEl.value):45;let ds=null;if(type==='contract'){ds={mon:readRows('sh-mon'),tue:readRows('sh-tue'),wed:readRows('sh-wed'),thu:readRows('sh-thu'),fri:readRows('sh-fri'),sat:{1:readRows('sh-sat1'),2:readRows('sh-sat2'),3:readRows('sh-sat3'),4:readRows('sh-sat4'),5:readRows('sh-sat5')},sun:readRows('sh-sun')};}if(eSid){const idx=DB.staff.findIndex(s=>s.id===eSid);if(idx>=0)DB.staff[idx]={...DB.staff[idx],name,employeeId:eid,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min};}else{const nid=Math.max(0,...DB.staff.map(s=>s.id))+1;DB.staff.push({id:nid,name,employeeId:eid,company:CO,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min});}sDB();document.getElementById('stm').classList.add('hidden');showToast(name+'を保存しました');renderAL();renderSG();}
+function delSt(id){const s=DB.staff.find(x=>x.id===id);if(!s||!confirm(s.name+'を削除しますか？'))return;DB.staff=DB.staff.filter(x=>x.id!==id);sDB();showToast(s.name+'を削除しました');renderAL();renderSG();}
 
-// \u2550\u2550\u2550 \u65e5\u6b21\u30b7\u30d5\u30c8 \u2550\u2550\u2550
-function loadAS(){const list=DB.staff.filter(s=>s.company===CO);['ds-s','sp-s','rs-s'].forEach(id=>{const sel=document.getElementById(id);sel.innerHTML='<option value="">\u30b9\u30bf\u30c3\u30d5\u3092\u9078\u629e</option>';list.forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}</option>`);});document.getElementById('ds-d').value=todayStr();document.getElementById('sp-d').value=todayStr();document.getElementById('rs-d').value=todayStr();}
-function addDSRow(data){dsCnt++;const id='dsr'+dsCnt;const c=document.getElementById('ds-sh');const row=document.createElement('div');row.className='shift-row';row.id=id;row.innerHTML=`<div><label class="fl">\u958b\u59cb</label><select class="tsel">${makeTimeOpts(data?data.s:'')}</select></div><div><label class="fl">\u7d42\u4e86</label><select class="tsel">${makeTimeOpts(data?data.e:'')}</select></div><button class="del-btn" onclick="document.getElementById('${id}').remove()">\u524a\u9664</button>`;c.appendChild(row);}
-function saveDS(){const sid=parseInt(document.getElementById('ds-s').value);const date=document.getElementById('ds-d').value;if(!sid||!date){showToast('\u30b9\u30bf\u30c3\u30d5\u3068\u65e5\u4ed8\u3092\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044');return;}const shifts=readRows('ds-sh');DB.dayShifts=DB.dayShifts.filter(d=>!(d.staffId===sid&&d.date===date));DB.dayShifts.push({id:Date.now(),staffId:sid,date,shifts});sDB();showToast('\u65e5\u6b21\u30b7\u30d5\u30c8\u3092\u767b\u9332\u3057\u307e\u3057\u305f');dsCnt=0;document.getElementById('ds-sh').innerHTML='';renderDSL();}
-function renderDSL(){const el=document.getElementById('dsl');const list=DB.dayShifts.filter(d=>{const s=DB.staff.find(x=>x.id===d.staffId);return s&&s.company===CO;}).sort((a,b)=>a.date<b.date?1:-1);el.innerHTML=list.length?list.map(d=>{const s=DB.staff.find(x=>x.id===d.staffId);return`<div class="spit"><div class="sii"><b>${s?s.name:'?'}</b> ${d.date}<br><span style="color:var(--t2);font-size:10px;">${d.shifts.map(sh=>sh.s+'\u301c'+sh.e).join('\u3001')}</span></div><button class="fd" onclick="delDS(${d.id})">\u524a\u9664</button></div>`;}).join(''):'<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">\u767b\u9332\u306a\u3057</div>';}
-function delDS(id){DB.dayShifts=DB.dayShifts.filter(d=>d.id!==id);sDB();renderDSL();showToast('\u524a\u9664\u3057\u307e\u3057\u305f');}
+// ═══ 日次シフト ═══
+function loadAS(){const list=DB.staff.filter(s=>s.company===CO);['ds-s','sp-s','rs-s'].forEach(id=>{const sel=document.getElementById(id);sel.innerHTML='<option value="">スタッフを選択</option>';list.forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}</option>`);});document.getElementById('ds-d').value=todayStr();document.getElementById('sp-d').value=todayStr();document.getElementById('rs-d').value=todayStr();}
+function addDSRow(data){dsCnt++;const id='dsr'+dsCnt;const c=document.getElementById('ds-sh');const row=document.createElement('div');row.className='shift-row';row.id=id;row.innerHTML=`<div><label class="fl">開始</label><select class="tsel">${makeTimeOpts(data?data.s:'')}</select></div><div><label class="fl">終了</label><select class="tsel">${makeTimeOpts(data?data.e:'')}</select></div><button class="del-btn" onclick="document.getElementById('${id}').remove()">削除</button>`;c.appendChild(row);}
+function saveDS(){const sid=parseInt(document.getElementById('ds-s').value);const date=document.getElementById('ds-d').value;if(!sid||!date){showToast('スタッフと日付を選択してください');return;}const shifts=readRows('ds-sh');DB.dayShifts=DB.dayShifts.filter(d=>!(d.staffId===sid&&d.date===date));DB.dayShifts.push({id:Date.now(),staffId:sid,date,shifts});sDB();showToast('日次シフトを登録しました');dsCnt=0;document.getElementById('ds-sh').innerHTML='';renderDSL();}
+function renderDSL(){const el=document.getElementById('dsl');const list=DB.dayShifts.filter(d=>{const s=DB.staff.find(x=>x.id===d.staffId);return s&&s.company===CO;}).sort((a,b)=>a.date<b.date?1:-1);el.innerHTML=list.length?list.map(d=>{const s=DB.staff.find(x=>x.id===d.staffId);return`<div class="spit"><div class="sii"><b>${s?s.name:'?'}</b> ${d.date}<br><span style="color:var(--t2);font-size:10px;">${d.shifts.map(sh=>sh.s+'〜'+sh.e).join('、')}</span></div><button class="fd" onclick="delDS(${d.id})">削除</button></div>`;}).join(''):'<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div>';}
+function delDS(id){DB.dayShifts=DB.dayShifts.filter(d=>d.id!==id);sDB();renderDSL();showToast('削除しました');}
 
-// \u2550\u2550\u2550 \u6253\u523b\u4fee\u6b63 \u2550\u2550\u2550
-function loadRecs(){const sid=parseInt(document.getElementById('rs-s').value);const date=document.getElementById('rs-d').value;rSid=sid;rDate=date;if(!sid||!date){showToast('\u30b9\u30bf\u30c3\u30d5\u3068\u65e5\u4ed8\u3092\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044');return;}const recs=DB.records.filter(r=>r.staffId===sid&&r.date===date).sort((a,b)=>a.tsISO<b.tsISO?-1:1);const cls={in:'b-in',out:'b-out',break:'b-break',resume:'b-resume',early:'b-early'};const tb=document.getElementById('rtb2');tb.innerHTML=recs.length?recs.map(r=>`<tr><td><span class="badge ${cls[r.type]||'b-in'}">${TL[r.type]||r.type}</span></td><td>${r.ts}</td><td><button class="fe" onclick="openER('${r.id}')">\u7de8\u96c6</button> <button class="fd" onclick="delR('${r.id}')">\u524a\u9664</button></td></tr>`).join(''):'<tr><td colspan="3" style="color:var(--t2);text-align:center;padding:12px;">\u6253\u523b\u306a\u3057</td></tr>';}
-function openAddRec(){if(!rSid){showToast('\u5148\u306b\u30b9\u30bf\u30c3\u30d5\u3068\u65e5\u4ed8\u3092\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044');return;}eRid=null;document.getElementById('rmt').textContent='\u6253\u523b\u3092\u8ffd\u52a0';document.getElementById('rtp').value='in';document.getElementById('rtm').value='';document.getElementById('rcm').classList.remove('hidden');}
-function openER(id){const r=DB.records.find(x=>x.id==id);if(!r)return;eRid=id;document.getElementById('rmt').textContent='\u6253\u523b\u3092\u7de8\u96c6';document.getElementById('rtp').value=r.type;document.getElementById('rtm').value=r.ts.substring(0,5);document.getElementById('rcm').classList.remove('hidden');}
+// ═══ 打刻修正 ═══
+function loadRecs(){const sid=parseInt(document.getElementById('rs-s').value);const date=document.getElementById('rs-d').value;rSid=sid;rDate=date;if(!sid||!date){showToast('スタッフと日付を選択してください');return;}const recs=DB.records.filter(r=>r.staffId===sid&&r.date===date).sort((a,b)=>a.tsISO<b.tsISO?-1:1);const cls={in:'b-in',out:'b-out',break:'b-break',resume:'b-resume',early:'b-early'};const tb=document.getElementById('rtb2');tb.innerHTML=recs.length?recs.map(r=>`<tr><td><span class="badge ${cls[r.type]||'b-in'}">${TL[r.type]||r.type}</span></td><td>${r.ts}</td><td><button class="fe" onclick="openER('${r.id}')">編集</button> <button class="fd" onclick="delR('${r.id}')">削除</button></td></tr>`).join(''):'<tr><td colspan="3" style="color:var(--t2);text-align:center;padding:12px;">打刻なし</td></tr>';}
+function openAddRec(){if(!rSid){showToast('先にスタッフと日付を選択してください');return;}eRid=null;document.getElementById('rmt').textContent='打刻を追加';document.getElementById('rtp').value='in';document.getElementById('rtm').value='';document.getElementById('rcm').classList.remove('hidden');}
+function openER(id){const r=DB.records.find(x=>x.id==id);if(!r)return;eRid=id;document.getElementById('rmt').textContent='打刻を編集';document.getElementById('rtp').value=r.type;document.getElementById('rtm').value=r.ts.substring(0,5);document.getElementById('rcm').classList.remove('hidden');}
 function closeRM(e){if(!e||e.target===document.getElementById('rcm'))document.getElementById('rcm').classList.add('hidden');}
-function saveRec(){const type=document.getElementById('rtp').value;const time=document.getElementById('rtm').value;if(!time){showToast('\u6642\u523b\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044');return;}const ts=time+':00';if(eRid){const idx=DB.records.findIndex(r=>r.id==eRid);if(idx>=0){DB.records[idx].type=type;DB.records[idx].ts=ts;DB.records[idx].tsISO=new Date(rDate+'T'+ts).toISOString();}}else{const s=DB.staff.find(x=>x.id===rSid);DB.records.push({id:Date.now(),staffId:rSid,staffName:s.name,company:CO,type,date:rDate,ts,tsISO:new Date(rDate+'T'+ts).toISOString()});}sDB();document.getElementById('rcm').classList.add('hidden');showToast('\u4fdd\u5b58\u3057\u307e\u3057\u305f');loadRecs();}
-function delR(id){if(!confirm('\u3053\u306e\u6253\u523b\u3092\u524a\u9664\u3057\u307e\u3059\u304b\uff1f'))return;DB.records=DB.records.filter(r=>r.id!=id);sDB();showToast('\u524a\u9664\u3057\u307e\u3057\u305f');loadRecs();}
+function saveRec(){const type=document.getElementById('rtp').value;const time=document.getElementById('rtm').value;if(!time){showToast('時刻を入力してください');return;}const ts=time+':00';if(eRid){const idx=DB.records.findIndex(r=>r.id==eRid);if(idx>=0){DB.records[idx].type=type;DB.records[idx].ts=ts;DB.records[idx].tsISO=new Date(rDate+'T'+ts).toISOString();}}else{const s=DB.staff.find(x=>x.id===rSid);DB.records.push({id:Date.now(),staffId:rSid,staffName:s.name,company:CO,type,date:rDate,ts,tsISO:new Date(rDate+'T'+ts).toISOString()});}sDB();document.getElementById('rcm').classList.add('hidden');showToast('保存しました');loadRecs();}
+function delR(id){if(!confirm('この打刻を削除しますか？'))return;DB.records=DB.records.filter(r=>r.id!=id);sDB();showToast('削除しました');loadRecs();}
 
-// \u2550\u2550\u2550 \u6709\u7d66\u5c65\u6b74 \u2550\u2550\u2550
-function initPH(){const sel=document.getElementById('ph-s');sel.innerHTML='<option value="">\u5168\u30b9\u30bf\u30c3\u30d5</option>';DB.staff.filter(s=>s.company===CO).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}</option>`);const ms=document.getElementById('ph-m');if(ms.options.length>1)return;const n=new Date();for(let i=0;i<6;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);ms.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}\u5e74${d.getMonth()+1}\u6708</option>`;}renderPH();}
-function renderPH(){const sid=parseInt(document.getElementById('ph-s').value)||null;const ym=document.getElementById('ph-m').value;const dw=['\u65e5','\u6708','\u706b','\u6c34','\u6728','\u91d1','\u571f'];const tl={full:'\u5168\u65e5\u6709\u7d66',am:'\u5348\u524d\u534a\u65e5',pm:'\u5348\u5f8c\u534a\u65e5'};let list=DB.paid.filter(p=>p.company===CO);if(sid)list=list.filter(p=>p.staffId===sid);if(ym)list=list.filter(p=>p.date.startsWith(ym));list.sort((a,b)=>a.date<b.date?-1:1);const tb=document.getElementById('ph-tb');if(!list.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">\u6709\u7d66\u7533\u8acb\u5c65\u6b74\u304c\u3042\u308a\u307e\u305b\u3093</td></tr>';document.getElementById('ph-sum').textContent='';return;}tb.innerHTML=list.map(p=>{const dt=new Date(p.date);const d=dw[dt.getDay()];const we=isLegalHoliday(p.date);return`<tr><td style="${we?'color:#E24B4A;font-weight:500;':''}">${p.date}</td><td style="${we?'color:#E24B4A;':''}">${d}</td><td>${p.staffName}</td><td><span class="badge b-paid">${tl[p.type]||p.type}</span></td><td style="color:var(--t2);font-size:10px;">${p.memo||''}</td><td><button class="fd" onclick="delPD(${p.id})">\u524a\u9664</button></td></tr>`;}).join('');let f=0,h=0;list.forEach(p=>{if(p.type==='full')f++;else h++;});document.getElementById('ph-sum').innerHTML=`\u5168\u65e5: <b>${f}\u65e5</b>\u3000\u534a\u65e5: <b>${h}\u56de</b>\u3000\u5408\u8a08: <b>${f+h*0.5}\u65e5</b>`;}
-function delPD(id){if(!confirm('\u3053\u306e\u6709\u7d66\u7533\u8acb\u3092\u524a\u9664\u3057\u307e\u3059\u304b\uff1f'))return;DB.paid=DB.paid.filter(p=>p.id!==id);sDB();showToast('\u524a\u9664\u3057\u307e\u3057\u305f');renderPH();renderSG();}
+// ═══ 有給履歴 ═══
+function initPH(){const sel=document.getElementById('ph-s');sel.innerHTML='<option value="">全スタッフ</option>';DB.staff.filter(s=>s.company===CO).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}</option>`);const ms=document.getElementById('ph-m');if(ms.options.length>1)return;const n=new Date();for(let i=0;i<6;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);ms.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}renderPH();}
+function renderPH(){const sid=parseInt(document.getElementById('ph-s').value)||null;const ym=document.getElementById('ph-m').value;const dw=['日','月','火','水','木','金','土'];const tl={full:'全日有給',am:'午前半日',pm:'午後半日'};let list=DB.paid.filter(p=>p.company===CO);if(sid)list=list.filter(p=>p.staffId===sid);if(ym)list=list.filter(p=>p.date.startsWith(ym));list.sort((a,b)=>a.date<b.date?-1:1);const tb=document.getElementById('ph-tb');if(!list.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">有給申請履歴がありません</td></tr>';document.getElementById('ph-sum').textContent='';return;}tb.innerHTML=list.map(p=>{const dt=new Date(p.date);const d=dw[dt.getDay()];const we=isLegalHoliday(p.date);return`<tr><td style="${we?'color:#E24B4A;font-weight:500;':''}">${p.date}</td><td style="${we?'color:#E24B4A;':''}">${d}</td><td>${p.staffName}</td><td><span class="badge b-paid">${tl[p.type]||p.type}</span></td><td style="color:var(--t2);font-size:10px;">${p.memo||''}</td><td><button class="fd" onclick="delPD(${p.id})">削除</button></td></tr>`;}).join('');let f=0,h=0;list.forEach(p=>{if(p.type==='full')f++;else h++;});document.getElementById('ph-sum').innerHTML=`全日: <b>${f}日</b>　半日: <b>${h}回</b>　合計: <b>${f+h*0.5}日</b>`;}
+function delPD(id){if(!confirm('この有給申請を削除しますか？'))return;DB.paid=DB.paid.filter(p=>p.id!==id);sDB();showToast('削除しました');renderPH();renderSG();}
 
-// \u2550\u2550\u2550 \u30e9\u30f3\u30c1\u30c7\u30ea\u7ba1\u7406 \u2550\u2550\u2550
+// ═══ ランチデリ管理 ═══
 let ldYear=null,ldMonth=null;
 
-// \u7ba1\u7406\u8005\u304c\u30ab\u30ec\u30f3\u30c0\u30fc\u3067\u6709\u52b9\u306b\u3057\u305f\u65e5\u304b\u3069\u3046\u304b
+// 管理者がカレンダーで有効にした日かどうか
 function isLunchEnabled(date){
   return DB.lunchEnabled.includes(date);
 }
-// \u30b9\u30bf\u30c3\u30d5\u304c\u5b9f\u969b\u306b\u30c1\u30a7\u30c3\u30af\u3057\u305f\u304b
+// スタッフが実際にチェックしたか
 function hasLunchCheck(sid,date){
   return DB.lunch.some(l=>l.staffId===sid&&l.date===date&&l.company===CO);
 }
 
-// \u6253\u523b\u753b\u9762\u3067\u306e\u30c1\u30a7\u30c3\u30af\u30c8\u30b0\u30eb\uff08\u30b9\u30bf\u30c3\u30d5\u500b\u5225\uff09
+// 打刻画面でのチェックトグル（スタッフ個別）
 function toggleLunchCheck(sid,date){
   if(hasLunchCheck(sid,date)){
     DB.lunch=DB.lunch.filter(l=>!(l.staffId===sid&&l.date===date&&l.company===CO));
-    showToast('\u30e9\u30f3\u30c1\u30c7\u30ea\uff1a\u89e3\u9664');
+    showToast('ランチデリ：解除');
   } else {
     const s=DB.staff.find(x=>x.id===sid);
     DB.lunch.push({id:Date.now(),staffId:sid,staffName:s.name,company:CO,date});
-    showToast('\u30e9\u30f3\u30c1\u30c7\u30ea\uff1a\u6ce8\u6587\u3042\u308a \u2713');
+    showToast('ランチデリ：注文あり ✓');
   }
   sDB();
-  // \u30e2\u30fc\u30c0\u30eb\u3092\u518d\u63cf\u753b
+  // モーダルを再描画
   document.getElementById('pm').classList.add('hidden');
   setTimeout(()=>tapS(sid),50);
 }
@@ -1202,8 +1202,8 @@ function ldPrevMonth(){ldMonth--;if(ldMonth<0){ldMonth=11;ldYear--;}renderLdCale
 function ldNextMonth(){ldMonth++;if(ldMonth>11){ldMonth=0;ldYear++;}renderLdCalendar();}
 
 function renderLdCalendar(){
-  const dows=['\u65e5','\u6708','\u706b','\u6c34','\u6728','\u91d1','\u571f'];
-  document.getElementById('ld-month-label').textContent=ldYear+'\u5e74'+(ldMonth+1)+'\u6708';
+  const dows=['日','月','火','水','木','金','土'];
+  document.getElementById('ld-month-label').textContent=ldYear+'年'+(ldMonth+1)+'月';
   const days=new Date(ldYear,ldMonth+1,0).getDate();
   const firstDow=new Date(ldYear,ldMonth,1).getDay();
   const today=todayStr();
@@ -1228,18 +1228,18 @@ function renderLdCalendar(){
       const isToday=date===today;
       const isSun=col===0,isSat=col===6;
       const isLeg=isLegalHoliday(date);
-      // \u305d\u306e\u65e5\u306b\u30c1\u30a7\u30c3\u30af\u3057\u305f\u30b9\u30bf\u30c3\u30d5\u6570
+      // その日にチェックしたスタッフ数
       const checkedCount=DB.lunch.filter(l=>l.date===date&&l.company===CO).length;
 
       let bg,border,numColor,sub;
       if(isEnabled){
         bg='#FFF8E1';border='2px solid #FFD54F';
         numColor=isSun||isLeg?'#E24B4A':isSat?'#0C447C':'#5D4037';
-        const label=checkedCount>0?checkedCount+'\u540d\u30c1\u30a7\u30c3\u30af':'\u8868\u793a\u4e2d';
+        const label=checkedCount>0?checkedCount+'名チェック':'表示中';
         sub=`<div style="font-size:9px;color:#F57F17;font-weight:600;">${label}</div>`;
       } else if(isLeg){
         bg='#FFEBEE';border='1px solid #FFCDD2';
-        numColor='#C62828';sub='<div style="font-size:9px;color:#FFCDD2;">\u4f11</div>';
+        numColor='#C62828';sub='<div style="font-size:9px;color:#FFCDD2;">休</div>';
       } else {
         bg='#fff';border=isToday?'2px solid var(--bl)':'1px solid var(--br)';
         numColor=isSun?'#E24B4A':isSat?'#0C447C':'var(--tx)';
@@ -1259,15 +1259,15 @@ function renderLdCalendar(){
   document.getElementById('ld-calendar').innerHTML=html;
 }
 
-// \u7ba1\u7406\u8005\uff1a\u65e5\u4ed8\u306e\u30e9\u30f3\u30c1\u30c7\u30ea\u8868\u793a\u3092ON/OFF
+// 管理者：日付のランチデリ表示をON/OFF
 function toggleLunchEnabled(date){
   const [yr,mo,d]=date.split('-').map(Number);
   if(isLunchEnabled(date)){
     DB.lunchEnabled=DB.lunchEnabled.filter(x=>x!==date);
-    sDB();showToast(mo+'\u6708'+d+'\u65e5 \u30e9\u30f3\u30c1\u30c7\u30ea\u8868\u793a\u3092OFF');
+    sDB();showToast(mo+'月'+d+'日 ランチデリ表示をOFF');
   } else {
     DB.lunchEnabled.push(date);
-    sDB();showToast(mo+'\u6708'+d+'\u65e5 \u30e9\u30f3\u30c1\u30c7\u30ea\u8868\u793a\u3092ON \u2713');
+    sDB();showToast(mo+'月'+d+'日 ランチデリ表示をON ✓');
   }
   renderLdCalendar();
   renderLunchHist();
@@ -1275,7 +1275,7 @@ function toggleLunchEnabled(date){
 
 function renderLunchHist(){
   const el=document.getElementById('lh-list');
-  const dows=['\u65e5','\u6708','\u706b','\u6c34','\u6728','\u91d1','\u571f'];
+  const dows=['日','月','火','水','木','金','土'];
   const now=new Date();
   let rows=[];
   for(let mo=0;mo<3;mo++){
@@ -1291,127 +1291,127 @@ function renderLunchHist(){
       const isLeg=isLegalHoliday(date);
       const checkedList=DB.lunch.filter(l=>l.date===date&&l.company===CO);
       count++;
-      const names=checkedList.map(l=>l.staffName).join('\u3001');
+      const names=checkedList.map(l=>l.staffName).join('、');
       monthRows.push(`<div style="padding:7px 0;border-bottom:1px solid var(--br);font-size:11px;">
         <div style="display:flex;align-items:center;gap:7px;margin-bottom:${checkedList.length?'4px':'0'};">
-          <span style="min-width:62px;font-weight:600;${isWe||isLeg?'color:#E24B4A;':''}">${m+1}/${day}\uff08${dows[dt.getDay()]}\uff09</span>
-          <span style="background:#FFF8E1;color:#F57F17;padding:2px 8px;border-radius:999px;font-size:9px;font-weight:700;">\u8868\u793aON</span>
-          <span style="color:var(--t2);">${checkedList.length}\u540d\u30c1\u30a7\u30c3\u30af</span>
+          <span style="min-width:62px;font-weight:600;${isWe||isLeg?'color:#E24B4A;':''}">${m+1}/${day}（${dows[dt.getDay()]}）</span>
+          <span style="background:#FFF8E1;color:#F57F17;padding:2px 8px;border-radius:999px;font-size:9px;font-weight:700;">表示ON</span>
+          <span style="color:var(--t2);">${checkedList.length}名チェック</span>
           <button onclick="toggleLunchEnabled('${date}')" style="margin-left:auto;padding:3px 9px;border:1px solid #f09595;border-radius:5px;background:#fff;font-size:10px;cursor:pointer;color:#A32D2D;font-family:inherit;">OFF</button>
         </div>
-        ${checkedList.length?`<div style="font-size:10px;color:var(--t2);padding-left:4px;">\u2713 ${names}</div>`:'<div style="font-size:10px;color:var(--br);">\u307e\u3060\u8ab0\u3082\u30c1\u30a7\u30c3\u30af\u3057\u3066\u3044\u307e\u305b\u3093</div>'}
+        ${checkedList.length?`<div style="font-size:10px;color:var(--t2);padding-left:4px;">✓ ${names}</div>`:'<div style="font-size:10px;color:var(--br);">まだ誰もチェックしていません</div>'}
       </div>`);
     }
     if(count>0){
-      rows.push(`<div style="font-size:11px;font-weight:700;color:var(--nv);padding:8px 0 5px;border-bottom:2px solid var(--nv);margin-bottom:3px;">${yr}\u5e74${m+1}\u6708\uff08${count}\u65e5\u8868\u793a\uff09</div>`);
+      rows.push(`<div style="font-size:11px;font-weight:700;color:var(--nv);padding:8px 0 5px;border-bottom:2px solid var(--nv);margin-bottom:3px;">${yr}年${m+1}月（${count}日表示）</div>`);
       rows.push(monthRows.join(''));
     }
   }
-  el.innerHTML=rows.length?rows.join(''):'<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">\u307e\u3060\u8a2d\u5b9a\u304c\u3042\u308a\u307e\u305b\u3093</div>';
+  el.innerHTML=rows.length?rows.join(''):'<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">まだ設定がありません</div>';
 }
 
 function clearLunchDay(date){
   DB.lunchEnabled=DB.lunchEnabled.filter(x=>x!==date);
   DB.lunch=DB.lunch.filter(l=>l.date!==date);
-  sDB();showToast('\u524a\u9664\u3057\u307e\u3057\u305f');renderLdCalendar();renderLunchHist();
+  sDB();showToast('削除しました');renderLdCalendar();renderLunchHist();
 }
 
-// \u2550\u2550\u2550 \u30d0\u30a4\u30c8\u67a0 \u2550\u2550\u2550
-function saveSP(){const sid=parseInt(document.getElementById('sp-s').value);const date=document.getElementById('sp-d').value;if(!sid||!date){showToast('\u30b9\u30bf\u30c3\u30d5\u3068\u65e5\u4ed8\u3092\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044');return;}DB.specials=DB.specials.filter(s=>!(s.staffId===sid&&s.date===date));DB.specials.push({id:Date.now(),staffId:sid,date,memo:document.getElementById('sp-m').value});sDB();showToast('\u30d0\u30a4\u30c8\u67a0\u3092\u767b\u9332\u3057\u307e\u3057\u305f');renderSPL();renderSG();}
-function renderSPL(){const el=document.getElementById('spl');const list=DB.specials.filter(s=>{const st=DB.staff.find(x=>x.id===s.staffId);return st&&st.company===CO;}).sort((a,b)=>a.date<b.date?1:-1);el.innerHTML=list.length?list.map(s=>{const st=DB.staff.find(x=>x.id===s.staffId);return`<div class="spit"><div class="sii"><b>${st?st.name:'?'}</b> ${s.date}${s.memo?' \u2014 '+s.memo:''}</div><button class="fd" onclick="delSP(${s.id})">\u524a\u9664</button></div>`;}).join(''):'<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">\u767b\u9332\u306a\u3057</div>';}
-function delSP(id){DB.specials=DB.specials.filter(s=>s.id!==id);sDB();renderSPL();showToast('\u524a\u9664\u3057\u307e\u3057\u305f');}
+// ═══ バイト枠 ═══
+function saveSP(){const sid=parseInt(document.getElementById('sp-s').value);const date=document.getElementById('sp-d').value;if(!sid||!date){showToast('スタッフと日付を選択してください');return;}DB.specials=DB.specials.filter(s=>!(s.staffId===sid&&s.date===date));DB.specials.push({id:Date.now(),staffId:sid,date,memo:document.getElementById('sp-m').value});sDB();showToast('バイト枠を登録しました');renderSPL();renderSG();}
+function renderSPL(){const el=document.getElementById('spl');const list=DB.specials.filter(s=>{const st=DB.staff.find(x=>x.id===s.staffId);return st&&st.company===CO;}).sort((a,b)=>a.date<b.date?1:-1);el.innerHTML=list.length?list.map(s=>{const st=DB.staff.find(x=>x.id===s.staffId);return`<div class="spit"><div class="sii"><b>${st?st.name:'?'}</b> ${s.date}${s.memo?' — '+s.memo:''}</div><button class="fd" onclick="delSP(${s.id})">削除</button></div>`;}).join(''):'<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div>';}
+function delSP(id){DB.specials=DB.specials.filter(s=>s.id!==id);sDB();renderSPL();showToast('削除しました');}
 
 
-// \u2550\u2550\u2550 \u30ed\u30b0\u51fa\u529b \u2550\u2550\u2550
+// ═══ ログ出力 ═══
 function exportLogCSV(){
   const ym=document.getElementById('log-ym')?document.getElementById('log-ym').value:'';
-  if(!ym){showToast('\u51fa\u529b\u6708\u3092\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044');return;}
+  if(!ym){showToast('出力月を選択してください');return;}
   const term=getTermDates(ym);
   const termDates=term.dates;
-  const dows=['\u65e5','\u6708','\u706b','\u6c34','\u6728','\u91d1','\u571f'];
-  // \u793e\u54e1\u756a\u53f7\u9806\u3067\u30bd\u30fc\u30c8
+  const dows=['日','月','火','水','木','金','土'];
+  // 社員番号順でソート
   const list=[...DB.staff.filter(s=>s.company===CO)].sort((a,b)=>(a.employeeId||0)-(b.employeeId||0));
-  let csv='\u793e\u54e1\u756a\u53f7,\u540d\u524d,\u65e5\u4ed8,\u66dc\u65e5,\u7a2e\u5225,\u6642\u523b,\u5b9f\u50cd\u6642\u9593,\u9045\u523b(\u5206),\u65e9\u9000(\u5206),\u6709\u7d66,\u4ea4\u901a\u8cbb,\u30e9\u30f3\u30c1\u30c7\u30ea\n';
+  let csv='社員番号,名前,日付,曜日,種別,時刻,実働時間,遅刻(分),早退(分),有給,交通費,ランチデリ\n';
   list.forEach(s=>{
-    // \u305d\u306e\u4eba\u306e\u671f\u9593\u5185\u306e\u65e5\u4ed8\u3092\u65e5\u4ed8\u9806\u306b
+    // その人の期間内の日付を日付順に
     termDates.forEach(date=>{
       const dt=new Date(date);const dow=dows[dt.getDay()];
       const recs=DB.records.filter(r=>r.staffId===s.id&&r.date===date).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
       const pr=DB.paid.find(p=>p.staffId===s.id&&p.date===date);
       const fr=DB.fare.filter(f=>f.staffId===s.id&&f.date===date);
       const lc=DB.lunch.filter(l=>l.staffId===s.id&&l.date===date&&l.company===CO);
-      // calcWork\u3067\u5b9f\u50cd\u30fb\u9045\u523b\u30fb\u65e9\u9000
+      // calcWorkで実働・遅刻・早退
       const work=calcWork(s.id,date);
       const hasPunch=recs.length>0||pr;
-      if(!hasPunch)return; // \u6253\u523b\u306a\u3057\u30fb\u6709\u7d66\u306a\u3057\u65e5\u306f\u30b9\u30ad\u30c3\u30d7
+      if(!hasPunch)return; // 打刻なし・有給なし日はスキップ
       if(recs.length===0&&pr){
-        // \u6709\u7d66\u306e\u307f
-        csv+=`${s.employeeId||''},${s.name},${date},${dow},\u6709\u7d66,,,,, ${pr?{full:'\u5168\u65e5',am:'\u5348\u524d\u534a\u65e5',pm:'\u5348\u5f8c\u534a\u65e5'}[pr.type]:''},,\n`;
+        // 有給のみ
+        csv+=`${s.employeeId||''},${s.name},${date},${dow},有給,,,,, ${pr?{full:'全日',am:'午前半日',pm:'午後半日'}[pr.type]:''},,\n`;
         return;
       }
-      // \u6253\u523b\u304c\u3042\u308b\u65e5: \u5404\u6253\u523b\u30921\u884c\u305a\u3064\u51fa\u529b\u3057\u3001\u6700\u521d\u306e\u884c\u306b\u96c6\u8a08\u3092\u4ed8\u3051\u308b
+      // 打刻がある日: 各打刻を1行ずつ出力し、最初の行に集計を付ける
       recs.forEach((r,i)=>{
         const workH=i===0?msToHHMM(work.total||0):'';
         const lateM=i===0?(work.lateMin||''):'';
         const earlyM=i===0?(work.earlyLeaveMin||''):'';
-        const paidStr=i===0?(pr?{full:'\u5168\u65e5',am:'\u5348\u524d\u534a\u65e5',pm:'\u5348\u5f8c\u534a\u65e5'}[pr.type]:''):'';
-        const fareStr=i===0?(fr.length?'\u25cb':''):'';
+        const paidStr=i===0?(pr?{full:'全日',am:'午前半日',pm:'午後半日'}[pr.type]:''):'';
+        const fareStr=i===0?(fr.length?'○':''):'';
         const lunchStr=i===0?(lc.length?lc.length:''):'';
         csv+=`${s.employeeId||''},${s.name},${date},${dow},${TL[r.type]||r.type},${r.ts},${workH},${lateM},${earlyM},${paidStr},${fareStr},${lunchStr}\n`;
       });
     });
-    csv+='\n'; // \u793e\u54e1\u9593\u306b\u7a7a\u884c
+    csv+='\n'; // 社員間に空行
   });
   const bom=new Uint8Array([0xEF,0xBB,0xBF]);
   const blob=new Blob([bom,csv],{type:'text/csv'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;
-  a.download='\u6253\u523b\u30ed\u30b0_'+ym+'\uff08'+term.start+'\u301c'+term.end+'\uff09.csv';
+  a.download='打刻ログ_'+ym+'（'+term.start+'〜'+term.end+'）.csv';
   a.click();URL.revokeObjectURL(url);
-  showToast('\u30ed\u30b0CSV\u3092\u30c0\u30a6\u30f3\u30ed\u30fc\u30c9\u3057\u307e\u3057\u305f');
+  showToast('ログCSVをダウンロードしました');
 }
 
 function exportMonthLog(){
   const ym=document.getElementById('log-ym')?document.getElementById('log-ym').value:'';
-  if(!ym){showToast('\u51fa\u529b\u6708\u3092\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044');return;}
-  showToast('\u6708\u6b21XLSX\u3092\u751f\u6210\u4e2d...');loadXLSX(()=>doExportMonthly(ym));
+  if(!ym){showToast('出力月を選択してください');return;}
+  showToast('月次XLSXを生成中...');loadXLSX(()=>doExportMonthly(ym));
 }
 
 
-// \u2550\u2550\u2550 \u30c7\u30fc\u30bf\u79fb\u884c \u2550\u2550\u2550
+// ═══ データ移行 ═══
 function exportData(){
   try{
     const json=JSON.stringify(DB,null,0);
-    // \u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u306b\u30b3\u30d4\u30fc
+    // クリップボードにコピー
     if(navigator.clipboard&&navigator.clipboard.writeText){
-      navigator.clipboard.writeText(json).then(()=>showToast('\u30c7\u30fc\u30bf\u3092\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u306b\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f \u2713')).catch(()=>fallbackCopy(json));
+      navigator.clipboard.writeText(json).then(()=>showToast('データをクリップボードにコピーしました ✓')).catch(()=>fallbackCopy(json));
     } else {
       fallbackCopy(json);
     }
-  }catch(e){showToast('\u30a8\u30af\u30b9\u30dd\u30fc\u30c8\u306b\u5931\u6557\u3057\u307e\u3057\u305f');}
+  }catch(e){showToast('エクスポートに失敗しました');}
 }
 function fallbackCopy(text){
   const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
-  try{document.execCommand('copy');showToast('\u30c7\u30fc\u30bf\u3092\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f \u2713 \u30e1\u30fc\u30eb\u7b49\u3067\u5225\u7aef\u672b\u306b\u9001\u3063\u3066\u304f\u3060\u3055\u3044');}catch(e){showToast('\u624b\u52d5\u3067\u30b3\u30d4\u30fc\u3057\u3066\u304f\u3060\u3055\u3044');}
+  try{document.execCommand('copy');showToast('データをコピーしました ✓ メール等で別端末に送ってください');}catch(e){showToast('手動でコピーしてください');}
   document.body.removeChild(ta);
 }
 function importData(){
   const text=document.getElementById('import-data').value.trim();
-  if(!text){showToast('\u30c7\u30fc\u30bf\u3092\u8cbc\u308a\u4ed8\u3051\u3066\u304f\u3060\u3055\u3044');return;}
-  if(!confirm('\u73fe\u5728\u306e\u30c7\u30fc\u30bf\u3092\u3059\u3079\u3066\u4e0a\u66f8\u304d\u3057\u307e\u3059\u304b\uff1f\n\u3053\u306e\u64cd\u4f5c\u306f\u5143\u306b\u623b\u305b\u307e\u305b\u3093\u3002')){return;}
+  if(!text){showToast('データを貼り付けてください');return;}
+  if(!confirm('現在のデータをすべて上書きしますか？\nこの操作は元に戻せません。')){return;}
   try{
     const parsed=JSON.parse(text);
-    if(!parsed.staff){showToast('\u30c7\u30fc\u30bf\u5f62\u5f0f\u304c\u6b63\u3057\u304f\u3042\u308a\u307e\u305b\u3093');return;}
+    if(!parsed.staff){showToast('データ形式が正しくありません');return;}
     DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],adminPw:'0000'},parsed);
     sDB();
     document.getElementById('import-data').value='';
-    showToast('\u30a4\u30f3\u30dd\u30fc\u30c8\u304c\u5b8c\u4e86\u3057\u307e\u3057\u305f \u2713 \u30ea\u30ed\u30fc\u30c9\u3057\u3066\u3054\u78ba\u8a8d\u304f\u3060\u3055\u3044');
+    showToast('インポートが完了しました ✓ リロードしてご確認ください');
     setTimeout(()=>location.reload(),2000);
-  }catch(e){showToast('\u30c7\u30fc\u30bf\u306e\u89e3\u6790\u306b\u5931\u6557\u3057\u307e\u3057\u305f\u3002\u6b63\u3057\u3044\u30c7\u30fc\u30bf\u3092\u8cbc\u308a\u4ed8\u3051\u3066\u304f\u3060\u3055\u3044');}
+  }catch(e){showToast('データの解析に失敗しました。正しいデータを貼り付けてください');}
 }
 
 
-// \u2550\u2550\u2550 GitHub\u540c\u671f \u2550\u2550\u2550
+// ═══ GitHub同期 ═══
 const GH_OWNER='fulllife449';
 const GH_REPO='kintai';
 const GH_DATA_FILE='kintai_data.json';
@@ -1462,15 +1462,15 @@ async function ghPutFile(filename,data,sha){
   }catch(e){console.error('ghPutFile error:',e);return false;}
 }
 
-// \u540c\u671f\u72b6\u614b\u8868\u793a
+// 同期状態表示
 function setSyncStatus(msg,color){
   const el=document.getElementById('sync-status');
   if(el){el.textContent=msg;el.style.color=color||'var(--t2)';}
 }
 
-// GitHub\u304b\u3089\u30c7\u30fc\u30bf\u3092\u8aad\u307f\u8fbc\u3080
+// GitHubからデータを読み込む
 async function syncFromGitHub(){
-  setSyncStatus('\u27f3 \u540c\u671f\u4e2d...');
+  setSyncStatus('⟳ 同期中...');
   try{
     const result=await ghGetFile(GH_DATA_FILE);
     if(result&&result.data){
@@ -1478,72 +1478,49 @@ async function syncFromGitHub(){
       const localRecords=DB.records;const localPaid=DB.paid;const localFare=DB.fare;const localLunch=DB.lunch;const localLunchEnabled=DB.lunchEnabled;
       DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]},remote);
       DB.records=localRecords;DB.paid=localPaid;DB.fare=localFare;DB.lunch=localLunch;DB.lunchEnabled=localLunchEnabled;
-      sDB();setSyncStatus('\u2713 \u540c\u671f\u6e08\u307f '+new Date().toLocaleTimeString('ja'),'var(--gd)');
+      sDB();setSyncStatus('✓ 同期済み '+new Date().toLocaleTimeString('ja'),'var(--gd)');
       renderSG();if(document.getElementById('pg-admin').classList.contains('active')){renderAL();}
     } else {
-      // \u30d5\u30a1\u30a4\u30eb\u304c\u306a\u3044\u2192\u521d\u56de\u306a\u306e\u3067\u73fe\u5728\u30c7\u30fc\u30bf\u3092\u30a2\u30c3\u30d7\u30ed\u30fc\u30c9
-      setSyncStatus('\u2191 \u521d\u671f\u5316\u4e2d...');
+      // ファイルがない→初回なので現在データをアップロード
+      setSyncStatus('↑ 初期化中...');
       await syncToGitHub();
     }
   }catch(e){
-    setSyncStatus('\u26a0 \u672a\u63a5\u7d9a','var(--am)');
+    setSyncStatus('⚠ 未接続','var(--am)');
     console.warn('syncFromGitHub:',e);
   }
 }
 
-// GitHub\u3078\u30c7\u30fc\u30bf\u3092\u66f8\u304d\u8fbc\u3080\uff08\u30b9\u30bf\u30c3\u30d5\u30fb\u8a2d\u5b9a\u306e\u307f\uff09
+// GitHubへデータを書き込む（スタッフ・設定のみ）
 async function syncToGitHub(){
-  setSyncStatus('\u2191 \u4fdd\u5b58\u4e2d...');
+  setSyncStatus('↑ 保存中...');
   try{
     const dataToSync={staff:DB.staff,dayShifts:DB.dayShifts,specials:DB.specials,lunchEnabled:DB.lunchEnabled,adminPw:DB.adminPw};
     const existing=await ghGetFile(GH_DATA_FILE);
     const sha=existing?existing.sha:null;
     const ok=await ghPutFile(GH_DATA_FILE,dataToSync,sha);
-    if(ok){setSyncStatus('\u2713 \u4fdd\u5b58\u6e08\u307f '+new Date().toLocaleTimeString('ja'),'var(--gd)');}
-    else{setSyncStatus('\u2717 \u4fdd\u5b58\u5931\u6557','var(--rd)');showToast('\u4fdd\u5b58\u5931\u6557 - \u30cd\u30c3\u30c8\u30ef\u30fc\u30af\u78ba\u8a8d or \u7ba1\u7406\u2192\u30c7\u30fc\u30bf\u79fb\u884c\u304b\u3089\u624b\u52d5\u4fdd\u5b58');}
+    if(ok){setSyncStatus('✓ 保存済み '+new Date().toLocaleTimeString('ja'),'var(--gd)');}
+    else{setSyncStatus('✗ 保存失敗','var(--rd)');showToast('保存失敗 - ネットワーク確認 or 管理→データ移行から手動保存');}
   }catch(e){
-    setSyncStatus('\u26a0 \u672a\u63a5\u7d9a','var(--am)');
+    setSyncStatus('⚠ 未接続','var(--am)');
     console.warn('syncToGitHub:',e);
   }
 }
 
-// \u8d77\u52d5\u6642\u306b\u81ea\u52d5\u540c\u671f
+// 起動時に自動同期
 async function initSync(){
-  setSyncStatus('\u27f3 \u63a5\u7d9a\u4e2d...');
-  if(!getGHToken()){setSyncStatus('\u1f511 \u8981\u8a2d\u5b9a','var(--am)');return;}
-  try{
-    const result=await ghGetFile(GH_DATA_FILE);
-    if(result&&result.data){
-      // \u30ea\u30e2\u30fc\u30c8\u30c7\u30fc\u30bf\u3042\u308a \u2192 \u8aad\u307f\u8fbc\u307f
-      const remote=result.data;
-      const localRecords=DB.records;
-      const localPaid=DB.paid;
-      const localFare=DB.fare;
-      const localLunch=DB.lunch;
-      const localLunchEnabled=DB.lunchEnabled;
-      DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]},remote);
-      DB.records=localRecords;DB.paid=localPaid;DB.fare=localFare;DB.lunch=localLunch;DB.lunchEnabled=localLunchEnabled;
-      sDB();setSyncStatus('\u2713 \u540c\u671f\u6e08\u307f '+new Date().toLocaleTimeString('ja'),'var(--gd)');
-      renderSG();
-    } else {
-      // \u30d5\u30a1\u30a4\u30eb\u306a\u3057 \u2192 \u73fe\u5728\u306e\u30b9\u30bf\u30c3\u30d5\u30c7\u30fc\u30bf\u3092\u30a2\u30c3\u30d7\u30ed\u30fc\u30c9
-      setSyncStatus('\u2191 \u521d\u671f\u5316\u4e2d...');
-      await syncToGitHub();
-    }
-  }catch(e){
-    setSyncStatus('\u26a0 \u672a\u63a5\u7d9a','var(--am)');
-  }
+  // 自動同期は無効。手動ボタンからのみ実行
+  setSyncStatus('');
 }
 
 
 function saveGHToken(){
   const t=document.getElementById('gh-token-input').value.trim();
-  if(!t){showToast('\u30c8\u30fc\u30af\u30f3\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044');return;}
-  if(!t.startsWith('ghp_')&&!t.startsWith('github_pat_')){showToast('\u30c8\u30fc\u30af\u30f3\u306e\u5f62\u5f0f\u304c\u6b63\u3057\u304f\u3042\u308a\u307e\u305b\u3093');return;}
+  if(!t){showToast('トークンを入力してください');return;}
+  if(!t.startsWith('ghp_')&&!t.startsWith('github_pat_')){showToast('トークンの形式が正しくありません');return;}
   setGHToken(t);
   document.getElementById('gh-token-input').value='';
-  showToast('\u30c8\u30fc\u30af\u30f3\u3092\u4fdd\u5b58\u3057\u307e\u3057\u305f \u2713 \u540c\u671f\u3092\u958b\u59cb\u3057\u307e\u3059');
-  setTimeout(()=>initSync(),500);
+  showToast('トークンを保存しました ✓');
 }
 function openDataTab(){
   const t=getGHToken();
@@ -1552,27 +1529,27 @@ function openDataTab(){
   if(box){
     if(t){
       box.style.background='var(--gl)';box.style.color='var(--gd)';
-      box.textContent='\u2713 \u8a2d\u5b9a\u6e08\u307f\uff08'+t.slice(0,12)+'...\uff09\u5909\u66f4\u3059\u308b\u5834\u5408\u306f\u4e0b\u306b\u5165\u529b\u3057\u3066\u4fdd\u5b58';
+      box.textContent='✓ 設定済み（'+t.slice(0,12)+'...）変更する場合は下に入力して保存';
     }else{
       box.style.background='var(--rl)';box.style.color='#791F1F';
-      box.textContent='\u26a0 \u672a\u8a2d\u5b9a \u2014 \u4e0b\u306b\u30c8\u30fc\u30af\u30f3\u3092\u8cbc\u308a\u4ed8\u3051\u3066\u300c\u4fdd\u5b58\u300d\u3057\u3066\u304f\u3060\u3055\u3044';
+      box.textContent='⚠ 未設定 — 下にトークンを貼り付けて「保存」してください';
     }
   }
-  if(el){el.value='';el.placeholder=t?'\u5909\u66f4\u3059\u308b\u5834\u5408\u306f\u5165\u529b':'ghp_... \u3092\u8cbc\u308a\u4ed8\u3051';}
+  if(el){el.value='';el.placeholder=t?'変更する場合は入力':'ghp_... を貼り付け';}
 }
 
-// \u2550\u2550\u2550 \u6642\u8a08 \u2550\u2550\u2550
+// ═══ 時計 ═══
 function tick(){const d=new Date();const el=document.getElementById('hk');if(el)el.textContent=pad(d.getHours())+':'+pad(d.getMinutes());if(document.getElementById('pg-punch').classList.contains('active'))renderSG();}
 
-// \u2550\u2550\u2550 \u7ba1\u7406PW \u2550\u2550\u2550
+// ═══ 管理PW ═══
 const DEFAULT_PW='0000';
 function getAdminPw(){return DB.adminPw||DEFAULT_PW;}
 function checkAdminPw(){
   const pw=getAdminPw();
-  // \u521d\u56de\uff08\u30c7\u30d5\u30a9\u30eb\u30c8PW\u306e\u307e\u307e\uff09\u306f\u30bb\u30c3\u30c8\u30a2\u30c3\u30d7\u8868\u793a
+  // 初回（デフォルトPWのまま）はセットアップ表示
   document.getElementById('pw-setup-area').style.display=pw===DEFAULT_PW?'block':'none';
-  document.getElementById('pw-label').textContent=pw===DEFAULT_PW?'\u65b0\u3057\u3044\u30d1\u30b9\u30ef\u30fc\u30c9\u3092\u8a2d\u5b9a\uff08\u6570\u5b574\u6841\uff09':'\u30d1\u30b9\u30ef\u30fc\u30c9\u3092\u5165\u529b';
-  document.getElementById('pw-btn').textContent=pw===DEFAULT_PW?'\u8a2d\u5b9a\u3059\u308b':'\u78ba\u8a8d';
+  document.getElementById('pw-label').textContent=pw===DEFAULT_PW?'新しいパスワードを設定（数字4桁）':'パスワードを入力';
+  document.getElementById('pw-btn').textContent=pw===DEFAULT_PW?'設定する':'確認';
   document.getElementById('pw-input').value='';
   document.getElementById('pw-error').textContent='';
   document.getElementById('pwm').classList.remove('hidden');
@@ -1581,32 +1558,32 @@ function checkAdminPw(){
 function closePWM(e){if(!e||e.target===document.getElementById('pwm'))document.getElementById('pwm').classList.add('hidden');}
 function submitPW(){
   const val=document.getElementById('pw-input').value;
-  if(!/^[0-9]{4}$/.test(val)){document.getElementById('pw-error').textContent='\u6570\u5b574\u6841\u3067\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044';return;}
+  if(!/^[0-9]{4}$/.test(val)){document.getElementById('pw-error').textContent='数字4桁で入力してください';return;}
   const pw=getAdminPw();
   if(pw===DEFAULT_PW){
-    // \u521d\u56de\u8a2d\u5b9a
-    DB.adminPw=val;sDB();document.getElementById('pwm').classList.add('hidden');showToast('\u30d1\u30b9\u30ef\u30fc\u30c9\u3092\u8a2d\u5b9a\u3057\u307e\u3057\u305f');showPg('admin');
+    // 初回設定
+    DB.adminPw=val;sDB();document.getElementById('pwm').classList.add('hidden');showToast('パスワードを設定しました');showPg('admin');
   } else if(val===pw){
     document.getElementById('pwm').classList.add('hidden');showPg('admin');
   } else {
-    document.getElementById('pw-error').textContent='\u30d1\u30b9\u30ef\u30fc\u30c9\u304c\u9055\u3044\u307e\u3059';
+    document.getElementById('pw-error').textContent='パスワードが違います';
     document.getElementById('pw-input').value='';
   }
 }
 function showPWChange(){
-  // PW\u5909\u66f4: \u73fe\u5728PW\u78ba\u8a8d\u2192\u65b0PW\u5165\u529b
-  const newPw=prompt('\u73fe\u5728\u306e\u30d1\u30b9\u30ef\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044\uff08\u6570\u5b574\u6841\uff09:');
+  // PW変更: 現在PW確認→新PW入力
+  const newPw=prompt('現在のパスワードを入力してください（数字4桁）:');
   if(!newPw)return;
-  if(newPw!==getAdminPw()){showToast('\u30d1\u30b9\u30ef\u30fc\u30c9\u304c\u9055\u3044\u307e\u3059');return;}
-  const next=prompt('\u65b0\u3057\u3044\u30d1\u30b9\u30ef\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044\uff08\u6570\u5b574\u6841\uff09:');
-  if(!next||!/^[0-9]{4}$/.test(next)){showToast('\u6570\u5b574\u6841\u3067\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044');return;}
-  DB.adminPw=next;sDB();document.getElementById('pwm').classList.add('hidden');showToast('\u30d1\u30b9\u30ef\u30fc\u30c9\u3092\u5909\u66f4\u3057\u307e\u3057\u305f');
+  if(newPw!==getAdminPw()){showToast('パスワードが違います');return;}
+  const next=prompt('新しいパスワードを入力してください（数字4桁）:');
+  if(!next||!/^[0-9]{4}$/.test(next)){showToast('数字4桁で入力してください');return;}
+  DB.adminPw=next;sDB();document.getElementById('pwm').classList.add('hidden');showToast('パスワードを変更しました');
 }
 
-// \u2550\u2550\u2550 onTC\u62e1\u5f35\uff08free1\u30aa\u30d7\u30b7\u30e7\u30f3\u8868\u793a\uff09 \u2550\u2550\u2550
+// ═══ onTC拡張（free1オプション表示） ═══
 lDB();autoStart();setInterval(tick,30000);tick();
-// GitHub\u540c\u671f\u3092\u975e\u540c\u671f\u3067\u958b\u59cb\uff08UI\u3092\u30d6\u30ed\u30c3\u30af\u3057\u306a\u3044\uff09
-setTimeout(()=>initSync(),500);
+// GitHub同期：手動のみ（自動同期無効）
+// setTimeout(()=>initSync(),500);
 </script>
 </body>
 </html>
