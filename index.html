@@ -255,6 +255,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
         </div>
         <div style="margin-bottom:11px;">
           <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">① このデバイスからエクスポート</div>
+          <div style="margin-bottom:11px;padding:10px;background:#FFF8E1;border-radius:8px;border:1px solid #FFD54F;">
+            <div style="font-size:11px;font-weight:600;color:#5D4037;margin-bottom:6px;">🔑 GitHubトークン設定</div>
+            <div style="display:flex;gap:6px;">
+              <input class="fi" id="gh-token-input" type="password" placeholder="ghp_..." style="flex:1;font-size:11px;" value="">
+              <button class="fb" style="padding:7px 10px;font-size:11px;white-space:nowrap;" onclick="saveGHToken()">保存</button>
+            </div>
+            <div style="font-size:9px;color:#795548;margin-top:4px;">トークンはこの端末のみに保存されます（HTMLには含まれません）</div>
+          </div>
           <button class="fb" style="width:100%;margin-bottom:7px;" onclick="syncFromGitHub()">🔄 GitHubから最新データを取得</button>
           <button class="fb" style="width:100%;background:#0C447C;" onclick="syncToGitHub()">☁️ GitHubへ今すぐ保存</button>
           <div style="border-top:1px solid var(--br);margin:11px 0;"></div>
@@ -724,7 +732,7 @@ function autoStart(){
   }
 }
 function showPg(p){['punch','log','report','admin'].forEach(n=>{document.getElementById('pg-'+n).classList.toggle('active',n===p);document.getElementById('tab-'+n).classList.toggle('active',n===p);document.getElementById('bn-'+n).classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();}}
-function showAS(sub){['staff','shift','rec','paid','lunch','special','data'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid')initPH();if(sub==='lunch')initLunch();}
+function showAS(sub){['staff','shift','rec','paid','lunch','special','data'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid')initPH();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();}
 
 // ═══ 打刻グリッド ═══
 function renderSG(){
@@ -1404,9 +1412,9 @@ function importData(){
 // ═══ GitHub同期 ═══
 const GH_OWNER='fulllife449';
 const GH_REPO='kintai';
-const GH_TOKEN='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';
 const GH_DATA_FILE='kintai_data.json';
-const GH_RECORDS_FILE='kintai_records.json';
+function getGHToken(){return localStorage.getItem('kintai_gh_token')||'';}
+function setGHToken(t){localStorage.setItem('kintai_gh_token',t);}
 
 async function ghGetFile(filename){
   try{
@@ -1414,7 +1422,7 @@ async function ghGetFile(filename){
       method:'GET',
       mode:'cors',
       headers:{
-        'Authorization':'Bearer '+GH_TOKEN,
+        'Authorization':'Bearer '+getGHToken(),
         'Accept':'application/vnd.github+json',
         'X-GitHub-Api-Version':'2022-11-28'
       }
@@ -1436,7 +1444,7 @@ async function ghPutFile(filename,data,sha){
       method:'PUT',
       mode:'cors',
       headers:{
-        'Authorization':'Bearer '+GH_TOKEN,
+        'Authorization':'Bearer '+getGHToken(),
         'Accept':'application/vnd.github+json',
         'X-GitHub-Api-Version':'2022-11-28',
         'Content-Type':'application/json'
@@ -1500,6 +1508,7 @@ async function syncToGitHub(){
 // 起動時に自動同期
 async function initSync(){
   setSyncStatus('⟳ 接続中...');
+  if(!getGHToken()){setSyncStatus('🔑 要設定','var(--am)');return;}
   try{
     const result=await ghGetFile(GH_DATA_FILE);
     if(result&&result.data){
@@ -1522,6 +1531,22 @@ async function initSync(){
   }catch(e){
     setSyncStatus('⚠ 未接続','var(--am)');
   }
+}
+
+
+function saveGHToken(){
+  const t=document.getElementById('gh-token-input').value.trim();
+  if(!t){showToast('トークンを入力してください');return;}
+  if(!t.startsWith('ghp_')&&!t.startsWith('github_pat_')){showToast('トークンの形式が正しくありません');return;}
+  setGHToken(t);
+  document.getElementById('gh-token-input').value='';
+  showToast('トークンを保存しました ✓ 同期を開始します');
+  setTimeout(()=>initSync(),500);
+}
+function openDataTab(){
+  // トークン入力欄に現在のトークンをマスク表示
+  const el=document.getElementById('gh-token-input');
+  if(el){const t=getGHToken();el.placeholder=t?'設定済み（変更する場合は入力）':'ghp_...';}
 }
 
 // ═══ 時計 ═══
