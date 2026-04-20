@@ -421,7 +421,7 @@ let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lu
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
-const STAFF_VER='v1930'; // 19:30変更バージョン
+const STAFF_VER='v1930b'; // 19:30変更バージョン
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -450,7 +450,8 @@ function ini(n){return(n||'?').charAt(0);}
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2700);}
 function makeTimeOpts(sel=''){
   let h='<option value="">-</option>';
-  for(let i=0;i<24;i++)for(let j=0;j<60;j+=15){
+  for(let i=8;i<=20;i++)for(let j=0;j<60;j+=15){
+    if(i===20&&j>0)break;
     const v=pad(i)+':'+pad(j);
     h+=`<option value="${v}"${v===sel?' selected':''}>${v}</option>`;
   }
@@ -1062,7 +1063,8 @@ function selDow(dow,btn){document.querySelectorAll('.dow-tab').forEach(b=>b.clas
 function selSat(n,btn){document.querySelectorAll('.sat-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.sat-panel').forEach(p=>p.classList.remove('active'));document.getElementById('sp-'+n).classList.add('active');}
 function makeTimeList(){
   let opts='';
-  for(let i=0;i<24;i++)for(let j=0;j<60;j+=15){
+  for(let i=8;i<=20;i++)for(let j=0;j<60;j+=15){
+    if(i===20&&j>0)break; // 20:00まで
     opts+=`<option value="${pad(i)+':'+pad(j)}">`;
   }
   return opts;
