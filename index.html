@@ -248,6 +248,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
       <div class="card"><div class="cl">バイト枠一覧</div><div id="spl"><div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div></div></div>
     </div>
     <div class="asc" id="asc-data">
+      <div class="card" style="border:2px solid #FFD54F;background:#FFFDE7;">
+        <div class="cl" style="color:#F57F17;">🔑 GitHub同期トークン設定</div>
+        <div style="font-size:11px;color:#5D4037;margin-bottom:9px;">同期機能を使うには各端末で1回だけトークンを設定してください。</div>
+        <div id="token-status-box" style="margin-bottom:9px;padding:7px 9px;border-radius:7px;font-size:11px;"></div>
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <input class="fi" id="gh-token-input" type="password" placeholder="ghp_... を貼り付け" style="flex:1;font-size:12px;">
+          <button class="fb" style="padding:9px 14px;font-size:12px;white-space:nowrap;" onclick="saveGHToken()">保存</button>
+        </div>
+        <div style="font-size:9px;color:#795548;">このブラウザのみに保存。HTMLには含まれません。</div>
+      </div>
       <div class="card">
         <div class="cl">データ移行（PC ⇔ タブレット）</div>
         <div class="fs2">
@@ -255,14 +265,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
         </div>
         <div style="margin-bottom:11px;">
           <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">① このデバイスからエクスポート</div>
-          <div style="margin-bottom:11px;padding:10px;background:#FFF8E1;border-radius:8px;border:1px solid #FFD54F;">
-            <div style="font-size:11px;font-weight:600;color:#5D4037;margin-bottom:6px;">🔑 GitHubトークン設定</div>
-            <div style="display:flex;gap:6px;">
-              <input class="fi" id="gh-token-input" type="password" placeholder="ghp_..." style="flex:1;font-size:11px;" value="">
-              <button class="fb" style="padding:7px 10px;font-size:11px;white-space:nowrap;" onclick="saveGHToken()">保存</button>
-            </div>
-            <div style="font-size:9px;color:#795548;margin-top:4px;">トークンはこの端末のみに保存されます（HTMLには含まれません）</div>
-          </div>
           <button class="fb" style="width:100%;margin-bottom:7px;" onclick="syncFromGitHub()">🔄 GitHubから最新データを取得</button>
           <button class="fb" style="width:100%;background:#0C447C;" onclick="syncToGitHub()">☁️ GitHubへ今すぐ保存</button>
           <div style="border-top:1px solid var(--br);margin:11px 0;"></div>
@@ -1544,9 +1546,19 @@ function saveGHToken(){
   setTimeout(()=>initSync(),500);
 }
 function openDataTab(){
-  // トークン入力欄に現在のトークンをマスク表示
+  const t=getGHToken();
+  const box=document.getElementById('token-status-box');
   const el=document.getElementById('gh-token-input');
-  if(el){const t=getGHToken();el.placeholder=t?'設定済み（変更する場合は入力）':'ghp_...';}
+  if(box){
+    if(t){
+      box.style.background='var(--gl)';box.style.color='var(--gd)';
+      box.textContent='✓ 設定済み（'+t.slice(0,12)+'...）変更する場合は下に入力して保存';
+    }else{
+      box.style.background='var(--rl)';box.style.color='#791F1F';
+      box.textContent='⚠ 未設定 — 下にトークンを貼り付けて「保存」してください';
+    }
+  }
+  if(el){el.value='';el.placeholder=t?'変更する場合は入力':'ghp_... を貼り付け';}
 }
 
 // ═══ 時計 ═══
