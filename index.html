@@ -265,8 +265,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
         </div>
         <div style="margin-bottom:11px;">
           <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">① このデバイスからエクスポート</div>
-          <button class="fb" style="width:100%;margin-bottom:7px;" onclick="syncFromGitHub()">🔄 GitHubから最新データを取得</button>
-          <button class="fb" style="width:100%;background:#0C447C;" onclick="syncToGitHub()">☁️ GitHubへ今すぐ保存</button>
+          <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">スタッフ設定</div>
+          <button class="fb" style="width:100%;margin-bottom:6px;" onclick="syncFromGitHub()">🔄 GitHubから取得（設定）</button>
+          <button class="fb" style="width:100%;background:#0C447C;margin-bottom:11px;" onclick="syncToGitHub()">☁️ GitHubへ保存（設定）</button>
+          <div style="border-top:1px solid var(--br);padding-top:11px;font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">打刻データ</div>
+          <button class="fb" style="width:100%;margin-bottom:6px;background:#1D9E75;" onclick="syncRecordsFromGitHub()">⬇️ GitHubから取得（打刻）</button>
+          <button class="fb" style="width:100%;background:#085041;margin-bottom:11px;" onclick="syncRecordsToGitHub()">⬆️ GitHubへ保存（打刻）</button>
+          <div style="font-size:9px;color:var(--t2);padding:7px 9px;background:var(--gy);border-radius:7px;">
+            打刻データは自動同期されません。<br>業務終了時に「打刻→GitHub保存」、別端末使用前に「打刻→GitHub取得」をしてください。
+          </div>
           <div style="border-top:1px solid var(--br);margin:11px 0;"></div>
           <button class="fb" style="width:100%;background:var(--t2);" onclick="exportData()">📤 データをエクスポート（コピー）</button>
           <div style="font-size:10px;color:var(--t2);margin-top:5px;">クリップボードにコピーされます。メモ帳・メール等に貼り付けて別端末に送ってください。</div>
@@ -1567,6 +1574,65 @@ function openDataTab(){
     }
   }
   if(el){el.value='';el.placeholder=t?'変更する場合は入力':'ghp_... を貼り付け';}
+}
+
+
+// ═══ 打刻データ同期 ═══
+const GH_RECORDS_FILE='kintai_records.json';
+
+async function syncRecordsToGitHub(){
+  setSyncStatus('\u2191 \u6253\u523b\u4fdd\u5b58\u4e2d...');
+  try{
+    const dataToSync={
+      records:DB.records,
+      paid:DB.paid,
+      fare:DB.fare,
+      lunch:DB.lunch
+    };
+    const jsonStr=JSON.stringify(dataToSync,null,0).replace(/[\u0080-\uffff]/g,ch=>'\\u'+('0000'+ch.charCodeAt(0).toString(16)).slice(-4));
+    const content=btoa(unescape(encodeURIComponent(jsonStr)));
+    const existing=await ghGetFile(GH_RECORDS_FILE);
+    const sha=existing?existing.sha:null;
+    const body={message:'update records',content};
+    if(sha)body.sha=sha;
+    const res=await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_RECORDS_FILE}`,{
+      method:'PUT',mode:'cors',
+      headers:{'Authorization':'Bearer '+getGHToken(),'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    if(res.ok){
+      setSyncStatus('\u2713 \u6253\u523b\u4fdd\u5b58\u6e08 '+new Date().toLocaleTimeString('ja'),'var(--gd)');
+      showToast('\u6253\u523b\u30c7\u30fc\u30bf\u3092GitHub\u306b\u4fdd\u5b58\u3057\u307e\u3057\u305f \u2713');
+    } else {
+      setSyncStatus('\u2717 \u4fdd\u5b58\u5931\u6557','var(--rd)');
+      showToast('\u4fdd\u5b58\u306b\u5931\u6557\u3057\u307e\u3057\u305f');
+    }
+  }catch(e){
+    setSyncStatus('\u26a0 \u672a\u63a5\u7d9a','var(--am)');
+  }
+}
+
+async function syncRecordsFromGitHub(){
+  setSyncStatus('\u21e9 \u6253\u523b\u53d6\u5f97\u4e2d...');
+  try{
+    const result=await ghGetFile(GH_RECORDS_FILE);
+    if(result&&result.data){
+      const remote=result.data;
+      if(remote.records)DB.records=remote.records;
+      if(remote.paid)DB.paid=remote.paid;
+      if(remote.fare)DB.fare=remote.fare;
+      if(remote.lunch)DB.lunch=remote.lunch;
+      sDB();
+      setSyncStatus('\u2713 \u6253\u523b\u53d6\u5f97\u6e08 '+new Date().toLocaleTimeString('ja'),'var(--gd)');
+      showToast('\u6253\u523b\u30c7\u30fc\u30bf\u3092\u53d6\u5f97\u3057\u307e\u3057\u305f \u2713');
+      renderSG();renderLog();
+    } else {
+      showToast('\u6253\u523b\u30c7\u30fc\u30bf\u304c\u3042\u308a\u307e\u305b\u3093');
+      setSyncStatus('','');
+    }
+  }catch(e){
+    setSyncStatus('\u26a0 \u672a\u63a5\u7d9a','var(--am)');
+  }
 }
 
 // ═══ 時計 ═══
