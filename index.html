@@ -1439,7 +1439,9 @@ async function ghGetFile(filename){
 
 async function ghPutFile(filename,data,sha){
   try{
-    const content=btoa(unescape(encodeURIComponent(JSON.stringify(data,null,0))));
+    // Unicodeエスケープで保存（文字化け防止）
+    const jsonStr=JSON.stringify(data,null,0).replace(/[\u0080-\uffff]/g,ch=>'\\u'+('0000'+ch.charCodeAt(0).toString(16)).slice(-4));
+    const content=btoa(unescape(encodeURIComponent(jsonStr)));
     const body={message:'update '+filename,content};
     if(sha)body.sha=sha;
     const res=await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${filename}`,{
@@ -1509,8 +1511,37 @@ async function syncToGitHub(){
 
 // 起動時に自動同期
 async function initSync(){
-  // 自動同期は無効。手動ボタンからのみ実行
-  setSyncStatus('');
+  setSyncStatus('⟳ 接続中...');
+  if(!getGHToken()){setSyncStatus('🔑 要設定','var(--am)');return;}
+  try{
+    const result=await ghGetFile(GH_DATA_FILE);
+    if(result&&result.data){
+      const remote=result.data;
+      // スタッフ名が正常か確認（文字化けチェック）
+      const firstStaff=remote.staff&&remote.staff[0];
+      if(firstStaff&&firstStaff.name&&/[\u4e00-\u9fff\u3040-\u30ff]/.test(firstStaff.name)){
+        // 正常な日本語データ → 読み込み
+        const localRecords=DB.records;const localPaid=DB.paid;const localFare=DB.fare;const localLunch=DB.lunch;const localLunchEnabled=DB.lunchEnabled;
+        DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]},remote);
+        DB.records=localRecords;DB.paid=localPaid;DB.fare=localFare;DB.lunch=localLunch;DB.lunchEnabled=localLunchEnabled;
+        sDB();setSyncStatus('\u2713 \u540c\u671f\u6e08 '+new Date().toLocaleTimeString('ja'),'var(--gd)');
+        renderSG();
+      } else if(firstStaff&&firstStaff.name){
+        // 文字化けデータ → 無視してローカルデータをアップロード
+        setSyncStatus('\u2191 \u4fee\u5fa9\u4e2d...');
+        await syncToGitHub();
+      } else {
+        // スタッフなし → アップロード
+        setSyncStatus('\u2191 \u521d\u671f\u5316\u4e2d...');
+        await syncToGitHub();
+      }
+    } else {
+      setSyncStatus('\u2191 \u521d\u671f\u5316\u4e2d...');
+      await syncToGitHub();
+    }
+  }catch(e){
+    setSyncStatus('\u26a0 \u672a\u63a5\u7d9a','var(--am)');
+  }
 }
 
 
@@ -1582,8 +1613,8 @@ function showPWChange(){
 
 // ═══ onTC拡張（free1オプション表示） ═══
 lDB();autoStart();setInterval(tick,30000);tick();
-// GitHub同期：手動のみ（自動同期無効）
-// setTimeout(()=>initSync(),500);
+// GitHub同期を非同期で開始
+setTimeout(()=>initSync(),800);
 </script>
 </body>
 </html>
