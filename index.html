@@ -255,7 +255,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
         </div>
         <div style="margin-bottom:11px;">
           <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">① このデバイスからエクスポート</div>
-          <button class="fb" style="width:100%;" onclick="exportData()">📤 データをエクスポート（コピー）</button>
+          <button class="fb" style="width:100%;margin-bottom:7px;" onclick="syncFromGitHub()">🔄 GitHubから最新データを取得</button>
+          <button class="fb" style="width:100%;background:#0C447C;" onclick="syncToGitHub()">☁️ GitHubへ今すぐ保存</button>
+          <div style="border-top:1px solid var(--br);margin:11px 0;"></div>
+          <button class="fb" style="width:100%;background:var(--t2);" onclick="exportData()">📤 データをエクスポート（コピー）</button>
           <div style="font-size:10px;color:var(--t2);margin-top:5px;">クリップボードにコピーされます。メモ帳・メール等に貼り付けて別端末に送ってください。</div>
         </div>
         <div style="border-top:1px solid var(--br);padding-top:11px;">
@@ -330,7 +333,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
       <div class="sat-panel" id="sp-5"></div>
     </div>
     <div class="dow-panel" id="dp-sun"></div>
-    <div class="frw" style="margin-top:10px;"><label class="fl">休憩時間（分）<span style="color:var(--t2);font-size:9px;font-weight:400;">　打刻管理の場合は0</span></label><input class="fi" id="fbk" type="number" value="60"></div>
+    <div class="frw" style="margin-top:10px;"><label class="fl">休憩時間（分）<span style="color:var(--t2);font-size:9px;font-weight:400;">　打刻管理の場合は0</span></label><input class="fi" id="fbk" type="number" value="0"></div>
   <div style="margin-top:8px;padding:10px;background:var(--bll);border-radius:8px;">
     <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
       <div id="fft-box" onclick="toggleFft()" style="width:22px;height:22px;border-radius:5px;border:2px solid var(--br);background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;transition:all 0.15s;"></div>
@@ -432,7 +435,7 @@ function lDB(){
     localStorage.setItem('kintai_staff_ver',STAFF_VER);
   }
   if(!DB.staff.length){
-    DB.staff=[{id:1,name:'壹岐 伸弥',employeeId:3,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:2,name:'宮浦 幸湖',employeeId:4,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:3,name:'髙木 綾子',employeeId:5,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:4,name:'亀田 雅子',employeeId:6,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:5,name:'前田 美香',employeeId:7,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:6,name:'岡田 美鈴',employeeId:8,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:7,name:'矢野 恵夢',employeeId:12,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:8,name:'内藤 敏',employeeId:14,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:9,name:'森田 晴彦',employeeId:19,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:10,name:'大橋 章弘',employeeId:23,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:11,name:'寺嶋 真由美',employeeId:24,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:12,name:'寺岡 優希',employeeId:25,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:13,name:'加藤 慶紀',employeeId:27,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:14,name:'関 亜矢子',employeeId:28,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:15,name:'中野 拓哉',employeeId:33,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:16,name:'髙岡 夏実',employeeId:36,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:17,name:'西田 圭一郎',employeeId:38,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:18,name:'吉村 晋一',employeeId:43,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0},{id:19,name:'中 功',employeeId:46,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[{s:'13:45',e:'17:00'}],2:[{s:'13:45',e:'17:00'}],3:[{s:'13:45',e:'17:00'}],4:[{s:'13:45',e:'17:00'}],5:[]},sun:[]},breakMin:60,fare:0}];
+    DB.staff=[{id:1,name:'壹岐 伸弥',employeeId:3,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:2,name:'宮浦 幸湖',employeeId:4,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:3,name:'髙木 綾子',employeeId:5,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:4,name:'亀田 雅子',employeeId:6,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:5,name:'前田 美香',employeeId:7,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:6,name:'岡田 美鈴',employeeId:8,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:7,name:'矢野 恵夢',employeeId:12,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:8,name:'内藤 敏',employeeId:14,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:9,name:'森田 晴彦',employeeId:19,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:10,name:'大橋 章弘',employeeId:23,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:11,name:'寺嶋 真由美',employeeId:24,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:12,name:'寺岡 優希',employeeId:25,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:13,name:'加藤 慶紀',employeeId:27,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:14,name:'関 亜矢子',employeeId:28,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:15,name:'中野 拓哉',employeeId:33,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:16,name:'髙岡 夏実',employeeId:36,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:17,name:'西田 圭一郎',employeeId:38,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:18,name:'吉村 晋一',employeeId:43,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:19,name:'中 功',employeeId:46,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0}];
     sDB();
   }
 }
@@ -1095,15 +1098,15 @@ function initPanels(ds){
     shifts.forEach(sh=>addShiftRow('sh-'+d,sh.s,sh.e));});for(let n=1;n<=5;n++){
     const el=document.getElementById('sp-'+n);
     el.innerHTML=`<div id="sh-sat${n}"></div><button class="fa" onclick="addShiftRow('sh-sat${n}')">＋ 時間枠を追加</button>`;
-    const satShifts=ds&&ds.sat&&ds.sat[n]?ds.sat[n]:(n===1?[{s:'13:45',e:'17:00'}]:[]);
+    const satShifts=ds&&ds.sat&&ds.sat[n]?ds.sat[n]:[];
     satShifts.forEach(sh=>addShiftRow('sh-sat'+n,sh.s,sh.e));
   }const se=document.getElementById('dp-sun');se.innerHTML=`<div id="sh-sun"></div><button class="fa" onclick="addShiftRow('sh-sun')">＋ 時間枠を追加</button>`;(ds&&ds.sun||[]).forEach(sh=>addShiftRow('sh-sun',sh.s,sh.e));}
-function openAdd(){eSid=null;document.getElementById('stm-t').textContent='スタッフを追加';setFft(false);document.getElementById('fn').value='';document.getElementById('feid').value='';document.getElementById('ft').value='contract';document.getElementById('fstd').value='480';document.getElementById('fbk').value='60';document.getElementById('ff').value='0';onTC();initPanels(null);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));setFft(s.freeEnd||false);
+function openAdd(){eSid=null;document.getElementById('stm-t').textContent='スタッフを追加';setFft(false);document.getElementById('fn').value='';document.getElementById('feid').value='';document.getElementById('ft').value='contract';document.getElementById('fstd').value='480';document.getElementById('fbk').value='0';document.getElementById('ff').value='0';onTC();initPanels(null);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));setFft(s.freeEnd||false);
   const f1el=document.getElementById('ff1min');
   if(f1el)f1el.value=s.free1Min!==undefined?s.free1Min:45;
   onTC();
   document.getElementById('stm').classList.remove('hidden');}
-function openEdit(id){const s=DB.staff.find(x=>x.id===id);if(!s)return;eSid=id;document.getElementById('stm-t').textContent='スタッフを編集';document.getElementById('fn').value=s.name;document.getElementById('feid').value=s.employeeId||'';document.getElementById('ft').value=s.type;document.getElementById('fstd').value=s.stdMin||480;document.getElementById('fbk').value=s.breakMin||60;document.getElementById('ff').value=s.fare||0;onTC();initPanels(s.dowShifts);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));document.getElementById('stm').classList.remove('hidden');}
+function openEdit(id){const s=DB.staff.find(x=>x.id===id);if(!s)return;eSid=id;document.getElementById('stm-t').textContent='スタッフを編集';document.getElementById('fn').value=s.name;document.getElementById('feid').value=s.employeeId||'';document.getElementById('ft').value=s.type;document.getElementById('fstd').value=s.stdMin||480;document.getElementById('fbk').value=s.breakMin!==undefined?s.breakMin:0;document.getElementById('ff').value=s.fare||0;onTC();initPanels(s.dowShifts);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));document.getElementById('stm').classList.remove('hidden');}
 function closeSTM(e){if(!e||e.target===document.getElementById('stm'))document.getElementById('stm').classList.add('hidden');}
 function onTC(){
   const t=document.getElementById('ft').value;
@@ -1135,9 +1138,9 @@ function setFft(val){
     box.innerHTML='';
   }
 }
-function saveSt(){const name=document.getElementById('fn').value.trim();if(!name){showToast('名前を入力してください');return;}const eid=parseInt(document.getElementById('feid').value)||null;const type=document.getElementById('ft').value;const stdMin=parseInt(document.getElementById('fstd').value)||480;const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)?60:Math.max(0,bkRaw);const fareRaw=parseInt(document.getElementById('ff').value);const fare=isNaN(fareRaw)?0:Math.max(0,fareRaw);const freeEnd=document.getElementById('fft').value==='1';
+function saveSt(){const name=document.getElementById('fn').value.trim();if(!name){showToast('名前を入力してください');return;}const eid=parseInt(document.getElementById('feid').value)||null;const type=document.getElementById('ft').value;const stdMin=parseInt(document.getElementById('fstd').value)||480;const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)?0:Math.max(0,bkRaw);const fareRaw=parseInt(document.getElementById('ff').value);const fare=isNaN(fareRaw)?0:Math.max(0,fareRaw);const freeEnd=document.getElementById('fft').value==='1';
   const free1MinEl=document.getElementById('ff1min');
-  const free1Min=free1MinEl?parseInt(free1MinEl.value):45;let ds=null;if(type==='contract'){ds={mon:readRows('sh-mon'),tue:readRows('sh-tue'),wed:readRows('sh-wed'),thu:readRows('sh-thu'),fri:readRows('sh-fri'),sat:{1:readRows('sh-sat1'),2:readRows('sh-sat2'),3:readRows('sh-sat3'),4:readRows('sh-sat4'),5:readRows('sh-sat5')},sun:readRows('sh-sun')};}if(eSid){const idx=DB.staff.findIndex(s=>s.id===eSid);if(idx>=0)DB.staff[idx]={...DB.staff[idx],name,employeeId:eid,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min};}else{const nid=Math.max(0,...DB.staff.map(s=>s.id))+1;DB.staff.push({id:nid,name,employeeId:eid,company:CO,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min});}sDB();document.getElementById('stm').classList.add('hidden');showToast(name+'を保存しました');renderAL();renderSG();}
+  const free1Min=free1MinEl?parseInt(free1MinEl.value):45;let ds=null;if(type==='contract'){ds={mon:readRows('sh-mon'),tue:readRows('sh-tue'),wed:readRows('sh-wed'),thu:readRows('sh-thu'),fri:readRows('sh-fri'),sat:{1:readRows('sh-sat1'),2:readRows('sh-sat2'),3:readRows('sh-sat3'),4:readRows('sh-sat4'),5:readRows('sh-sat5')},sun:readRows('sh-sun')};}if(eSid){const idx=DB.staff.findIndex(s=>s.id===eSid);if(idx>=0)DB.staff[idx]={...DB.staff[idx],name,employeeId:eid,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min};}else{const nid=Math.max(0,...DB.staff.map(s=>s.id))+1;DB.staff.push({id:nid,name,employeeId:eid,company:CO,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min});}sDB();document.getElementById('stm').classList.add('hidden');showToast(name+'を保存しました');renderAL();renderSG();syncToGitHub();}
 function delSt(id){const s=DB.staff.find(x=>x.id===id);if(!s||!confirm(s.name+'を削除しますか？'))return;DB.staff=DB.staff.filter(x=>x.id!==id);sDB();showToast(s.name+'を削除しました');renderAL();renderSG();}
 
 // ═══ 日次シフト ═══
@@ -1407,6 +1410,102 @@ function importData(){
   }catch(e){showToast('データの解析に失敗しました。正しいデータを貼り付けてください');}
 }
 
+
+// ═══ GitHub同期 ═══
+const GH_OWNER='fulllife449';
+const GH_REPO='kintai';
+const GH_TOKEN='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';
+const GH_DATA_FILE='kintai_data.json';
+const GH_RECORDS_FILE='kintai_records.json';
+
+async function ghGetFile(filename){
+  try{
+    const res=await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${filename}`,{
+      headers:{'Authorization':'token '+GH_TOKEN,'Accept':'application/vnd.github.v3+json'}
+    });
+    if(!res.ok)return null;
+    const json=await res.json();
+    const content=atob(json.content.replace(/\n/g,''));
+    return{data:JSON.parse(content),sha:json.sha};
+  }catch(e){console.error('ghGetFile error:',e);return null;}
+}
+
+async function ghPutFile(filename,data,sha){
+  try{
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(data,null,0))));
+    const body={message:'update '+filename,content};
+    if(sha)body.sha=sha;
+    const res=await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${filename}`,{
+      method:'PUT',
+      headers:{'Authorization':'token '+GH_TOKEN,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    return res.ok;
+  }catch(e){console.error('ghPutFile error:',e);return false;}
+}
+
+// 同期状態表示
+function setSyncStatus(msg,color){
+  const el=document.getElementById('sync-status');
+  if(el){el.textContent=msg;el.style.color=color||'var(--t2)';}
+}
+
+// GitHubからデータを読み込む
+async function syncFromGitHub(){
+  setSyncStatus('⟳ 同期中...');
+  const result=await ghGetFile(GH_DATA_FILE);
+  if(result&&result.data){
+    const remote=result.data;
+    // スタッフ・設定データをリモートで上書き（打刻は保持）
+    const localRecords=DB.records;
+    const localPaid=DB.paid;
+    const localFare=DB.fare;
+    const localLunch=DB.lunch;
+    const localLunchEnabled=DB.lunchEnabled;
+    DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]},remote);
+    // 打刻データはローカルを保持
+    DB.records=localRecords;
+    DB.paid=localPaid;
+    DB.fare=localFare;
+    DB.lunch=localLunch;
+    DB.lunchEnabled=localLunchEnabled;
+    sDB();
+    setSyncStatus('✓ 同期済み '+new Date().toLocaleTimeString('ja'),'var(--gd)');
+    renderSG();
+    if(document.getElementById('pg-admin').classList.contains('active')){renderAL();}
+  } else {
+    setSyncStatus('⚠ GitHub未接続','var(--am)');
+  }
+}
+
+// GitHubへデータを書き込む（スタッフ・設定のみ）
+async function syncToGitHub(){
+  setSyncStatus('↑ 保存中...');
+  // 打刻以外のデータを送信
+  const dataToSync={
+    staff:DB.staff,
+    dayShifts:DB.dayShifts,
+    specials:DB.specials,
+    lunchEnabled:DB.lunchEnabled,
+    adminPw:DB.adminPw
+  };
+  const existing=await ghGetFile(GH_DATA_FILE);
+  const sha=existing?existing.sha:null;
+  const ok=await ghPutFile(GH_DATA_FILE,dataToSync,sha);
+  if(ok){
+    setSyncStatus('✓ 保存済み '+new Date().toLocaleTimeString('ja'),'var(--gd)');
+  } else {
+    setSyncStatus('✗ 保存失敗','var(--rd)');
+    showToast('GitHub同期に失敗しました');
+  }
+}
+
+// 起動時に自動同期
+async function initSync(){
+  setSyncStatus('⟳ 接続中...');
+  await syncFromGitHub();
+}
+
 // ═══ 時計 ═══
 function tick(){const d=new Date();const el=document.getElementById('hk');if(el)el.textContent=pad(d.getHours())+':'+pad(d.getMinutes());if(document.getElementById('pg-punch').classList.contains('active'))renderSG();}
 
@@ -1451,6 +1550,8 @@ function showPWChange(){
 
 // ═══ onTC拡張（free1オプション表示） ═══
 lDB();autoStart();setInterval(tick,30000);tick();
+// GitHub同期を非同期で開始（UIをブロックしない）
+setTimeout(()=>initSync(),500);
 </script>
 </body>
 </html>
