@@ -421,7 +421,7 @@ let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lu
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
-const STAFF_VER='v1930d'; // 19:30変更バージョン
+const STAFF_VER='v1930c'; // 19:30変更バージョン
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -1443,76 +1443,67 @@ function setSyncStatus(msg,color){
 // GitHubからデータを読み込む
 async function syncFromGitHub(){
   setSyncStatus('⟳ 同期中...');
-  const result=await ghGetFile(GH_DATA_FILE);
-  if(result&&result.data){
-    const remote=result.data;
-    // スタッフ・設定データをリモートで上書き（打刻は保持）
-    const localRecords=DB.records;
-    const localPaid=DB.paid;
-    const localFare=DB.fare;
-    const localLunch=DB.lunch;
-    const localLunchEnabled=DB.lunchEnabled;
-    const localStaff=DB.staff; // ローカルの現在スタッフ
-    DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]},remote);
-    // STAFF_VERチェック: リモートのスタッフが古い場合はローカルを優先
-    if(remote.staffVer!==STAFF_VER){
-      DB.staff=localStaff; // ローカル初期データを保持
-      DB.staffVer=STAFF_VER;
+  try{
+    const result=await ghGetFile(GH_DATA_FILE);
+    if(result&&result.data){
+      const remote=result.data;
+      const localRecords=DB.records;const localPaid=DB.paid;const localFare=DB.fare;const localLunch=DB.lunch;const localLunchEnabled=DB.lunchEnabled;
+      DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]},remote);
+      DB.records=localRecords;DB.paid=localPaid;DB.fare=localFare;DB.lunch=localLunch;DB.lunchEnabled=localLunchEnabled;
+      sDB();setSyncStatus('✓ 同期済み '+new Date().toLocaleTimeString('ja'),'var(--gd)');
+      renderSG();if(document.getElementById('pg-admin').classList.contains('active')){renderAL();}
+    } else {
+      // ファイルがない→初回なので現在データをアップロード
+      setSyncStatus('↑ 初期化中...');
+      await syncToGitHub();
     }
-    // 打刻データはローカルを保持
-    DB.records=localRecords;
-    DB.paid=localPaid;
-    DB.fare=localFare;
-    DB.lunch=localLunch;
-    DB.lunchEnabled=localLunchEnabled;
-    // 古いデータ補正: breakMin:60→0、土曜シフト空
-    DB.staff.forEach(s=>{
-      if(s.breakMin===60||s.breakMin===undefined)s.breakMin=0;
-      if(s.dowShifts&&s.dowShifts.sat){
-        [1,2,3,4,5].forEach(n=>{if(!Array.isArray(s.dowShifts.sat[n]))s.dowShifts.sat[n]=[];
-          else{
-            // 土曜に13:45-17:00が入っていたら空に
-            s.dowShifts.sat[n]=s.dowShifts.sat[n].filter(sh=>!(sh.s==='13:45'&&sh.e==='17:00'));
-          }
-        });
-      }
-    });
-    sDB();
-    setSyncStatus('✓ 同期済み '+new Date().toLocaleTimeString('ja'),'var(--gd)');
-    renderSG();
-    if(document.getElementById('pg-admin').classList.contains('active')){renderAL();}
-  } else {
-    setSyncStatus('⚠ GitHub未接続','var(--am)');
+  }catch(e){
+    setSyncStatus('⚠ 未接続','var(--am)');
+    console.warn('syncFromGitHub:',e);
   }
 }
 
 // GitHubへデータを書き込む（スタッフ・設定のみ）
 async function syncToGitHub(){
   setSyncStatus('↑ 保存中...');
-  // 打刻以外のデータを送信
-  const dataToSync={
-    staff:DB.staff,
-    staffVer:STAFF_VER,
-    dayShifts:DB.dayShifts,
-    specials:DB.specials,
-    lunchEnabled:DB.lunchEnabled,
-    adminPw:DB.adminPw
-  };
-  const existing=await ghGetFile(GH_DATA_FILE);
-  const sha=existing?existing.sha:null;
-  const ok=await ghPutFile(GH_DATA_FILE,dataToSync,sha);
-  if(ok){
-    setSyncStatus('✓ 保存済み '+new Date().toLocaleTimeString('ja'),'var(--gd)');
-  } else {
-    setSyncStatus('✗ 保存失敗','var(--rd)');
-    showToast('GitHub同期に失敗しました');
+  try{
+    const dataToSync={staff:DB.staff,dayShifts:DB.dayShifts,specials:DB.specials,lunchEnabled:DB.lunchEnabled,adminPw:DB.adminPw};
+    const existing=await ghGetFile(GH_DATA_FILE);
+    const sha=existing?existing.sha:null;
+    const ok=await ghPutFile(GH_DATA_FILE,dataToSync,sha);
+    if(ok){setSyncStatus('✓ 保存済み '+new Date().toLocaleTimeString('ja'),'var(--gd)');}
+    else{setSyncStatus('✗ 保存失敗','var(--rd)');showToast('GitHub同期に失敗しました');}
+  }catch(e){
+    setSyncStatus('⚠ 未接続','var(--am)');
+    console.warn('syncToGitHub:',e);
   }
 }
 
 // 起動時に自動同期
 async function initSync(){
   setSyncStatus('⟳ 接続中...');
-  await syncFromGitHub();
+  try{
+    const result=await ghGetFile(GH_DATA_FILE);
+    if(result&&result.data){
+      // リモートデータあり → 読み込み
+      const remote=result.data;
+      const localRecords=DB.records;
+      const localPaid=DB.paid;
+      const localFare=DB.fare;
+      const localLunch=DB.lunch;
+      const localLunchEnabled=DB.lunchEnabled;
+      DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]},remote);
+      DB.records=localRecords;DB.paid=localPaid;DB.fare=localFare;DB.lunch=localLunch;DB.lunchEnabled=localLunchEnabled;
+      sDB();setSyncStatus('✓ 同期済み '+new Date().toLocaleTimeString('ja'),'var(--gd)');
+      renderSG();
+    } else {
+      // ファイルなし → 現在のスタッフデータをアップロード
+      setSyncStatus('↑ 初期化中...');
+      await syncToGitHub();
+    }
+  }catch(e){
+    setSyncStatus('⚠ 未接続','var(--am)');
+  }
 }
 
 // ═══ 時計 ═══
