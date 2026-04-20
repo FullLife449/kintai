@@ -1,0 +1,160 @@
+{
+"staff": [
+{
+"id": 1,
+"name": "壹岐 伸弥",
+"employeeId": 3,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 2,
+"name": "宮浦 幸湖",
+"employeeId": 4,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 3,
+"name": "髙木 綾子",
+"employeeId": 5,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 4,
+"name": "亀田 雅子",
+"employeeId": 6,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 5,
+"name": "前田 美香",
+"employeeId": 7,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 6,
+"name": "岡田 美鈴",
+"employeeId": 8,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 7,
+"name": "矢野 恵夢",
+"employeeId": 12,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 8,
+"name": "内藤 敏",
+"employeeId": 14,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 9,
+"name": "森田 晴彦",
+"employeeId": 19,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 10,
+"name": "大橋 章弘",
+"employeeId": 23,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 11,
+"name": "寺嶋 真由美",
+"employeeId": 24,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 12,
+"name": "寺岡 優希",
+"employeeId": 25,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 13,
+"name": "加藤 慶紀",
+"employeeId": 27,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 14,
+"name": "関 亜矢子",
+"employeeId": 28,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 15,
+"name": "中野 拓哉",
+"employeeId": 33,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 16,
+"name": "髙岡 夏実",
+"employeeId": 36,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 17,
+"name": "西田 圭一郎",
+"employeeId": 38,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 18,
+"name": "吉村 晋一",
+"employeeId": 43,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+},
+{
+"id": 19,
+"name": "中 功",
+"employeeId": 46,
+"type": "contract",
+"breakMin": 0,
+"fare": 0
+}
+],
+"dayShifts": [],
+"specials": [],
+"lunchEnabled": [],
+"adminPw": "0000"
+}
