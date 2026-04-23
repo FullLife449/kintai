@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#1a1a2e">
-<title>勤怠タッチ Pro - 医療法人香庸会</title>
+<title>勤怠タッチ Pro</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{--nv:#1a1a2e;--gn:#1D9E75;--gl:#E1F5EE;--gd:#085041;--rd:#E24B4A;--rl:#FCEBEB;--am:#EF9F27;--al:#FAEEDA;--bl:#378ADD;--bll:#E6F1FB;--pu:#7F77DD;--pul:#EEEDFE;--gy:#f5f5f3;--br:#e0ddd6;--tx:#1a1a18;--t2:#6b6b66;}
@@ -120,17 +120,70 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 .nb.active{color:var(--nv);}.ni{font-size:19px;line-height:1;}
 .hidden{display:none!important;}
 .late-warn{color:#C62828;font-size:10px;font-weight:600;}
+
+.ptab{padding:6px 11px;border:1px solid var(--br);border-radius:20px;background:#fff;font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--t2);white-space:nowrap;}
+.ptab.active{background:var(--nv);color:#fff;border-color:var(--nv);}
+.pview{display:block;}
+
+.action-btn{padding:28px 10px;border:none;border-radius:14px;font-size:20px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform 0.1s;}
+.action-btn:active{transform:scale(0.95);}
+.action-in{background:var(--gl);color:var(--gd);}
+.action-break{background:var(--al);color:#633806;}
+.action-resume{background:var(--bll);color:#0C447C;}
+.action-out{background:var(--rl);color:#791F1F;}
 </style>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getDatabase, ref, set, get, onValue, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDiI2ihk_P2-n4-I7ZL09phNJFvxI2-7Ug",
+  authDomain: "kintai-koyokai-fulllife.firebaseapp.com",
+  databaseURL: "https://kintai-koyokai-fulllife-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "kintai-koyokai-fulllife",
+  storageBucket: "kintai-koyokai-fulllife.firebasestorage.app",
+  messagingSenderId: "703604624047",
+  appId: "1:703604624047:web:bbe2ef3e3cc45c6fcc225a"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// グローバルに公開
+window.fbDB = db;
+window.fbRef = ref;
+window.fbSet = set;
+window.fbGet = get;
+window.fbOnValue = onValue;
+window.fbUpdate = update;
+window.firebaseReady = true;
+
+console.log('Firebase initialized');
+</script>
 </head>
 <body>
 <div id="cs">
-  <h1>勤怠タッチ Pro</h1>
-  <p>医療法人香庸会</p>
-  <button class="stbtn" onclick="start()">タッチして開始</button>
+  <div style="text-align:center;padding:40px 20px 30px;">
+    <div style="color:rgba(255,255,255,0.5);font-size:11px;margin-bottom:6px;">勤怠タッチ Pro</div>
+    <div style="color:#fff;font-size:20px;font-weight:700;margin-bottom:4px;">会社を選択してください</div>
+    <div style="color:rgba(255,255,255,0.4);font-size:10px;margin-bottom:36px;">β v2.0 Firebase対応</div>
+    <div style="display:flex;flex-direction:column;gap:12px;max-width:300px;margin:0 auto;">
+      <button onclick="selectCompany('koyokai')" style="width:100%;padding:18px;border:none;border-radius:14px;cursor:pointer;font-size:15px;font-weight:700;background:#fff;color:#1a1a2e;font-family:inherit;">
+        <div style="font-size:11px;color:#888;margin-bottom:3px;">医療法人</div>
+        香庸会
+      </button>
+      <button onclick="selectCompany('fulllife')" style="width:100%;padding:18px;border:none;border-radius:14px;cursor:pointer;font-size:15px;font-weight:700;background:rgba(255,255,255,0.15);color:#fff;font-family:inherit;border:1px solid rgba(255,255,255,0.3);">
+        <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:3px;">株式会社</div>
+        フルライフ
+      </button>
+    </div>
+  </div>
 </div>
 <div id="ms">
   <div class="hd">
-    <div><div class="hco">医療法人</div><div class="ht">香庸会 勤怠タッチ Pro</div></div>
+    <div><div class="hco" id="hco-label">勤怠タッチ Pro</div><div class="ht" id="hco-name">-</div></div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">β v1.0</div></div>
   </div>
   <div class="tabs">
@@ -139,9 +192,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
     <button class="tab" id="tab-report" onclick="showPg('report')">レポート</button>
     <button class="tab" id="tab-admin" onclick="checkAdminPw()">管理</button>
   </div>
-  <div id="pg-punch" class="pg active"><div class="pad"><div class="card">
-    <div class="cl" id="dlbl">スタッフを選択</div>
-    <div class="sg" id="sg"></div>
+  <div id="pg-punch" class="pg active"><div class="pad"><!-- 動作選択画面 -->
+  <div id="action-select-view">
+    <div class="card" id="action-card">
+      <div class="cl" id="dlbl">打刻する動作を選択</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;">
+        <button class="action-btn action-in"  onclick="selectAction('in')">出勤</button>
+        <button class="action-btn action-break" onclick="selectAction('break')">休憩開始</button>
+        <button class="action-btn action-resume" onclick="selectAction('resume')">休憩終了</button>
+        <button class="action-btn action-out"  onclick="selectAction('out')">退勤</button>
+      </div>
+    </div>
+  </div>
+  <!-- スタッフ選択画面（動作選択後） -->
+  <div id="staff-select-view" style="display:none;">
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="display:flex;align-items:center;padding:10px 11px;border-bottom:1px solid var(--br);background:var(--gy);">
+        <button onclick="backToAction()" style="border:none;background:none;font-size:18px;cursor:pointer;padding:0 8px 0 0;color:var(--nv);">←</button>
+        <div id="action-label" style="font-size:13px;font-weight:700;color:var(--nv);flex:1;"></div>
+        <div style="display:flex;gap:4px;">
+          <button id="co-tab-koyokai" onclick="setCoTab('koyokai')" style="padding:5px 10px;border:1px solid var(--br);border-radius:20px;background:var(--nv);color:#fff;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;">香庸会</button>
+          <button id="co-tab-fulllife" onclick="setCoTab('fulllife')" style="padding:5px 10px;border:1px solid var(--br);border-radius:20px;background:#fff;color:var(--t2);font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;">フルライフ</button>
+        </div>
+      </div>
+      <div style="padding:11px;">
+        <div class="sg" id="sg"></div>
+      </div>
+    </div>
   </div></div></div>
   <div id="pg-log" class="pg"><div class="pad"><div class="card">
     <div style="margin-bottom:9px;">
@@ -162,8 +239,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
       <div class="s3" id="rs"></div>
       <div class="rw"><table class="rt"><thead id="rth"></thead><tbody id="rtb"></tbody></table></div>
     </div>
-    <div class="card"><div class="cl">個人別XLSX</div>
-      <div class="fr"><select id="isel" onchange="renderIndPreview()"><option value="">スタッフを選択</option></select><select id="im" onchange="renderIndPreview()"></select><button class="bn" onclick="exportIndXLSX()">個人XLSX</button></div>
+    <div class="card"><div class="cl">個人別明細</div>
+      <div class="fr" style="flex-wrap:wrap;gap:5px;">
+        <select id="isel" onchange="renderIndPreview()" style="flex:1;min-width:120px;"><option value="">スタッフを選択</option></select>
+        <select id="im" onchange="renderIndPreview()" style="flex:1;min-width:100px;"></select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px;">
+        <button class="fb" style="padding:10px;font-size:12px;" onclick="renderIndPreview()">👁 画面で確認</button>
+        <button class="bn" style="padding:10px;font-size:12px;" onclick="exportIndXLSX()">📊 XLSXダウンロード</button>
+      </div>
     </div>
   </div></div>
   <div id="pg-admin" class="pg"><div class="pad">
@@ -176,6 +260,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
       <button class="at" id="atab-special" onclick="showAS('special')">特別枠</button>
       <button class="at" id="atab-data" onclick="showAS('data')">データ移行</button>
     </div>
+    <div class="card" style="margin-bottom:8px;background:var(--bll);border:1px solid var(--bl);">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:9px;color:var(--t2);">現在の会社</div>
+          <div style="font-size:14px;font-weight:700;color:var(--nv);" id="admin-co-label">-</div>
+        </div>
+        <button onclick="switchCompany()" style="padding:8px 14px;border:1px solid var(--bl);border-radius:8px;background:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--bl);">会社を切替</button>
+      </div>
+    </div>
     <div class="asc active" id="asc-staff">
       <div class="card"><div class="cl">スタッフ一覧</div><div class="sl2" id="asl"></div>
         <button class="ab" style="margin-top:10px;" onclick="openAdd()">＋ スタッフを追加</button>
@@ -186,6 +279,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
         <div class="fs2">特定の日だけ基本シフトを上書きします</div>
         <div class="frw"><label class="fl">スタッフ</label><select class="fsl" id="ds-s"></select></div>
         <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="ds-d"></div>
+        <div class="frw"><label class="fl">この日の勤務タイプ</label>
+          <select class="fsl" id="ds-type">
+            <option value="">スタッフ設定に従う（デフォルト）</option>
+            <option value="contract">契約型</option>
+            <option value="free">フリー型（打刻そのまま）</option>
+            <option value="free1">フリー①型（XX:45自動切り上げ）</option>
+          </select>
+        </div>
         <div id="ds-sh"></div>
         <button class="fa" onclick="addDSRow()">＋ 時間枠を追加</button>
         <button class="fb" style="width:100%;" onclick="saveDS()">登録する</button>
@@ -288,6 +389,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
     </div>
   </div></div>
   <div class="bnav">
+    <button class="nb" onclick="openPersonalModal()"><span class="ni">👤</span>個人</button>
     <button class="nb active" id="bn-punch" onclick="showPg('punch')"><span class="ni">👆</span>打刻</button>
     <button class="nb" id="bn-log" onclick="showPg('log')"><span class="ni">📋</span>ログ</button>
     <button class="nb" id="bn-report" onclick="showPg('report')"><span class="ni">📊</span>レポート</button>
@@ -313,12 +415,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
   </div>
   <div id="fca">
     <div class="fs2">契約時間より早い打刻は契約開始時刻から計算。早出ボタン押下時はその時刻から計算。</div>
-    <div class="frw"><label class="fl">1日の所定労働時間</label>
-      <select class="fsl" id="fstd">
-        <option value="240">4時間</option><option value="270">4時間30分</option><option value="300">5時間</option>
-        <option value="330">5時間30分</option><option value="360">6時間</option><option value="390">6時間30分</option>
-        <option value="420">7時間</option><option value="450">7時間30分</option><option value="480" selected>8時間</option>
-      </select>
+    
     </div>
     <div class="cl" style="margin-bottom:8px;">曜日別シフト設定（5分刻み）</div>
     <div class="dow-tabs">
@@ -382,8 +479,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 <!-- 個人XLSX プレビューモーダル -->
 <div class="ov hidden" id="indm" onclick="closeIndM(event)"><div class="mo" onclick="event.stopPropagation()" style="max-height:93vh;">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">
-    <div class="mt" id="indm-title" style="margin-bottom:0;font-size:14px;">個人明細プレビュー</div>
-    <button onclick="closeIndM()" style="padding:5px 11px;border:1px solid var(--br);border-radius:7px;background:#fff;font-size:12px;cursor:pointer;font-family:inherit;">✕ 閉じる</button>
+    <div class="mt" id="indm-title" style="margin-bottom:0;font-size:13px;">個人明細プレビュー</div>
+    <div style="display:flex;gap:5px;">
+      <button onclick="dlIndXLSX()" style="padding:5px 11px;border:none;border-radius:7px;background:var(--gn);color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">📊 XLSX</button>
+      <button onclick="closeIndM()" style="padding:5px 11px;border:1px solid var(--br);border-radius:7px;background:#fff;font-size:12px;cursor:pointer;font-family:inherit;">✕</button>
+    </div>
   </div>
   <div class="rw" id="indm-body"></div>
   <div style="margin-top:10px;font-size:10px;color:var(--t2);">個人XLSXには「個人明細」（合計行あり）＋「給与取り込み」（28列）の2シートが含まれます</div>
@@ -406,6 +506,84 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
     <button onclick="showPWChange()" style="width:100%;padding:8px;border:1px solid var(--br);border-radius:7px;background:#fff;font-size:11px;cursor:pointer;font-family:inherit;color:var(--t2);">パスワードを変更する</button>
   </div>
 </div></div>
+
+<!-- 個人ログインモーダル -->
+<div class="ov hidden" id="personal-modal" onclick="closePersonalModal(event)">
+  <div class="mo" onclick="event.stopPropagation()" style="max-height:90vh;">
+    <div id="personal-login-view">
+      <div class="mt">個人ページ</div>
+      <div class="frw"><label class="fl">社員番号</label>
+        <input class="fi" id="personal-id" type="text" placeholder="例: 3 または f1" inputmode="text">
+      </div>
+      <div class="frw"><label class="fl">パスワード（初期: 0000）</label>
+        <input class="fi" id="personal-pw" type="password" maxlength="8" placeholder="パスワード">
+      </div>
+      <div id="personal-err" style="color:var(--rd);font-size:11px;height:16px;margin-bottom:7px;"></div>
+      <div class="btr">
+        <button class="fc" onclick="closePersonalModal()">閉じる</button>
+        <button class="fb" onclick="loginPersonal()">ログイン</button>
+      </div>
+    </div>
+    <div id="personal-main-view" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">
+        <div>
+          <div class="mt" id="personal-name" style="margin-bottom:0;"></div>
+          <div style="font-size:10px;color:var(--t2);" id="personal-co"></div>
+        </div>
+        <button onclick="logoutPersonal()" style="padding:5px 10px;border:1px solid var(--br);border-radius:7px;background:#fff;font-size:11px;cursor:pointer;font-family:inherit;">ログアウト</button>
+      </div>
+      <!-- タブ -->
+      <div style="display:flex;gap:4px;margin-bottom:11px;overflow-x:auto;">
+        <button class="ptab active" id="ptab-log" onclick="showPTab('log')">打刻ログ</button>
+        <button class="ptab" id="ptab-paid" onclick="showPTab('paid')">有給</button>
+        <button class="ptab" id="ptab-fare" onclick="showPTab('fare')">交通費</button>
+        <button class="ptab" id="ptab-lunch" onclick="showPTab('lunch')">ランチ</button>
+        <button class="ptab" id="ptab-pw" onclick="showPTab('pw')">PW変更</button>
+      </div>
+      <!-- 打刻ログ -->
+      <div id="pview-log" class="pview">
+        <div class="cl">今月の打刻ログ</div>
+        <div id="personal-log-list" style="max-height:300px;overflow-y:auto;"></div>
+      </div>
+      <!-- 有給 -->
+      <div id="pview-paid" class="pview" style="display:none;">
+        <div class="cl">有給申請</div>
+        <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="p-paid-date"></div>
+        <div class="frw"><label class="fl">種別</label>
+          <select class="fsl" id="p-paid-type">
+            <option value="full">全日</option>
+            <option value="am">午前半日</option>
+            <option value="pm">午後半日</option>
+          </select>
+        </div>
+        <button class="fb" style="width:100%;margin-top:7px;" onclick="submitPersonalPaid()">申請する</button>
+        <div id="personal-paid-list" style="margin-top:11px;"></div>
+      </div>
+      <!-- 交通費 -->
+      <div id="pview-fare" class="pview" style="display:none;">
+        <div class="cl">交通費申請</div>
+        <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="p-fare-date"></div>
+        <button class="fb" style="width:100%;margin-top:7px;" onclick="submitPersonalFare()">申請する</button>
+        <div id="personal-fare-list" style="margin-top:11px;"></div>
+      </div>
+      <!-- ランチデリ -->
+      <div id="pview-lunch" class="pview" style="display:none;">
+        <div class="cl">ランチデリ登録</div>
+        <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="p-lunch-date"></div>
+        <button class="fb" style="width:100%;margin-top:7px;" onclick="submitPersonalLunch()">登録する</button>
+        <div id="personal-lunch-list" style="margin-top:11px;"></div>
+      </div>
+      <!-- PW変更 -->
+      <div id="pview-pw" class="pview" style="display:none;">
+        <div class="cl">パスワード変更</div>
+        <div class="frw"><label class="fl">現在のパスワード</label><input class="fi" type="password" id="p-pw-old" maxlength="8"></div>
+        <div class="frw"><label class="fl">新しいパスワード</label><input class="fi" type="password" id="p-pw-new" maxlength="8"></div>
+        <div class="frw"><label class="fl">確認</label><input class="fi" type="password" id="p-pw-new2" maxlength="8"></div>
+        <button class="fb" style="width:100%;margin-top:7px;" onclick="changePersonalPw()">変更する</button>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- 有給モーダル -->
 <div class="ov hidden" id="pdm" onclick="closePD(event)"><div class="mo" onclick="event.stopPropagation()">
   <div class="mt">有給申請</div>
@@ -431,18 +609,136 @@ const JP_HOL=new Set(['2024-01-01','2024-01-08','2024-02-11','2024-02-12','2024-
 function isHoliday(d){return JP_HOL.has(d);}
 function isLegalHoliday(d){return new Date(d).getDay()===0||isHoliday(d);}
 
-const CO='koyokai';
+const CO='koyokai'; // 後方互換用
+
+// ═══ Firebase設定 ═══
+const COMPANIES = {
+  koyokai: { name: '香庸会', label: '医療法人', color: '#1a1a2e' },
+  fulllife: { name: 'フルライフ', label: '株式会社', color: '#0C447C' }
+};
+let currentCompany = localStorage.getItem('kintai_company') || '';
+
+function selectCompany(co) {
+  currentCompany = co;
+  localStorage.setItem('kintai_company', co);
+  // ヘッダー更新
+  const info = COMPANIES[co] || {};
+  const hcoLabel = document.getElementById('hco-label');
+  const hcoName = document.getElementById('hco-name');
+  if(hcoLabel) hcoLabel.textContent = info.label || '';
+  if(hcoName) hcoName.textContent = info.name + ' 勤怠タッチ Pro' || '';
+  // 起動画面を隠してメイン表示
+  document.getElementById('cs').style.display = 'none';
+  document.getElementById('ms').style.display = 'flex';
+  showPg('punch');
+  // Firebaseから最新データを読み込む
+  fbLoadAndSync(co);
+}
+
+// Firebase: データ読み込み＋リアルタイム監視
+function fbLoadAndSync(co) {
+  if(!window.firebaseReady || !window.fbDB) {
+    setSyncStatus('⚠ FB未接続', 'var(--am)');
+    lDB(); renderSG(); return;
+  }
+  setSyncStatus('⟳ 接続中...');
+  const staffRef = window.fbRef(window.fbDB, co + '/staff');
+  const recordsRef = window.fbRef(window.fbDB, co + '/records');
+  const settingsRef = window.fbRef(window.fbDB, co + '/settings');
+
+  // 初回読み込み
+  window.fbGet(staffRef).then(snap => {
+    if(snap.exists()) {
+      const data = snap.val();
+      // オブジェクト→配列変換
+      DB.staff = Array.isArray(data) ? data : Object.values(data);
+      console.log('Staff loaded:', DB.staff.length);
+    } else {
+      // データなし→現在のlocalStorageのスタッフをアップロード
+      lDB();
+      fbSaveStaff(co);
+    }
+    renderSG();
+  }).catch(e => { console.error(e); lDB(); renderSG(); });
+
+  window.fbGet(recordsRef).then(snap => {
+    if(snap.exists()) {
+      const data = snap.val();
+      DB.records = Array.isArray(data) ? data : Object.values(data);
+      renderLog();
+    }
+  }).catch(e => console.error(e));
+
+  window.fbGet(settingsRef).then(snap => {
+    if(snap.exists()) {
+      const s = snap.val();
+      if(s.dayShifts) DB.dayShifts = Array.isArray(s.dayShifts) ? s.dayShifts : Object.values(s.dayShifts);
+      if(s.specials) DB.specials = Array.isArray(s.specials) ? s.specials : Object.values(s.specials);
+      if(s.paid) DB.paid = Array.isArray(s.paid) ? s.paid : Object.values(s.paid);
+      if(s.fare) DB.fare = Array.isArray(s.fare) ? s.fare : Object.values(s.fare);
+      if(s.lunch) DB.lunch = Array.isArray(s.lunch) ? s.lunch : Object.values(s.lunch);
+      if(s.lunchEnabled) DB.lunchEnabled = Array.isArray(s.lunchEnabled) ? s.lunchEnabled : Object.values(s.lunchEnabled);
+      if(s.adminPw) DB.adminPw = s.adminPw;
+    }
+    sDB();
+    setSyncStatus('✓ ' + new Date().toLocaleTimeString('ja'), 'var(--gd)');
+  }).catch(e => console.error(e));
+
+  // リアルタイム監視: 他端末の打刻を即時反映
+  window.fbOnValue(recordsRef, snap => {
+    if(snap.exists()) {
+      const data = snap.val();
+      DB.records = Array.isArray(data) ? data : Object.values(data);
+      sDB(); renderSG(); renderLog();
+      setSyncStatus('✓ ' + new Date().toLocaleTimeString('ja'), 'var(--gd)');
+    }
+  });
+}
+
+// Firebase: スタッフ保存
+function fbSaveStaff(co) {
+  if(!window.firebaseReady || !window.fbDB) return;
+  const co2 = co || currentCompany;
+  const staffRef = window.fbRef(window.fbDB, co2 + '/staff');
+  window.fbSet(staffRef, DB.staff)
+    .then(() => setSyncStatus('✓ ' + new Date().toLocaleTimeString('ja'), 'var(--gd)'))
+    .catch(e => { console.error(e); setSyncStatus('✗ 保存失敗', 'var(--rd)'); });
+}
+
+// Firebase: 打刻データ保存（打刻するたびに呼ぶ）
+function fbSaveRecords() {
+  if(!window.firebaseReady || !window.fbDB || !currentCompany) return;
+  const recordsRef = window.fbRef(window.fbDB, currentCompany + '/records');
+  window.fbSet(recordsRef, DB.records)
+    .catch(e => console.error('fbSaveRecords error:', e));
+}
+
+// Firebase: 設定データ保存
+function fbSaveSettings() {
+  if(!window.firebaseReady || !window.fbDB || !currentCompany) return;
+  const settingsRef = window.fbRef(window.fbDB, currentCompany + '/settings');
+  window.fbSet(settingsRef, {
+    dayShifts: DB.dayShifts,
+    specials: DB.specials,
+    paid: DB.paid,
+    fare: DB.fare,
+    lunch: DB.lunch,
+    lunchEnabled: DB.lunchEnabled,
+    adminPw: DB.adminPw
+  }).catch(e => console.error('fbSaveSettings error:', e));
+}
+
 const TL={in:'出勤',out:'退勤',break:'休憩開始',resume:'勤務再開',early:'早出',fare:'交通費',paid:'有給',lunch:'ランチデリ'};
 
 let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]};
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
-const STAFF_VER='v1930c'; // 19:30変更バージョン
+const STAFF_VER='v2000'; // 19:30変更バージョン
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
-    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]},d);
+    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[]},d);
   }catch(e){}
   // スタッフデータのバージョンが古い（17:45が含まれる）場合はスタッフのみリセット
   const staffVer=localStorage.getItem('kintai_staff_ver');
@@ -452,7 +748,7 @@ function lDB(){
     localStorage.setItem('kintai_staff_ver',STAFF_VER);
   }
   if(!DB.staff.length){
-    DB.staff=[{id:1,name:'壹岐 伸弥',employeeId:3,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:2,name:'宮浦 幸湖',employeeId:4,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:3,name:'髙木 綾子',employeeId:5,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:4,name:'亀田 雅子',employeeId:6,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:5,name:'前田 美香',employeeId:7,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:6,name:'岡田 美鈴',employeeId:8,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:7,name:'矢野 恵夢',employeeId:12,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:8,name:'内藤 敏',employeeId:14,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:9,name:'森田 晴彦',employeeId:19,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:10,name:'大橋 章弘',employeeId:23,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:11,name:'寺嶋 真由美',employeeId:24,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:12,name:'寺岡 優希',employeeId:25,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:13,name:'加藤 慶紀',employeeId:27,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:14,name:'関 亜矢子',employeeId:28,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:15,name:'中野 拓哉',employeeId:33,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:16,name:'髙岡 夏実',employeeId:36,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:17,name:'西田 圭一郎',employeeId:38,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:18,name:'吉村 晋一',employeeId:43,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:19,name:'中 功',employeeId:46,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0}];
+    DB.staff=[{id:1,name:'壹岐 伸弥',employeeId:3,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:2,name:'宮浦 幸湖',employeeId:4,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:3,name:'髙木 綾子',employeeId:5,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:4,name:'亀田 雅子',employeeId:6,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:5,name:'前田 美香',employeeId:7,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:6,name:'岡田 美鈴',employeeId:8,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:7,name:'矢野 恵夢',employeeId:12,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:8,name:'内藤 敏',employeeId:14,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:9,name:'森田 晴彦',employeeId:19,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:10,name:'大橋 章弘',employeeId:23,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:11,name:'寺嶋 真由美',employeeId:24,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:12,name:'寺岡 優希',employeeId:25,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:13,name:'加藤 慶紀',employeeId:27,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:14,name:'関 亜矢子',employeeId:28,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:15,name:'中野 拓哉',employeeId:33,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:16,name:'髙岡 夏実',employeeId:36,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:17,name:'西田 圭一郎',employeeId:38,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:18,name:'吉村 晋一',employeeId:43,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:19,name:'中 功',employeeId:46,company:CO,type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0},{id:101,name:'FL01',employeeId:'f1',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:102,name:'FL02',employeeId:'f2',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:103,name:'FL03',employeeId:'f3',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:104,name:'FL04',employeeId:'f4',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:105,name:'FL05',employeeId:'f5',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:106,name:'FL06',employeeId:'f6',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:107,name:'FL07',employeeId:'f7',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:108,name:'FL08',employeeId:'f8',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:109,name:'FL09',employeeId:'f9',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:110,name:'FL10',employeeId:'f10',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:111,name:'FL11',employeeId:'f11',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:112,name:'FL12',employeeId:'f12',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:113,name:'FL13',employeeId:'f13',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:114,name:'FL14',employeeId:'f14',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:115,name:'FL15',employeeId:'f15',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:116,name:'FL16',employeeId:'f16',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:117,name:'FL17',employeeId:'f17',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:118,name:'FL18',employeeId:'f18',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:119,name:'FL19',employeeId:'f19',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:120,name:'FL20',employeeId:'f20',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:121,name:'FL21',employeeId:'f21',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:122,name:'FL22',employeeId:'f22',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:123,name:'FL23',employeeId:'f23',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:124,name:'FL24',employeeId:'f24',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:125,name:'FL25',employeeId:'f25',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:126,name:'FL26',employeeId:'f26',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:127,name:'FL27',employeeId:'f27',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:128,name:'FL28',employeeId:'f28',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:129,name:'FL29',employeeId:'f29',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'},{id:130,name:'FL30',employeeId:'f30',company:'fulllife',type:'contract',stdMin:480,dowShifts:{mon:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],tue:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],wed:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],thu:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],fri:[{s:'08:45',e:'12:45'},{s:'15:45',e:'19:30'}],sat:{1:[],2:[],3:[],4:[],5:[]},sun:[]},breakMin:0,fare:0,freeEnd:false,free1Min:45,pw:'0000'}];
     sDB();
   }
 }
@@ -574,10 +870,10 @@ function calcWork(sid,date){
   if((last.type==='in'||last.type==='resume'||last.type==='early')&&inT)segs.push({start:inT,end:Date.now()});
   const rawMs=segs.reduce((s,sg)=>s+(sg.end-sg.start),0);
   const nightMs=calcNight(segs);
-  if(staff.type==='free'||staff.type==='free1'||(staff.type==='annual'&&!isSp)){
+  if(effectiveType==='free'||effectiveType==='free1'||(effectiveType==='annual'&&!isSp)){
     let net=Math.max(0,rawMs-(staff.breakMin||0)*60000);
     // free1: XX:45自動切り上げ
-    if(staff.type==='free1'&&inRec){
+    if(effectiveType==='free1'&&inRec){
       const basMin=staff.free1Min!==undefined?staff.free1Min:45;
       const inDt=new Date(inRec.tsISO);
       const inM=inDt.getHours()*60+inDt.getMinutes();
@@ -599,7 +895,7 @@ function calcWork(sid,date){
         net=Math.max(0,net-cutMs);
       }
     }
-    return{total:net,breakdown:{[staff.type==='annual'?'年俸勤務':staff.type==='free1'?'フリー①勤務':'総勤務']:net},otA:0,otB:0,otC:0,otD:nightMs,otE:0,lateMin:0,earlyLeaveMin:0};
+    return{total:net,breakdown:{[effectiveType==='annual'?'年俸勤務':effectiveType==='free1'?'フリー①勤務':'総勤務']:net},otA:0,otB:0,otC:0,otD:nightMs,otE:0,lateMin:0,earlyLeaveMin:0};
   }
   if(isSp){const net=Math.max(0,rawMs-(staff.breakMin||0)*60000);return{total:net,breakdown:{'バイト枠':net},otA:0,otB:0,otC:0,otD:nightMs,otE:0,lateMin:0,earlyLeaveMin:0};}
   const inRec=recs.find(r=>r.type==='in'||r.type==='early');
@@ -733,15 +1029,19 @@ function stLbl(s){return{none:'未出勤',in:'勤務中',out:'退勤済',break:'
 // ═══ 起動・ページ ═══
 function start(){document.getElementById('cs').style.display='none';document.getElementById('ms').style.display='flex';showPg('punch');}
 function autoStart(){
-  // 既にDBデータがあれば起動画面をスキップして直接一覧へ
-  if(DB.staff&&DB.staff.length>0){
-    document.getElementById('cs').style.display='none';
-    document.getElementById('ms').style.display='flex';
-    showPg('punch');
+  // 会社が選択済みなら自動起動
+  if(currentCompany && COMPANIES[currentCompany]){
+    selectCompany(currentCompany);
+  } else if(DB.staff&&DB.staff.length>0){
+    // 旧バージョン互換：koyokaiとして起動
+    selectCompany('koyokai');
   }
 }
 function showPg(p){['punch','log','report','admin'].forEach(n=>{document.getElementById('pg-'+n).classList.toggle('active',n===p);document.getElementById('tab-'+n).classList.toggle('active',n===p);document.getElementById('bn-'+n).classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();}}
-function showAS(sub){['staff','shift','rec','paid','lunch','special','data'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid')initPH();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();}
+function showAS(sub){
+  // 管理画面の会社名更新
+  const el=document.getElementById('admin-co-label');
+  if(el){const info=COMPANIES[currentCompany]||{};el.textContent=(info.label||'')+' '+( info.name||'');}['staff','shift','rec','paid','lunch','special','data'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid')initPH();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();}
 
 // ═══ 打刻グリッド ═══
 function renderSG(){
@@ -750,7 +1050,13 @@ function renderSG(){
   let lbl=dw.getFullYear()+'年'+(dw.getMonth()+1)+'月'+dw.getDate()+'日（'+days[dw.getDay()]+'）';
   if(isLeg)lbl+=' 🔴法定休日';
   document.getElementById('dlbl').textContent=lbl;
-  const list=DB.staff.filter(s=>s.company===CO);const el=document.getElementById('sg');
+  const list=DB.staff.filter(s=>s.company===(currentCoTab||'koyokai'));
+  // 動作選択時のタイトル更新
+  const dlbl=document.getElementById('dlbl');
+  if(dlbl&&!selectedAction){
+    const d=new Date();const days=['日','月','火','水','木','金','土'];
+    dlbl.textContent=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日（'+days[d.getDay()]+'）';
+  }const el=document.getElementById('sg');
   if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:12px;padding:18px;text-align:center;grid-column:1/-1;">管理タブからスタッフを追加してください</div>';return;}
   el.innerHTML=list.map(s=>{
     const st=getSt(s.id,t);const{total,lateMin}=calcWork(s.id,t);const wStr=total?fmtHM(total):'';
@@ -767,47 +1073,44 @@ function renderSG(){
 
 // ═══ 打刻モーダル ═══
 function tapS(sid){
-  const t=todayStr();const staff=DB.staff.find(s=>s.id===sid);const st=getSt(sid,t);
-  const{total,breakdown,otA,otB,otC,otD,lateMin,earlyLeaveMin}=calcWork(sid,t);pSid=sid;
-  document.getElementById('mn').textContent=staff.name;
-  let info='現在時刻: <b>'+nowStr()+'</b>';
-  if(isLegalHoliday(t))info+='<br><span style="color:#E24B4A;">⚠ 法定休日（休日割増対象）</span>';
-  if(total){info+='<br>実働: <b>'+fmtHM(total)+'</b>';if(breakdown)Object.entries(breakdown).forEach(([k,v])=>{if(v>0)info+='<br>'+k+': <b>'+fmtHM(v)+'</b>';});}
-  if(lateMin>0)info+='<br><span style="color:#C62828;font-weight:600;">遅刻: '+fmtMin(lateMin)+'</span>';
-  if(earlyLeaveMin>0)info+='<br><span style="color:#E65100;font-weight:600;">早退: '+fmtMin(earlyLeaveMin)+'</span>';
-  if(otA>0)info+='<br>時間外A(法定内): <b>'+fmtHM(otA)+'</b>';
-  if(otB>0)info+='<br>時間外B(法定外): <b>'+fmtHM(otB)+'</b>';
-  if(otC>0)info+='<br>時間外C(休日): <b>'+fmtHM(otC)+'</b>';
-  if(otD>0)info+='<br>時間外D(深夜): <b>'+fmtHM(otD)+'</b>';
-  if(DB.specials.some(s=>s.staffId===sid&&s.date===t))info+='<br><span style="color:#BA7517;">バイト枠（支給項目4）として集計</span>';
-  document.getElementById('mi').innerHTML=info;
-  const hF=DB.fare.some(f=>f.staffId===sid&&f.date===t);const hP=DB.paid.some(p=>p.staffId===sid&&p.date===t);
-  let btns='';
-  if(st==='paid'){document.getElementById('ma').textContent='有給取得中';btns=`<button class="mc mi-in" onclick="doP(${sid},'in')">出勤（有給取消）</button>`;}
-  else if(st==='none'||st==='out'){document.getElementById('ma').textContent='打刻してください';btns=`<button class="mc mi-in" onclick="doP(${sid},'in')">出勤</button><button class="mc mi-early" onclick="doP(${sid},'early')" style="margin-top:7px;">早出（この時刻から勤務）</button>`;}
-  else if(st==='in'||st==='resume'||st==='early'){document.getElementById('ma').textContent='休憩開始 または 退勤しますか？';btns=`<button class="mc mi-break" onclick="doP(${sid},'break')">休憩開始</button><button class="mc mi-out" onclick="doP(${sid},'out')" style="margin-top:7px;">退勤</button>`;}
-  else if(st==='break'){document.getElementById('ma').textContent='勤務再開しますか？';btns=`<button class="mc mi-resume" onclick="doP(${sid},'resume')">勤務再開</button>`;}
-  if(!hF&&staff.fare>0)btns+=`<button class="mc mi-fare" onclick="doFare(${sid})" style="margin-top:7px;">交通費申請（本日分）</button>`;
-  else if(hF)btns+=`<div style="text-align:center;color:var(--gd);font-size:11px;margin-top:7px;">交通費申請済み ○</div>`;
-  if(!hP)btns+=`<button class="mc mi-paid" onclick="openPD(${sid})" style="margin-top:7px;">有給申請</button>`;
-  // ランチデリチェックボックス（管理者がカレンダーで有効にした日のみ表示）
-  if(isLunchEnabled(t)){
-    const checked=DB.lunch.some(l=>l.staffId===sid&&l.date===t&&l.company===CO);
-    btns+=`<div onclick="toggleLunchCheck(${sid},'${t}')" style="margin-top:9px;padding:13px;background:${checked?'#FFFDE7':'#FFF8E1'};border:${checked?'2px solid #FFD54F':'1px solid #FFD54F'};border-radius:11px;display:flex;align-items:center;gap:12px;cursor:pointer;">
-      <div style="width:24px;height:24px;border-radius:6px;border:2px solid ${checked?'var(--gn)':'#FFB300'};background:${checked?'var(--gn)':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        ${checked?'<span style=\"color:#fff;font-size:15px;font-weight:700;line-height:1;\">✓</span>':''}
-      </div>
-      <div>
-        <div style="font-size:14px;font-weight:700;color:#5D4037;">🍱 ランチデリ</div>
-        <div style="font-size:11px;color:${checked?'var(--gd)':'#795548'};">${checked?'注文あり（タップで解除）':'注文する場合はタップ'}</div>
-      </div>
-    </div>`;
+  const staff=DB.staff.find(s=>s.id===sid);if(!staff)return;
+  const t=todayStr();
+  // selectedActionがある場合は直接打刻
+  if(selectedAction){
+    const action=selectedAction;
+    // 打刻可能かチェック
+    const st=getSt(sid,t);
+    let ok=false;
+    if(action==='in'&&(st==='none'||st==='out'))ok=true;
+    if(action==='break'&&(st==='in'||st==='resume'||st==='early'))ok=true;
+    if(action==='resume'&&st==='break')ok=true;
+    if(action==='out'&&(st==='in'||st==='resume'||st==='early'))ok=true;
+    if(!ok){
+      showToast(staff.name+' は現在「'+stLbl(st)+'」のため「'+ACTION_LABELS[action]+'」できません');
+      return;
+    }
+    doP(sid, action);
+    showToast(staff.name+' — '+ACTION_LABELS[action]);
+    // 打刻後に動作選択画面に戻る
+    backToAction();
+    return;
   }
+  // selectedActionがない場合は従来のモーダル表示
+  const st=getSt(sid,t);
+  document.getElementById('mn').textContent=staff.name;
+  let typeInfo=`<b>${{contract:'契約型',free:'フリー型',free1:'フリー①型',annual:'年俣型'}[staff.type]||staff.type}</b>`;
+  document.getElementById('ma').textContent='';
+  document.getElementById('mi').innerHTML=`現在時刻: <b>${nowStr()}</b><br>タイプ: ${typeInfo}`;
+  let btns='';
+  if(st==='none'||st==='out')btns=`<button class="mc mi-in" onclick="doP(${sid},'in')">出勤</button>`;
+  else if(st==='in'||st==='resume'||st==='early'){btns=`<button class="mc mi-break" onclick="doP(${sid},'break')">休憩開始</button><button class="mc mi-out" onclick="doP(${sid},'out')" style="margin-top:6px;">退勤</button>`;}
+  else if(st==='break')btns=`<button class="mc mi-resume" onclick="doP(${sid},'resume')">休憩終了</button>`;
   btns+=`<button class="mcc" onclick="closePM()" style="margin-top:7px;">閉じる</button>`;
-  document.getElementById('mb').innerHTML=btns;document.getElementById('pm').classList.remove('hidden');
+  document.getElementById('mb').innerHTML=btns;
+  document.getElementById('pm').classList.remove('hidden');
 }
 function closePM(e){if(!e||e.target===document.getElementById('pm'))document.getElementById('pm').classList.add('hidden');}
-function doP(sid,action){const s=DB.staff.find(x=>x.id===sid);const n=new Date();DB.records.unshift({id:Date.now(),staffId:sid,staffName:s.name,company:CO,type:action,date:todayStr(),ts:nowStr(),tsISO:n.toISOString()});sDB();document.getElementById('pm').classList.add('hidden');showToast(s.name+' — '+TL[action]);renderSG();}
+function doP(sid,action){const s=DB.staff.find(x=>x.id===sid);const n=new Date();DB.records.unshift({id:Date.now(),staffId:sid,staffName:s.name,company:CO,type:action,date:todayStr(),ts:nowStr(),tsISO:n.toISOString()});sDB();fbSaveRecords();document.getElementById('pm').classList.add('hidden');showToast(s.name+' — '+TL[action]);renderSG();}
 function doFare(sid){const s=DB.staff.find(x=>x.id===sid);DB.fare.push({id:Date.now(),staffId:sid,staffName:s.name,company:CO,date:todayStr(),amount:s.fare});sDB();document.getElementById('pm').classList.add('hidden');showToast(s.name+' — 交通費申請（'+s.fare.toLocaleString()+'円）');renderSG();}
 function openPD(sid){pPaid=sid;document.getElementById('pd-dt').value=todayStr();document.getElementById('pd-tp').value='full';document.getElementById('pd-mo').value='';document.getElementById('pm').classList.add('hidden');document.getElementById('pdm').classList.remove('hidden');}
 function closePD(e){if(!e||e.target===document.getElementById('pdm'))document.getElementById('pdm').classList.add('hidden');}
@@ -1113,7 +1416,7 @@ function openAdd(){eSid=null;document.getElementById('stm-t').textContent='ス�
   if(f1el)f1el.value=s.free1Min!==undefined?s.free1Min:45;
   onTC();
   document.getElementById('stm').classList.remove('hidden');}
-function openEdit(id){const s=DB.staff.find(x=>x.id===id);if(!s)return;eSid=id;document.getElementById('stm-t').textContent='スタッフを編集';document.getElementById('fn').value=s.name;document.getElementById('feid').value=s.employeeId||'';document.getElementById('ft').value=s.type;document.getElementById('fstd').value=s.stdMin||480;document.getElementById('fbk').value=s.breakMin!==undefined?s.breakMin:0;document.getElementById('ff').value=s.fare||0;onTC();initPanels(s.dowShifts);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));document.getElementById('stm').classList.remove('hidden');}
+function openEdit(id){const s=DB.staff.find(x=>x.id===id);if(!s)return;eSid=id;document.getElementById('stm-t').textContent='スタッフを編集';document.getElementById('fn').value=s.name;document.getElementById('feid').value=s.employeeId||'';document.getElementById('ft').value=s.type;document.getElementById('fbk').value=s.breakMin!==undefined?s.breakMin:0;document.getElementById('ff').value=s.fare||0;onTC();initPanels(s.dowShifts);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));document.getElementById('stm').classList.remove('hidden');}
 function closeSTM(e){if(!e||e.target===document.getElementById('stm'))document.getElementById('stm').classList.add('hidden');}
 function onTC(){
   const t=document.getElementById('ft').value;
@@ -1145,15 +1448,16 @@ function setFft(val){
     box.innerHTML='';
   }
 }
-function saveSt(){const name=document.getElementById('fn').value.trim();if(!name){showToast('名前を入力してください');return;}const eid=parseInt(document.getElementById('feid').value)||null;const type=document.getElementById('ft').value;const stdMin=parseInt(document.getElementById('fstd').value)||480;const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)?0:Math.max(0,bkRaw);const fareRaw=parseInt(document.getElementById('ff').value);const fare=isNaN(fareRaw)?0:Math.max(0,fareRaw);const freeEnd=document.getElementById('fft').value==='1';
+function saveSt(){const name=document.getElementById('fn').value.trim();if(!name){showToast('名前を入力してください');return;}const eid=parseInt(document.getElementById('feid').value)||null;const type=document.getElementById('ft').value;const stdMin=480; // 固定8時間（シフトから自動計算）const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)?0:Math.max(0,bkRaw);const fareRaw=parseInt(document.getElementById('ff').value);const fare=isNaN(fareRaw)?0:Math.max(0,fareRaw);const freeEnd=document.getElementById('fft').value==='1';
   const free1MinEl=document.getElementById('ff1min');
-  const free1Min=free1MinEl?parseInt(free1MinEl.value):45;let ds=null;if(type==='contract'){ds={mon:readRows('sh-mon'),tue:readRows('sh-tue'),wed:readRows('sh-wed'),thu:readRows('sh-thu'),fri:readRows('sh-fri'),sat:{1:readRows('sh-sat1'),2:readRows('sh-sat2'),3:readRows('sh-sat3'),4:readRows('sh-sat4'),5:readRows('sh-sat5')},sun:readRows('sh-sun')};}if(eSid){const idx=DB.staff.findIndex(s=>s.id===eSid);if(idx>=0)DB.staff[idx]={...DB.staff[idx],name,employeeId:eid,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min};}else{const nid=Math.max(0,...DB.staff.map(s=>s.id))+1;DB.staff.push({id:nid,name,employeeId:eid,company:CO,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min});}sDB();document.getElementById('stm').classList.add('hidden');showToast(name+'を保存しました');renderAL();renderSG();}
+  const free1Min=free1MinEl?parseInt(free1MinEl.value):45;let ds=null;if(type==='contract'){ds={mon:readRows('sh-mon'),tue:readRows('sh-tue'),wed:readRows('sh-wed'),thu:readRows('sh-thu'),fri:readRows('sh-fri'),sat:{1:readRows('sh-sat1'),2:readRows('sh-sat2'),3:readRows('sh-sat3'),4:readRows('sh-sat4'),5:readRows('sh-sat5')},sun:readRows('sh-sun')};}if(eSid){const idx=DB.staff.findIndex(s=>s.id===eSid);if(idx>=0)DB.staff[idx]={...DB.staff[idx],name,employeeId:eid,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min};}else{const nid=Math.max(0,...DB.staff.map(s=>s.id))+1;DB.staff.push({id:nid,name,employeeId:eid,company:CO,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min});}sDB();document.getElementById('stm').classList.add('hidden');showToast(name+'を保存しました');renderAL();renderSG();fbSaveStaff();fbSaveSettings();}
 function delSt(id){const s=DB.staff.find(x=>x.id===id);if(!s||!confirm(s.name+'を削除しますか？'))return;DB.staff=DB.staff.filter(x=>x.id!==id);sDB();showToast(s.name+'を削除しました');renderAL();renderSG();}
 
 // ═══ 日次シフト ═══
 function loadAS(){const list=DB.staff.filter(s=>s.company===CO);['ds-s','sp-s','rs-s'].forEach(id=>{const sel=document.getElementById(id);sel.innerHTML='<option value="">スタッフを選択</option>';list.forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}</option>`);});document.getElementById('ds-d').value=todayStr();document.getElementById('sp-d').value=todayStr();document.getElementById('rs-d').value=todayStr();}
 function addDSRow(data){dsCnt++;const id='dsr'+dsCnt;const c=document.getElementById('ds-sh');const row=document.createElement('div');row.className='shift-row';row.id=id;row.innerHTML=`<div><label class="fl">開始</label><select class="tsel">${makeTimeOpts(data?data.s:'')}</select></div><div><label class="fl">終了</label><select class="tsel">${makeTimeOpts(data?data.e:'')}</select></div><button class="del-btn" onclick="document.getElementById('${id}').remove()">削除</button>`;c.appendChild(row);}
-function saveDS(){const sid=parseInt(document.getElementById('ds-s').value);const date=document.getElementById('ds-d').value;if(!sid||!date){showToast('スタッフと日付を選択してください');return;}const shifts=readRows('ds-sh');DB.dayShifts=DB.dayShifts.filter(d=>!(d.staffId===sid&&d.date===date));DB.dayShifts.push({id:Date.now(),staffId:sid,date,shifts});sDB();showToast('日次シフトを登録しました');dsCnt=0;document.getElementById('ds-sh').innerHTML='';renderDSL();}
+function saveDS(){const sid=parseInt(document.getElementById('ds-s').value);const date=document.getElementById('ds-d').value;if(!sid||!date){showToast('スタッフと日付を選択してください');return;}const shifts=readRows('ds-sh');DB.dayShifts=DB.dayShifts.filter(d=>!(d.staffId===sid&&d.date===date));const dsType=document.getElementById('ds-type').value;
+  DB.dayShifts.push({id:Date.now(),staffId:sid,date,shifts,type:dsType||null});sDB();showToast('日次シフトを登録しました');dsCnt=0;document.getElementById('ds-sh').innerHTML='';renderDSL();}
 function renderDSL(){const el=document.getElementById('dsl');const list=DB.dayShifts.filter(d=>{const s=DB.staff.find(x=>x.id===d.staffId);return s&&s.company===CO;}).sort((a,b)=>a.date<b.date?1:-1);el.innerHTML=list.length?list.map(d=>{const s=DB.staff.find(x=>x.id===d.staffId);return`<div class="spit"><div class="sii"><b>${s?s.name:'?'}</b> ${d.date}<br><span style="color:var(--t2);font-size:10px;">${d.shifts.map(sh=>sh.s+'〜'+sh.e).join('、')}</span></div><button class="fd" onclick="delDS(${d.id})">削除</button></div>`;}).join(''):'<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div>';}
 function delDS(id){DB.dayShifts=DB.dayShifts.filter(d=>d.id!==id);sDB();renderDSL();showToast('削除しました');}
 
@@ -1635,6 +1939,302 @@ async function syncRecordsFromGitHub(){
   }
 }
 
+
+function dlIndXLSX(){
+  const sid=parseInt(document.getElementById('isel').value);
+  const ym=document.getElementById('im').value;
+  if(!sid||!ym){showToast('\u30b9\u30bf\u30c3\u30d5\u3068\u6708\u3092\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044');return;}
+  loadXLSX(()=>doExportInd(sid,ym));
+}
+
+
+function switchCompany(){
+  if(!confirm('会社を切り替えます。現在の画面は閉じられます。〈8にりますか？'))return;
+  currentCompany='';
+  localStorage.removeItem('kintai_company');
+  document.getElementById('ms').style.display='none';
+  document.getElementById('cs').style.display='flex';
+}
+
+
+// ═══ 会社タブ ═══
+let currentCoTab = 'koyokai';
+function setCoTab(co){
+  currentCoTab = co;
+  ['koyokai','fulllife'].forEach(t=>{
+    const btn=document.getElementById('co-tab-'+t);
+    if(btn){btn.style.background=t===co?'var(--nv)':'#fff';btn.style.color=t===co?'#fff':'var(--t2)';}
+  });
+  renderSG();
+}
+
+// ═══ 個人ログイン ═══
+let personalStaff = null;
+
+function openPersonalModal(){
+  document.getElementById('personal-modal').classList.remove('hidden');
+  document.getElementById('personal-login-view').style.display='block';
+  document.getElementById('personal-main-view').style.display='none';
+  document.getElementById('personal-id').value='';
+  document.getElementById('personal-pw').value='';
+  document.getElementById('personal-err').textContent='';
+  // 今日の日付をセット
+  const t=todayStr();
+  ['p-paid-date','p-fare-date','p-lunch-date'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value=t;
+  });
+}
+
+function closePersonalModal(e){
+  if(!e||e.target===document.getElementById('personal-modal'))
+    document.getElementById('personal-modal').classList.add('hidden');
+}
+
+function loginPersonal(){
+  const eid=document.getElementById('personal-id').value.trim();
+  const pw=document.getElementById('personal-pw').value;
+  if(!eid||!pw){document.getElementById('personal-err').textContent='社員番号とPWを入力してください';return;}
+  // 社員番号で検索（数字またはf1形式）
+  const staff=DB.staff.find(s=>String(s.employeeId)===eid||String(s.employeeId)==='f'+eid.replace('f',''));
+  if(!staff){document.getElementById('personal-err').textContent='スタッフが見つかりません';return;}
+  if((staff.pw||'0000')!==pw){document.getElementById('personal-err').textContent='PWが違います';return;}
+  personalStaff=staff;
+  document.getElementById('personal-login-view').style.display='none';
+  document.getElementById('personal-main-view').style.display='block';
+  const coInfo={koyokai:'医療法人 香庸会',fulllife:'株式会社 フルライフ'};
+  document.getElementById('personal-name').textContent=staff.name;
+  document.getElementById('personal-co').textContent=coInfo[staff.company]||staff.company;
+  showPTab('log');
+}
+
+function logoutPersonal(){
+  personalStaff=null;
+  document.getElementById('personal-login-view').style.display='block';
+  document.getElementById('personal-main-view').style.display='none';
+}
+
+function showPTab(tab){
+  ['log','paid','fare','lunch','pw'].forEach(t=>{
+    const v=document.getElementById('pview-'+t);
+    const b=document.getElementById('ptab-'+t);
+    if(v)v.style.display=t===tab?'block':'none';
+    if(b)b.classList.toggle('active',t===tab);
+  });
+  if(tab==='log')renderPersonalLog();
+  if(tab==='paid')renderPersonalPaid();
+  if(tab==='fare')renderPersonalFare();
+  if(tab==='lunch')renderPersonalLunch();
+}
+
+function renderPersonalLog(){
+  if(!personalStaff)return;
+  const ym=todayStr().substring(0,7);
+  const term=getTermDates(ym);
+  const recs=DB.records.filter(r=>r.staffId===personalStaff.id&&term.dates.includes(r.date))
+    .sort((a,b)=>a.date<b.date?-1:1);
+  const dows=['日','月','火','水','木','金','土'];
+  const el=document.getElementById('personal-log-list');
+  if(!el)return;
+  if(!recs.length){el.innerHTML='<div style="color:var(--t2);font-size:11px;padding:12px;text-align:center;">打刻データがありません</div>';return;}
+  const groups={};
+  recs.forEach(r=>{if(!groups[r.date])groups[r.date]=[];groups[r.date].push(r);});
+  el.innerHTML=Object.entries(groups).map(([date,rs])=>{
+    const dt=new Date(date);
+    const w=dows[dt.getDay()];
+    return`<div style="padding:7px 0;border-bottom:1px solid var(--br);">
+      <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:4px;">${date}（${w}）</div>
+      ${rs.map(r=>`<div style="display:flex;gap:7px;font-size:11px;"><span style="color:var(--t2);">${r.ts.substring(0,5)}</span><span>${TL[r.type]||r.type}</span></div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function renderPersonalPaid(){
+  if(!personalStaff)return;
+  const list=DB.paid.filter(p=>p.staffId===personalStaff.id).sort((a,b)=>a.date<b.date?-1:1);
+  const el=document.getElementById('personal-paid-list');
+  if(!el)return;
+  const typeL={full:'全日',am:'午前半日',pm:'午後半日'};
+  el.innerHTML=list.length?list.map(p=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--br);font-size:11px;"><span>${p.date}</span><span>${typeL[p.type]||p.type}</span></div>`).join(''):'<div style="color:var(--t2);font-size:11px;padding:7px;">申請なし</div>';
+}
+
+function renderPersonalFare(){
+  if(!personalStaff)return;
+  const list=DB.fare.filter(f=>f.staffId===personalStaff.id).sort((a,b)=>a.date<b.date?-1:1);
+  const el=document.getElementById('personal-fare-list');
+  if(!el)return;
+  el.innerHTML=list.length?list.map(f=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--br);font-size:11px;"><span>${f.date}</span><span>交通費</span></div>`).join(''):'<div style="color:var(--t2);font-size:11px;padding:7px;">申請なし</div>';
+}
+
+function renderPersonalLunch(){
+  if(!personalStaff)return;
+  const list=DB.lunch.filter(l=>l.staffId===personalStaff.id).sort((a,b)=>a.date<b.date?-1:1);
+  const el=document.getElementById('personal-lunch-list');
+  if(!el)return;
+  el.innerHTML=list.length?list.map(l=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--br);font-size:11px;"><span>${l.date}</span><span>ランチデリ</span></div>`).join(''):'<div style="color:var(--t2);font-size:11px;padding:7px;">登録なし</div>';
+}
+
+function submitPersonalPaid(){
+  if(!personalStaff)return;
+  const date=document.getElementById('p-paid-date').value;
+  const type=document.getElementById('p-paid-type').value;
+  if(!date)return;
+  DB.paid=DB.paid.filter(p=>!(p.staffId===personalStaff.id&&p.date===date));
+  DB.paid.push({staffId:personalStaff.id,date,type,staffName:personalStaff.name});
+  sDB();fbSaveSettings();showToast('有給を申請しました');renderPersonalPaid();
+}
+
+function submitPersonalFare(){
+  if(!personalStaff)return;
+  const date=document.getElementById('p-fare-date').value;
+  if(!date)return;
+  if(!DB.fare.find(f=>f.staffId===personalStaff.id&&f.date===date)){
+    DB.fare.push({staffId:personalStaff.id,date,staffName:personalStaff.name});
+    sDB();fbSaveSettings();showToast('交通費を申請しました');
+  } else {showToast('この日は既に登録済み');}
+  renderPersonalFare();
+}
+
+function submitPersonalLunch(){
+  if(!personalStaff)return;
+  const date=document.getElementById('p-lunch-date').value;
+  if(!date)return;
+  if(!DB.lunch.find(l=>l.staffId===personalStaff.id&&l.date===date)){
+    DB.lunch.push({staffId:personalStaff.id,date,company:personalStaff.company,staffName:personalStaff.name});
+    sDB();fbSaveSettings();showToast('ランチデリを登録しました');
+  } else {showToast('この日は既に登録済み');}
+  renderPersonalLunch();
+}
+
+function changePersonalPw(){
+  if(!personalStaff)return;
+  const old=document.getElementById('p-pw-old').value;
+  const nw=document.getElementById('p-pw-new').value;
+  const nw2=document.getElementById('p-pw-new2').value;
+  if((personalStaff.pw||'0000')!==old){showToast('現在のPWが違います');return;}
+  if(nw!==nw2){showToast('新PWが一致しません');return;}
+  if(nw.length<4){showToast('4文字以上で設定してください');return;}
+  const idx=DB.staff.findIndex(s=>s.id===personalStaff.id);
+  if(idx>=0){DB.staff[idx].pw=nw;personalStaff=DB.staff[idx];}
+  sDB();fbSaveStaff();showToast('PWを変更しました ✓');
+  ['p-pw-old','p-pw-new','p-pw-new2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+}
+
+
+// ═══ 管理者権限システム ═══
+const DEFAULT_ADMINS = [
+  {id:'admin1', name:'スーパー管理者', pw:'admin0000', role:'super', company:'both'}
+];
+
+function getAdmins(){return DB.admins&&DB.admins.length?DB.admins:DEFAULT_ADMINS;}
+
+let currentAdmin = null;
+
+function checkAdminPw(){
+  // 管理者ログインモーダルを表示
+  document.getElementById('pw-setup-area').style.display='none';
+  document.getElementById('pw-label').textContent='管理者IDまたはPW';
+  document.getElementById('pw-btn').textContent='ログイン';
+  document.getElementById('pw-input').value='';
+  document.getElementById('pw-error').textContent='';
+  document.getElementById('pwm').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('pw-input').focus(),100);
+}
+
+function submitPW(){
+  const val=document.getElementById('pw-input').value;
+  if(!val){document.getElementById('pw-error').textContent='入力してください';return;}
+  // 管理者一覧から検索（PW一致）
+  const admins=getAdmins();
+  const admin=admins.find(a=>a.pw===val);
+  if(admin){
+    currentAdmin=admin;
+    document.getElementById('pwm').classList.add('hidden');
+    showPg('admin');
+    // 権限に応じて管理画面を制限
+    applyAdminPermissions(admin);
+    showToast(admin.name+' でログインしました');
+  } else {
+    document.getElementById('pw-error').textContent='PWが違います';
+    document.getElementById('pw-input').value='';
+  }
+}
+
+function applyAdminPermissions(admin){
+  // super: 全て表示
+  // company: 自社のみ
+  const isSuperAdmin = admin.role==='super';
+  // 会社選択フィルタを設定
+  if(!isSuperAdmin){
+    currentCoTab = admin.company;
+    setCoTab(admin.company);
+  }
+  // 管理画面のタイトルに権限表示
+  const el=document.getElementById('admin-co-label');
+  if(el){
+    const coName={koyokai:'香庸会',fulllife:'フルライフ',both:'両社'}[admin.company]||'';
+    el.textContent=admin.name+'（'+coName+'）';
+  }
+  // レポート出力を会社でフィルタ
+  window.adminCompanyFilter = isSuperAdmin ? null : admin.company;
+}
+
+// レポート出力時に会社フィルタ適用
+function getFilteredStaff(){
+  const filter=window.adminCompanyFilter;
+  if(!filter)return DB.staff;
+  return DB.staff.filter(s=>s.company===filter);
+}
+
+
+// ═══ 動作選択フロー ═══
+let selectedAction = null;
+const ACTION_LABELS = {
+  in: '出勤',
+  break: '休憩開始',
+  resume: '休憩終了',
+  out: '退勤'
+};
+const ACTION_COLORS = {
+  in: 'var(--gd)',
+  break: '#633806',
+  resume: '#0C447C',
+  out: '#791F1F'
+};
+
+function selectAction(action){
+  selectedAction = action;
+  // 動作選択画面を隠してスタッフ選択画面を表示
+  document.getElementById('action-select-view').style.display='none';
+  document.getElementById('staff-select-view').style.display='block';
+  // ラベル更新
+  const lbl=document.getElementById('action-label');
+  if(lbl){
+    lbl.textContent=ACTION_LABELS[action]+'するスタッフを選択';
+    lbl.style.color=ACTION_COLORS[action]||'var(--nv)';
+  }
+  renderSG();
+}
+
+function backToAction(){
+  selectedAction=null;
+  document.getElementById('staff-select-view').style.display='none';
+  document.getElementById('action-select-view').style.display='block';
+}
+
+// showPg('punch')時に動作選択画面に戻る
+const _origShowPg = showPg;
+function showPg(p){
+  _origShowPg(p);
+  if(p==='punch'){
+    // 打刻画面に来たら動作選択画面に戻す
+    const asv=document.getElementById('action-select-view');
+    const ssv=document.getElementById('staff-select-view');
+    if(asv)asv.style.display='block';
+    if(ssv)ssv.style.display='none';
+    selectedAction=null;
+  }
+}
+
 // ═══ 時計 ═══
 function tick(){const d=new Date();const el=document.getElementById('hk');if(el)el.textContent=pad(d.getHours())+':'+pad(d.getMinutes());if(document.getElementById('pg-punch').classList.contains('active'))renderSG();}
 
@@ -1679,8 +2279,8 @@ function showPWChange(){
 
 // ═══ onTC拡張（free1オプション表示） ═══
 lDB();autoStart();setInterval(tick,30000);tick();
-// GitHub同期を非同期で開始
-setTimeout(()=>initSync(),800);
+// Firebase同期はselectCompany()で起動
+// GitHub同期は無効（Firebase移行済み）
 </script>
 </body>
 </html>
