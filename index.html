@@ -263,6 +263,8 @@ console.log('Firebase initialized');
       <button class="at" id="atab-paid" onclick="showAS('paid')">有給履歴</button>
       <button class="at" id="atab-lunch" onclick="showAS('lunch')">ランチデリ</button>
       <button class="at" id="atab-special" onclick="showAS('special')">特別枠</button>
+      <button class="at" id="atab-log" onclick="showAS('log')">ログ</button>
+      <button class="at" id="atab-report" onclick="showAS('report')">レポート</button>
       <button class="at" id="atab-data" onclick="showAS('data')">データ移行</button>
     </div>
     <div class="card" style="margin-bottom:8px;background:var(--bll);border:1px solid var(--bl);">
@@ -392,12 +394,49 @@ console.log('Firebase initialized');
         </div>
       </div>
     </div>
+    <div class="asc" id="asc-log">
+      <div class="pad"><div class="card">
+    <div style="margin-bottom:9px;">
+      <div class="cl" style="margin-bottom:6px;">出力月を選択</div>
+      <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+        <select id="log-co" style="padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;">
+          <option value="koyokai">香庸会</option>
+          <option value="fulllife">フルラフ</option>
+          <option value="all">両社</option>
+        </select>
+        <select id="log-ym" onchange="updateLogTermLabel()" style="flex:1;padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"></select>
+        <button class="bg" style="font-size:10px;padding:7px 10px;white-space:nowrap;" onclick="exportLogCSV()">📄 ログCSV</button>
+        <button class="bn" style="font-size:10px;padding:7px 10px;white-space:nowrap;" onclick="exportMonthLog()">📊 月次XLSX</button>
+      </div>
+      <div style="font-size:9px;color:var(--t2);margin-top:4px;" id="log-term-label"></div>
+    </div>
+    <div class="cl" style="margin-bottom:6px;">本日の打刻ログ</div>
+    <div class="ll" id="ll"><div style="color:var(--t2);font-size:12px;padding:14px;text-align:center;">まだ打刻がありません</div></div>
+  </div>
+    </div>
+    <div class="asc" id="asc-report">
+      <div class="pad">
+    <div class="card">
+      <div class="fr" style="flex-wrap:wrap;gap:5px;"><select id="rep-co" style="padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"><option value="koyokai">香庸会</option><option value="fulllife">フルラフ</option><option value="all">両社</option></select><select id="rm" style="flex:1;"></select><button class="bg" onclick="renderRep()">表示</button><button class="bn" onclick="exportXLSX()">月次XLSX</button></div>
+      <div class="s3" id="rs"></div>
+      <div class="rw"><table class="rt"><thead id="rth"></thead><tbody id="rtb"></tbody></table></div>
+    </div>
+    <div class="card"><div class="cl">個人別明細</div>
+      <div class="fr" style="flex-wrap:wrap;gap:5px;">
+        <select id="isel" onchange="renderIndPreview()" style="flex:1;min-width:120px;"><option value="">スタッフを選択</option></select>
+        <select id="im" onchange="renderIndPreview()" style="flex:1;min-width:100px;"></select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px;">
+        <button class="fb" style="padding:10px;font-size:12px;" onclick="renderIndPreview()">👁 画面で確認</button>
+        <button class="bn" style="padding:10px;font-size:12px;" onclick="exportIndXLSX()">📊 XLSXダウンロード</button>
+      </div>
+    </div>
+  
+    </div>
   </div></div>
   <div class="bnav">
-    <button class="nb" onclick="openPersonalModal()"><span class="ni">👤</span>個人</button>
     <button class="nb active" id="bn-punch" onclick="showPg('punch')"><span class="ni">👆</span>打刻</button>
-    <button class="nb" id="bn-log" onclick="showPg('log')"><span class="ni">📋</span>ログ</button>
-    <button class="nb" id="bn-report" onclick="showPg('report')"><span class="ni">📊</span>レポート</button>
+    <button class="nb" id="bn-personal" onclick="openPersonalModal()"><span class="ni">👤</span>個人</button>
     <button class="nb" id="bn-admin" onclick="checkAdminPw()"><span class="ni">⚙️</span>管理</button>
   </div>
 </div>
@@ -1053,7 +1092,7 @@ function autoStart(){
     selectCompany('koyokai');
   }
 }
-function showPg(p){['punch','log','report','admin'].forEach(n=>{document.getElementById('pg-'+n).classList.toggle('active',n===p);document.getElementById('tab-'+n).classList.toggle('active',n===p);document.getElementById('bn-'+n).classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='punch'){resetToActionView();}if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}}
+function showPg(p){['punch','admin'].forEach(n=>{document.getElementById('pg-'+n).classList.toggle('active',n===p);document.getElementById('tab-'+n).classList.toggle('active',n===p);document.getElementById('bn-'+n).classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='punch'){resetToActionView();}if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}}
 function showAS(sub){
   // 管理画面の会社名更新
   const el=document.getElementById('admin-co-label');
@@ -1061,7 +1100,7 @@ function showAS(sub){
     const admin=currentAdmin||{name:'管理者',company:'both'};
     const coName={koyokai:'香庸会',fulllife:'フルラフ',both:'両社'}[admin.company]||'';
     el.textContent=admin.name+(coName?'（'+coName+'）':'');
-  }['staff','shift','rec','paid','lunch','special','data'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid')initPH();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();}
+  }['staff','shift','rec','paid','lunch','special','log','report','data'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid')initPH();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();renderRep();}}
 
 // ═══ 打刻グリッド ═══
 function renderSG(){
@@ -1130,7 +1169,7 @@ function tapS(sid){
   document.getElementById('pm').classList.remove('hidden');
 }
 function closePM(e){if(!e||e.target===document.getElementById('pm'))document.getElementById('pm').classList.add('hidden');}
-function doP(sid,action){const s=DB.staff.find(x=>x.id===sid);const n=new Date();DB.records.unshift({id:Date.now(),staffId:sid,staffName:s.name,company:CO,type:action,date:todayStr(),ts:nowStr(),tsISO:n.toISOString()});sDB();fbSaveRecords();document.getElementById('pm').classList.add('hidden');showToast(s.name+' — '+TL[action]);renderSG();}
+function doP(sid,action){const s=DB.staff.find(x=>x.id===sid);const n=new Date();DB.records.unshift({id:Date.now(),staffId:sid,staffName:s.name,company:CO,type:action,date:todayStr(),ts:nowStr(),tsISO:n.toISOString()});sDB();fbSaveRecords();document.getElementById('pm').classList.add('hidden');showToast(s.name+' — '+TL[action]);renderSG();setTimeout(()=>backToAction(),800);}
 function doFare(sid){const s=DB.staff.find(x=>x.id===sid);DB.fare.push({id:Date.now(),staffId:sid,staffName:s.name,company:CO,date:todayStr(),amount:s.fare});sDB();document.getElementById('pm').classList.add('hidden');showToast(s.name+' — 交通費申請（'+s.fare.toLocaleString()+'円）');renderSG();}
 function openPD(sid){pPaid=sid;document.getElementById('pd-dt').value=todayStr();document.getElementById('pd-tp').value='full';document.getElementById('pd-mo').value='';document.getElementById('pm').classList.add('hidden');document.getElementById('pdm').classList.remove('hidden');}
 function closePD(e){if(!e||e.target===document.getElementById('pdm'))document.getElementById('pdm').classList.add('hidden');}
