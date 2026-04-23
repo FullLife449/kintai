@@ -168,7 +168,7 @@ console.log('Firebase initialized');
   <div style="text-align:center;padding:40px 20px 30px;">
     <div style="color:rgba(255,255,255,0.5);font-size:11px;margin-bottom:6px;">勤怠タッチ Pro</div>
     <div style="color:#fff;font-size:20px;font-weight:700;margin-bottom:4px;">会社を選択してください</div>
-    <div style="color:rgba(255,255,255,0.4);font-size:10px;margin-bottom:36px;">β v2.0 Firebase対応</div>
+    <div style="color:rgba(255,255,255,0.4);font-size:10px;margin-bottom:36px;">β v2.1 (1776926840)</div>
     <div style="display:flex;flex-direction:column;gap:12px;max-width:300px;margin:0 auto;">
       <button onclick="selectCompany('koyokai')" style="width:100%;padding:18px;border:none;border-radius:14px;cursor:pointer;font-size:15px;font-weight:700;background:#fff;color:#1a1a2e;font-family:inherit;">
         <div style="font-size:11px;color:#888;margin-bottom:3px;">医療法人</div>
@@ -192,34 +192,19 @@ console.log('Firebase initialized');
     <button class="tab" id="tab-report" onclick="showPg('report')">レポート</button>
     <button class="tab" id="tab-admin" onclick="checkAdminPw()">管理</button>
   </div>
-  <div id="pg-punch" class="pg active"><div class="pad"><!-- 動作選択画面 -->
-  <div id="action-select-view">
-    <div class="card" id="action-card">
-      <div class="cl" id="dlbl">打刻する動作を選択</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;">
-        <button class="action-btn action-in"  onclick="selectAction('in')">出勤</button>
-        <button class="action-btn action-break" onclick="selectAction('break')">休憩開始</button>
-        <button class="action-btn action-resume" onclick="selectAction('resume')">休憩終了</button>
-        <button class="action-btn action-out"  onclick="selectAction('out')">退勤</button>
-      </div>
+  <div id="pg-punch" class="pg active"><div class="pad">
+  <!-- 会社タブ＋スタッフ一覧（最初から表示） -->
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div style="display:flex;border-bottom:1px solid var(--br);">
+      <button id="co-tab-koyokai" onclick="setCoTab('koyokai')" style="flex:1;padding:10px;border:none;background:var(--nv);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">香庸会</button>
+      <button id="co-tab-fulllife" onclick="setCoTab('fulllife')" style="flex:1;padding:10px;border:none;background:#fff;color:var(--t2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border-left:1px solid var(--br);">フルラフ</button>
+    </div>
+    <div style="padding:11px;">
+      <div class="cl" id="dlbl" style="margin-bottom:8px;"></div>
+      <div class="sg" id="sg"></div>
     </div>
   </div>
-  <!-- スタッフ選択画面（動作選択後） -->
-  <div id="staff-select-view" style="display:none;">
-    <div class="card" style="padding:0;overflow:hidden;">
-      <div style="display:flex;align-items:center;padding:10px 11px;border-bottom:1px solid var(--br);background:var(--gy);">
-        <button onclick="backToAction()" style="border:none;background:none;font-size:18px;cursor:pointer;padding:0 8px 0 0;color:var(--nv);">←</button>
-        <div id="action-label" style="font-size:13px;font-weight:700;color:var(--nv);flex:1;"></div>
-        <div style="display:flex;gap:4px;">
-          <button id="co-tab-koyokai" onclick="setCoTab('koyokai')" style="padding:5px 10px;border:1px solid var(--br);border-radius:20px;background:var(--nv);color:#fff;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;">香庸会</button>
-          <button id="co-tab-fulllife" onclick="setCoTab('fulllife')" style="padding:5px 10px;border:1px solid var(--br);border-radius:20px;background:#fff;color:var(--t2);font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;">フルラフ</button>
-        </div>
-      </div>
-      <div style="padding:11px;">
-        <div class="sg" id="sg"></div>
-      </div>
-    </div>
-  </div></div></div>
+</div></div></div>
   <div id="pg-log" class="pg"><div class="pad"><div class="card">
     <div style="margin-bottom:9px;">
       <div class="cl" style="margin-bottom:6px;">出力月を選択</div>
@@ -1092,7 +1077,7 @@ function autoStart(){
     selectCompany('koyokai');
   }
 }
-function showPg(p){['punch','admin'].forEach(n=>{document.getElementById('pg-'+n).classList.toggle('active',n===p);document.getElementById('tab-'+n).classList.toggle('active',n===p);document.getElementById('bn-'+n).classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='punch'){resetToActionView();}if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}}
+function showPg(p){['punch','admin'].forEach(n=>{document.getElementById('pg-'+n).classList.toggle('active',n===p);document.getElementById('tab-'+n).classList.toggle('active',n===p);document.getElementById('bn-'+n).classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}}
 function showAS(sub){
   // 管理画面の会社名更新
   const el=document.getElementById('admin-co-label');
@@ -1134,27 +1119,7 @@ function renderSG(){
 function tapS(sid){
   const staff=DB.staff.find(s=>s.id===sid);if(!staff)return;
   const t=todayStr();
-  // selectedActionがある場合は直接打刻
-  if(selectedAction){
-    const action=selectedAction;
-    // 打刻可能かチェック
-    const st=getSt(sid,t);
-    let ok=false;
-    if(action==='in'&&(st==='none'||st==='out'))ok=true;
-    if(action==='break'&&(st==='in'||st==='resume'||st==='early'))ok=true;
-    if(action==='resume'&&st==='break')ok=true;
-    if(action==='out'&&(st==='in'||st==='resume'||st==='early'))ok=true;
-    if(!ok){
-      showToast(staff.name+' は現在「'+stLbl(st)+'」のため「'+ACTION_LABELS[action]+'」できません');
-      return;
-    }
-    doP(sid, action);
-    showToast(staff.name+' — '+ACTION_LABELS[action]);
-    // 打刻後に動作選択画面に戻る
-    backToAction();
-    return;
-  }
-  // selectedActionがない場合は従来のモーダル表示
+  // 常にモーダルで動作選択
   const st=getSt(sid,t);
   document.getElementById('mn').textContent=staff.name;
   let typeInfo=`<b>${{contract:'契約型',free:'フリー型',free1:'フリー①型',annual:'年俣型'}[staff.type]||staff.type}</b>`;
@@ -1169,7 +1134,7 @@ function tapS(sid){
   document.getElementById('pm').classList.remove('hidden');
 }
 function closePM(e){if(!e||e.target===document.getElementById('pm'))document.getElementById('pm').classList.add('hidden');}
-function doP(sid,action){const s=DB.staff.find(x=>x.id===sid);const n=new Date();DB.records.unshift({id:Date.now(),staffId:sid,staffName:s.name,company:CO,type:action,date:todayStr(),ts:nowStr(),tsISO:n.toISOString()});sDB();fbSaveRecords();document.getElementById('pm').classList.add('hidden');showToast(s.name+' — '+TL[action]);renderSG();setTimeout(()=>backToAction(),800);}
+function doP(sid,action){const s=DB.staff.find(x=>x.id===sid);const n=new Date();DB.records.unshift({id:Date.now(),staffId:sid,staffName:s.name,company:CO,type:action,date:todayStr(),ts:nowStr(),tsISO:n.toISOString()});sDB();fbSaveRecords();document.getElementById('pm').classList.add('hidden');showToast(s.name+' — '+TL[action]);renderSG();}
 function doFare(sid){const s=DB.staff.find(x=>x.id===sid);DB.fare.push({id:Date.now(),staffId:sid,staffName:s.name,company:CO,date:todayStr(),amount:s.fare});sDB();document.getElementById('pm').classList.add('hidden');showToast(s.name+' — 交通費申請（'+s.fare.toLocaleString()+'円）');renderSG();}
 function openPD(sid){pPaid=sid;document.getElementById('pd-dt').value=todayStr();document.getElementById('pd-tp').value='full';document.getElementById('pd-mo').value='';document.getElementById('pm').classList.add('hidden');document.getElementById('pdm').classList.remove('hidden');}
 function closePD(e){if(!e||e.target===document.getElementById('pdm'))document.getElementById('pdm').classList.add('hidden');}
