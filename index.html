@@ -176,7 +176,7 @@ console.log('Firebase initialized');
       </button>
       <button onclick="selectCompany('fulllife')" style="width:100%;padding:18px;border:none;border-radius:14px;cursor:pointer;font-size:15px;font-weight:700;background:rgba(255,255,255,0.15);color:#fff;font-family:inherit;border:1px solid rgba(255,255,255,0.3);">
         <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:3px;">株式会社</div>
-        フルライフ
+        フルラフ
       </button>
     </div>
   </div>
@@ -212,7 +212,7 @@ console.log('Firebase initialized');
         <div id="action-label" style="font-size:13px;font-weight:700;color:var(--nv);flex:1;"></div>
         <div style="display:flex;gap:4px;">
           <button id="co-tab-koyokai" onclick="setCoTab('koyokai')" style="padding:5px 10px;border:1px solid var(--br);border-radius:20px;background:var(--nv);color:#fff;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;">香庸会</button>
-          <button id="co-tab-fulllife" onclick="setCoTab('fulllife')" style="padding:5px 10px;border:1px solid var(--br);border-radius:20px;background:#fff;color:var(--t2);font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;">フルライフ</button>
+          <button id="co-tab-fulllife" onclick="setCoTab('fulllife')" style="padding:5px 10px;border:1px solid var(--br);border-radius:20px;background:#fff;color:var(--t2);font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;">フルラフ</button>
         </div>
       </div>
       <div style="padding:11px;">
@@ -542,8 +542,19 @@ console.log('Firebase initialized');
       </div>
       <!-- 打刻ログ -->
       <div id="pview-log" class="pview">
-        <div class="cl">今月の打刻ログ</div>
-        <div id="personal-log-list" style="max-height:300px;overflow-y:auto;"></div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;">
+          <div class="cl" style="margin-bottom:0;flex:1;">打刻ログ・勤務実績</div>
+          <select id="p-log-month" onchange="renderPersonalLog()" style="padding:5px 7px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"></select>
+        </div>
+        <!-- 有給残日数カード -->
+        <div id="p-paid-remain-card" style="background:var(--gl);border-radius:9px;padding:9px 12px;margin-bottom:9px;display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:11px;color:var(--gd);">有給残日数</div>
+          <div style="font-size:20px;font-weight:700;color:var(--gd);" id="p-paid-remain">-</div>
+        </div>
+        <!-- 月間サマリー -->
+        <div id="p-month-summary" style="background:var(--gy);border-radius:9px;padding:9px 12px;margin-bottom:9px;font-size:11px;"></div>
+        <!-- 日別一覧 -->
+        <div id="personal-log-list" style="max-height:350px;overflow-y:auto;"></div>
       </div>
       <!-- 有給 -->
       <div id="pview-paid" class="pview" style="display:none;">
@@ -614,7 +625,7 @@ const CO='koyokai'; // 後方互換用
 // ═══ Firebase設定 ═══
 const COMPANIES = {
   koyokai: { name: '香庸会', label: '医療法人', color: '#1a1a2e' },
-  fulllife: { name: 'フルライフ', label: '株式会社', color: '#0C447C' }
+  fulllife: { name: 'フルラフ', label: '株式会社', color: '#0C447C' }
 };
 let currentCompany = localStorage.getItem('kintai_company') || '';
 
@@ -1037,11 +1048,15 @@ function autoStart(){
     selectCompany('koyokai');
   }
 }
-function showPg(p){['punch','log','report','admin'].forEach(n=>{document.getElementById('pg-'+n).classList.toggle('active',n===p);document.getElementById('tab-'+n).classList.toggle('active',n===p);document.getElementById('bn-'+n).classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();}}
+function showPg(p){['punch','log','report','admin'].forEach(n=>{document.getElementById('pg-'+n).classList.toggle('active',n===p);document.getElementById('tab-'+n).classList.toggle('active',n===p);document.getElementById('bn-'+n).classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='punch'){resetToActionView();}if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}}
 function showAS(sub){
   // 管理画面の会社名更新
   const el=document.getElementById('admin-co-label');
-  if(el){const info=COMPANIES[currentCompany]||{};el.textContent=(info.label||'')+' '+( info.name||'');}['staff','shift','rec','paid','lunch','special','data'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid')initPH();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();}
+  if(el){
+    const admin=currentAdmin||{name:'管理者',company:'both'};
+    const coName={koyokai:'香庸会',fulllife:'フルラフ',both:'両社'}[admin.company]||'';
+    el.textContent=admin.name+(coName?'（'+coName+'）':'');
+  }['staff','shift','rec','paid','lunch','special','data'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid')initPH();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();}
 
 // ═══ 打刻グリッド ═══
 function renderSG(){
@@ -1372,7 +1387,7 @@ function doExportInd(sid,ym){
 // ═══ スタッフ管理 ═══
 function renderAL(){
   const el=document.getElementById('asl');const tl={contract:'契約型',free:'フリー型',annual:'年俸型'};
-  const list=DB.staff.filter(s=>s.company===CO);
+  const list=(window.adminCompanyFilter?DB.staff.filter(s=>s.company===window.adminCompanyFilter):DB.staff);
   if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:12px;padding:14px;text-align:center;">スタッフが登録されていません</div>';return;}
   el.innerHTML=list.map(s=>{
     let ss='';if(s.type==='contract'&&s.dowShifts){const wds=['mon','tue','wed','thu','fri'];const wdA=wds.map(d=>(s.dowShifts[d]||[]).map(sh=>sh.s+'〜'+sh.e).join(',')).filter(Boolean);const uniq=[...new Set(wdA)];if(uniq.length===1)ss='<br><b>平日:</b> '+uniq[0];else if(uniq.length>1)ss='<br><b>平日:</b> 曜日別設定あり';if(s.dowShifts.sat){const sa=Object.entries(s.dowShifts.sat).filter(([_,v])=>v&&v.length>0);if(sa.length)ss+='<br><b>土曜:</b> 第'+sa.map(([k,v])=>k+'('+v.map(x=>x.s+'〜'+x.e).join(')')).join(' 第');}}
@@ -2001,7 +2016,7 @@ function loginPersonal(){
   personalStaff=staff;
   document.getElementById('personal-login-view').style.display='none';
   document.getElementById('personal-main-view').style.display='block';
-  const coInfo={koyokai:'医療法人 香庸会',fulllife:'株式会社 フルライフ'};
+  const coInfo={koyokai:'医療法人 香庸会',fulllife:'株式会社 フルラフ'};
   document.getElementById('personal-name').textContent=staff.name;
   document.getElementById('personal-co').textContent=coInfo[staff.company]||staff.company;
   showPTab('log');
@@ -2020,30 +2035,71 @@ function showPTab(tab){
     if(v)v.style.display=t===tab?'block':'none';
     if(b)b.classList.toggle('active',t===tab);
   });
-  if(tab==='log')renderPersonalLog();
+  if(tab==='log'){initPersonalLogMonth();renderPersonalLog();}
   if(tab==='paid')renderPersonalPaid();
   if(tab==='fare')renderPersonalFare();
   if(tab==='lunch')renderPersonalLunch();
 }
 
+function initPersonalLogMonth(){
+  const sel=document.getElementById('p-log-month');
+  if(!sel||sel.options.length>0)return;
+  const n=new Date();
+  for(let i=0;i<12;i++){
+    const d=new Date(n.getFullYear(),n.getMonth()-i,1);
+    const val=d.getFullYear()+'-'+pad(d.getMonth()+1);
+    const lbl=d.getFullYear()+'年'+(d.getMonth()+1)+'月';
+    sel.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${lbl}</option>`;
+  }
+}
 function renderPersonalLog(){
   if(!personalStaff)return;
-  const ym=todayStr().substring(0,7);
+  initPersonalLogMonth();
+  const sel=document.getElementById('p-log-month');
+  const ym=sel?sel.value:todayStr().substring(0,7);
   const term=getTermDates(ym);
-  const recs=DB.records.filter(r=>r.staffId===personalStaff.id&&term.dates.includes(r.date))
-    .sort((a,b)=>a.date<b.date?-1:1);
   const dows=['日','月','火','水','木','金','土'];
   const el=document.getElementById('personal-log-list');
   if(!el)return;
+
+  // 有給残日数（簡易計算：年20日 - 使用日数）
+  const usedPaid=DB.paid.filter(p=>p.staffId===personalStaff.id).length;
+  const remainEl=document.getElementById('p-paid-remain');
+  if(remainEl)remainEl.textContent=Math.max(0,20-usedPaid)+'日';
+
+  // 月間サマリー
+  const summary=calcMonthSummary(personalStaff.id,ym);
+  const sumEl=document.getElementById('p-month-summary');
+  if(sumEl){
+    sumEl.innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+        <div style="text-align:center;"><div style="font-size:9px;color:var(--t2);">出勤日数</div><div style="font-weight:700;">${summary.weekdays+summary.holdays}日</div></div>
+        <div style="text-align:center;"><div style="font-size:9px;color:var(--t2);">総勤務時間</div><div style="font-weight:700;">${msToHHMM(summary.totalMs)}</div></div>
+        <div style="text-align:center;"><div style="font-size:9px;color:var(--t2);">有給取得</div><div style="font-weight:700;">${summary.paidDays}日</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px;">
+        <div style="text-align:center;"><div style="font-size:9px;color:var(--t2);">遅刻</div><div style="font-weight:700;">${fmtMin(summary.totalLateMin)}</div></div>
+        <div style="text-align:center;"><div style="font-size:9px;color:var(--t2);">早退</div><div style="font-weight:700;">${fmtMin(summary.totalEarlyMin)}</div></div>
+        <div style="text-align:center;"><div style="font-size:9px;color:var(--t2);">時間外</div><div style="font-weight:700;">${msToHHMM((summary.otA||0)+(summary.otB||0))}</div></div>
+      </div>`;
+  }
+
+  // 日別打刻一覧
+  const recs=DB.records.filter(r=>r.staffId===personalStaff.id&&term.dates.includes(r.date))
+    .sort((a,b)=>a.date<b.date?-1:1);
   if(!recs.length){el.innerHTML='<div style="color:var(--t2);font-size:11px;padding:12px;text-align:center;">打刻データがありません</div>';return;}
   const groups={};
   recs.forEach(r=>{if(!groups[r.date])groups[r.date]=[];groups[r.date].push(r);});
   el.innerHTML=Object.entries(groups).map(([date,rs])=>{
-    const dt=new Date(date);
-    const w=dows[dt.getDay()];
-    return`<div style="padding:7px 0;border-bottom:1px solid var(--br);">
-      <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:4px;">${date}（${w}）</div>
-      ${rs.map(r=>`<div style="display:flex;gap:7px;font-size:11px;"><span style="color:var(--t2);">${r.ts.substring(0,5)}</span><span>${TL[r.type]||r.type}</span></div>`).join('')}
+    const dt=new Date(date);const w=dows[dt.getDay()];
+    const work=calcWork(personalStaff.id,date);
+    const workStr=work.total>0?msToHHMM(work.total):'';
+    return`<div style="padding:8px 0;border-bottom:1px solid var(--br);">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <div style="font-size:11px;font-weight:600;">${date}（${w}）</div>
+        ${workStr?`<div style="font-size:11px;color:var(--gd);font-weight:600;">実務${workStr}</div>`:''}
+      </div>
+      ${rs.map(r=>`<div style="display:flex;gap:7px;font-size:11px;padding:1px 0;"><span style="color:var(--t2);min-width:38px;">${r.ts.substring(0,5)}</span><span>${TL[r.type]||r.type}</span></div>`).join('')}
     </div>`;
   }).join('');
 }
@@ -2171,7 +2227,7 @@ function applyAdminPermissions(admin){
   // 管理画面のタイトルに権限表示
   const el=document.getElementById('admin-co-label');
   if(el){
-    const coName={koyokai:'香庸会',fulllife:'フルライフ',both:'両社'}[admin.company]||'';
+    const coName={koyokai:'香庸会',fulllife:'フルラフ',both:'両社'}[admin.company]||'';
     el.textContent=admin.name+'（'+coName+'）';
   }
   // レポート出力を会社でフィルタ
@@ -2222,17 +2278,13 @@ function backToAction(){
 }
 
 // showPg('punch')時に動作選択画面に戻る
-const _origShowPg = showPg;
-function showPg(p){
-  _origShowPg(p);
-  if(p==='punch'){
-    // 打刻画面に来たら動作選択画面に戻す
-    const asv=document.getElementById('action-select-view');
-    const ssv=document.getElementById('staff-select-view');
-    if(asv)asv.style.display='block';
-    if(ssv)ssv.style.display='none';
-    selectedAction=null;
-  }
+// showPgの拡張（上書きではなく直接修正）
+function resetToActionView(){
+  selectedAction=null;
+  const asv=document.getElementById('action-select-view');
+  const ssv=document.getElementById('staff-select-view');
+  if(asv)asv.style.display='block';
+  if(ssv)ssv.style.display='none';
 }
 
 // ═══ 時計 ═══
