@@ -224,6 +224,11 @@ console.log('Firebase initialized');
     <div style="margin-bottom:9px;">
       <div class="cl" style="margin-bottom:6px;">出力月を選択</div>
       <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+        <select id="log-co" style="padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;">
+          <option value="koyokai">香庸会</option>
+          <option value="fulllife">フルラフ</option>
+          <option value="all">両社</option>
+        </select>
         <select id="log-ym" onchange="updateLogTermLabel()" style="flex:1;padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"></select>
         <button class="bg" style="font-size:10px;padding:7px 10px;white-space:nowrap;" onclick="exportLogCSV()">📄 ログCSV</button>
         <button class="bn" style="font-size:10px;padding:7px 10px;white-space:nowrap;" onclick="exportMonthLog()">📊 月次XLSX</button>
@@ -235,7 +240,7 @@ console.log('Firebase initialized');
   </div></div></div>
   <div id="pg-report" class="pg"><div class="pad">
     <div class="card">
-      <div class="fr"><select id="rm"></select><button class="bg" onclick="renderRep()">表示</button><button class="bn" onclick="exportXLSX()">月次XLSX</button></div>
+      <div class="fr" style="flex-wrap:wrap;gap:5px;"><select id="rep-co" style="padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"><option value="koyokai">香庸会</option><option value="fulllife">フルラフ</option><option value="all">両社</option></select><select id="rm" style="flex:1;"></select><button class="bg" onclick="renderRep()">表示</button><button class="bn" onclick="exportXLSX()">月次XLSX</button></div>
       <div class="s3" id="rs"></div>
       <div class="rw"><table class="rt"><thead id="rth"></thead><tbody id="rtb"></tbody></table></div>
     </div>
@@ -1169,7 +1174,8 @@ function renderLog(){
 function initMS(){['rm','im'].forEach(id=>{const sel=document.getElementById(id);if(sel.options.length>1)return;const n=new Date();for(let i=0;i<6;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);sel.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}});}
 function renderRep(){
   const ym=document.getElementById('rm').value;if(!ym)return;
-  const list=DB.staff.filter(s=>s.company===CO);
+  const repCo=document.getElementById('rep-co')?document.getElementById('rep-co').value:'koyokai';
+  const list=repCo==='all'?DB.staff:DB.staff.filter(s=>s.company===repCo);
   // XLSXの列順に合わせたUI表示（主要項目のみ）
   const labels=[
     {k:'weekdays',   lbl:'平日出勤', fmt:'d'},
@@ -1222,6 +1228,7 @@ function renderRep(){
   document.getElementById('rtb').innerHTML=html;
   const termInfo=getTermDates(ym);
   document.getElementById('rs').innerHTML=`
+    <div class="sc"><div class="slb">対象</div><div class="sv" style="font-size:10px;">${repCo==='all'?'両社':repCo==='koyokai'?'香庸会':'フルラフ'}</div></div>
     <div class="sc"><div class="slb">スタッフ数</div><div class="sv">${list.length}名</div></div>
     <div class="sc"><div class="slb">集計期間</div><div class="sv" style="font-size:9px;color:var(--gd);">${termInfo.start}<br>〜${termInfo.end}</div></div>
     <div class="sc"><div class="slb">合計行</div><div class="sv" style="font-size:11px;color:var(--gd);">なし✓</div></div>`;
@@ -1301,7 +1308,8 @@ function makePayRow(s,m,lunchCount){
 
 function exportXLSX(){const ym=document.getElementById('rm').value;if(!ym){showToast('月を選択してください');return;}showToast('XLSXを生成中...');loadXLSX(()=>doExportMonthly(ym));}
 function doExportMonthly(ym){
-  const list=DB.staff.filter(s=>s.company===CO);
+  const repCo=document.getElementById('rep-co')?document.getElementById('rep-co').value:'koyokai';
+  const list=repCo==='all'?DB.staff:DB.staff.filter(s=>s.company===repCo);
   const payAoa=[PAY_HDR];
   const termM=getTermDates(ym);
   list.forEach(s=>{
@@ -1656,7 +1664,8 @@ function exportLogCSV(){
   const termDates=term.dates;
   const dows=['日','月','火','水','木','金','土'];
   // 社員番号順でソート
-  const list=[...DB.staff.filter(s=>s.company===CO)].sort((a,b)=>(a.employeeId||0)-(b.employeeId||0));
+  const logCo=document.getElementById('log-co')?document.getElementById('log-co').value:'koyokai';
+  const list=[...(logCo==='all'?DB.staff:DB.staff.filter(s=>s.company===logCo))].sort((a,b)=>(a.employeeId||0)-(b.employeeId||0));
   let csv='社員番号,名前,日付,曜日,種別,時刻,実働時間,遅刻(分),早退(分),有給,交通費,ランチデリ\n';
   list.forEach(s=>{
     // その人の期間内の日付を日付順に
