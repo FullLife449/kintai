@@ -188,8 +188,7 @@ console.log('Firebase initialized');
   </div>
   <div class="tabs">
     <button class="tab active" id="tab-punch" onclick="showPg('punch')">打刻</button>
-    <button class="tab" id="tab-log" onclick="showPg('log')">ログ</button>
-    <button class="tab" id="tab-report" onclick="showPg('report')">レポート</button>
+    <button class="tab" id="tab-personal" onclick="showPg('personal')">個人</button>
     <button class="tab" id="tab-admin" onclick="checkAdminPw()">管理</button>
   </div>
   <div id="pg-punch" class="pg active"><div class="pad">
@@ -419,9 +418,88 @@ console.log('Firebase initialized');
   
     </div>
   </div></div>
+  <div id="pg-personal" class="pg"><div class="pad">
+    <div id="personal-inline-login">
+      <div class="card">
+        <div class="cl">個人ページ ログイン</div>
+        <div class="frw"><label class="fl">社員番号</label>
+          <input class="fi" id="pi-id" type="text" placeholder="例: 3 または f1" inputmode="text">
+        </div>
+        <div class="frw"><label class="fl">パスワード（初期: 0000）</label>
+          <input class="fi" id="pi-pw" type="password" maxlength="8" placeholder="パスワード">
+        </div>
+        <div id="pi-err" style="color:var(--rd);font-size:11px;height:16px;margin-bottom:7px;"></div>
+        <button class="fb" style="width:100%;" onclick="loginPersonalInline()">ログイン</button>
+      </div>
+    </div>
+    <div id="personal-inline-main" style="display:none;">
+      <div class="card" style="padding:10px 11px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:15px;font-weight:700;" id="pi-name"></div>
+            <div style="font-size:10px;color:var(--t2);" id="pi-co"></div>
+          </div>
+          <button onclick="logoutPersonalInline()" style="padding:5px 10px;border:1px solid var(--br);border-radius:7px;background:#fff;font-size:11px;cursor:pointer;font-family:inherit;">ログアウト</button>
+        </div>
+      </div>
+      <!-- タブ -->
+      <div style="display:flex;gap:4px;margin-bottom:9px;overflow-x:auto;padding-bottom:2px;">
+        <button class="ptab active" id="pi-tab-log" onclick="showPITab('log')">打刻ログ</button>
+        <button class="ptab" id="pi-tab-paid" onclick="showPITab('paid')">有給</button>
+        <button class="ptab" id="pi-tab-fare" onclick="showPITab('fare')">交通費</button>
+        <button class="ptab" id="pi-tab-lunch" onclick="showPITab('lunch')">ランチ</button>
+        <button class="ptab" id="pi-tab-pw" onclick="showPITab('pw')">PW変更</button>
+      </div>
+      <!-- 打刻ログ -->
+      <div id="pi-view-log" class="card">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;">
+          <div class="cl" style="margin-bottom:0;flex:1;">打刻ログ・勤務実績</div>
+          <select id="pi-log-month" onchange="renderPILog()" style="padding:5px 7px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"></select>
+        </div>
+        <div id="pi-paid-remain" style="background:var(--gl);border-radius:9px;padding:9px 12px;margin-bottom:9px;display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:11px;color:var(--gd);">有給残日数</div>
+          <div style="font-size:20px;font-weight:700;color:var(--gd);" id="pi-paid-remain-val">-</div>
+        </div>
+        <div id="pi-month-summary" style="background:var(--gy);border-radius:9px;padding:9px 12px;margin-bottom:9px;font-size:11px;"></div>
+        <div id="pi-log-list" style="max-height:350px;overflow-y:auto;"></div>
+      </div>
+      <!-- 有給 -->
+      <div id="pi-view-paid" class="card" style="display:none;">
+        <div class="cl">有給申請</div>
+        <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="pi-paid-date"></div>
+        <div class="frw"><label class="fl">種別</label>
+          <select class="fsl" id="pi-paid-type"><option value="full">全日</option><option value="am">午前半日</option><option value="pm">午後半日</option></select>
+        </div>
+        <button class="fb" style="width:100%;margin-top:7px;" onclick="submitPIRequest('paid')">申請する</button>
+        <div id="pi-paid-list" style="margin-top:11px;max-height:200px;overflow-y:auto;"></div>
+      </div>
+      <!-- 交通費 -->
+      <div id="pi-view-fare" class="card" style="display:none;">
+        <div class="cl">交通費申請</div>
+        <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="pi-fare-date"></div>
+        <button class="fb" style="width:100%;margin-top:7px;" onclick="submitPIRequest('fare')">申請する</button>
+        <div id="pi-fare-list" style="margin-top:11px;max-height:200px;overflow-y:auto;"></div>
+      </div>
+      <!-- ランチデリ -->
+      <div id="pi-view-lunch" class="card" style="display:none;">
+        <div class="cl">ランチデリ登録</div>
+        <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="pi-lunch-date"></div>
+        <button class="fb" style="width:100%;margin-top:7px;" onclick="submitPIRequest('lunch')">登録する</button>
+        <div id="pi-lunch-list" style="margin-top:11px;max-height:200px;overflow-y:auto;"></div>
+      </div>
+      <!-- PW変更 -->
+      <div id="pi-view-pw" class="card" style="display:none;">
+        <div class="cl">パスワード変更</div>
+        <div class="frw"><label class="fl">現在のPW</label><input class="fi" type="password" id="pi-pw-old" maxlength="8"></div>
+        <div class="frw"><label class="fl">新しいPW</label><input class="fi" type="password" id="pi-pw-new" maxlength="8"></div>
+        <div class="frw"><label class="fl">確認</label><input class="fi" type="password" id="pi-pw-new2" maxlength="8"></div>
+        <button class="fb" style="width:100%;margin-top:7px;" onclick="changePIpw()">変更する</button>
+      </div>
+    </div>
+  </div></div>
   <div class="bnav">
     <button class="nb active" id="bn-punch" onclick="showPg('punch')"><span class="ni">👆</span>打刻</button>
-    <button class="nb" id="bn-personal" onclick="openPersonalModal()"><span class="ni">👤</span>個人</button>
+    <button class="nb" id="bn-personal" onclick="showPg('personal')"><span class="ni">👤</span>個人</button>
     <button class="nb" id="bn-admin" onclick="checkAdminPw()"><span class="ni">⚙️</span>管理</button>
   </div>
 </div>
@@ -1077,7 +1155,7 @@ function autoStart(){
     selectCompany('koyokai');
   }
 }
-function showPg(p){['punch','admin'].forEach(n=>{document.getElementById('pg-'+n).classList.toggle('active',n===p);document.getElementById('tab-'+n).classList.toggle('active',n===p);document.getElementById('bn-'+n).classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}}
+function showPg(p){['punch','personal','admin'].forEach(n=>{const pgEl=document.getElementById('pg-'+n);const tbEl=document.getElementById('tab-'+n);const bnEl=document.getElementById('bn-'+n);if(pgEl)pgEl.classList.toggle('active',n===p);if(tbEl)tbEl.classList.toggle('active',n===p);if(bnEl)bnEl.classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}}
 function showAS(sub){
   // 管理画面の会社名更新
   const el=document.getElementById('admin-co-label');
@@ -2298,6 +2376,156 @@ function resetToActionView(){
   const ssv=document.getElementById('staff-select-view');
   if(asv)asv.style.display='block';
   if(ssv)ssv.style.display='none';
+}
+
+
+// ═══ 個人ページ（インライン） ═══
+let piStaff = null;
+
+function loginPersonalInline(){
+  const eid=document.getElementById('pi-id').value.trim();
+  const pw=document.getElementById('pi-pw').value;
+  if(!eid||!pw){document.getElementById('pi-err').textContent='入力してください';return;}
+  const staff=DB.staff.find(s=>String(s.employeeId)===eid||String(s.employeeId)==='f'+eid.replace(/^f/,''));
+  if(!staff){document.getElementById('pi-err').textContent='スタッフが見つかりません';return;}
+  if((staff.pw||'0000')!==pw){document.getElementById('pi-err').textContent='PWが違います';return;}
+  piStaff=staff;
+  document.getElementById('personal-inline-login').style.display='none';
+  document.getElementById('personal-inline-main').style.display='block';
+  const coName={koyokai:'医療法人 香庸会',fulllife:'株式会社 フルラフ'};
+  document.getElementById('pi-name').textContent=staff.name;
+  document.getElementById('pi-co').textContent=coName[staff.company]||staff.company;
+  // 日付初期設定
+  const t=todayStr();
+  ['pi-paid-date','pi-fare-date','pi-lunch-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
+  initPILogMonth();
+  showPITab('log');
+}
+
+function logoutPersonalInline(){
+  piStaff=null;
+  document.getElementById('personal-inline-login').style.display='block';
+  document.getElementById('personal-inline-main').style.display='none';
+  document.getElementById('pi-id').value='';
+  document.getElementById('pi-pw').value='';
+  document.getElementById('pi-err').textContent='';
+}
+
+function showPITab(tab){
+  ['log','paid','fare','lunch','pw'].forEach(t=>{
+    const v=document.getElementById('pi-view-'+t);
+    const b=document.getElementById('pi-tab-'+t);
+    if(v)v.style.display=t===tab?'block':'none';
+    if(b)b.classList.toggle('active',t===tab);
+  });
+  if(tab==='log'){initPILogMonth();renderPILog();}
+  if(tab==='paid')renderPIList('paid');
+  if(tab==='fare')renderPIList('fare');
+  if(tab==='lunch')renderPIList('lunch');
+}
+
+function initPILogMonth(){
+  const sel=document.getElementById('pi-log-month');
+  if(!sel||sel.options.length>0)return;
+  const n=new Date();
+  for(let i=0;i<12;i++){
+    const d=new Date(n.getFullYear(),n.getMonth()-i,1);
+    const val=d.getFullYear()+'-'+pad(d.getMonth()+1);
+    sel.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;
+  }
+}
+
+function renderPILog(){
+  if(!piStaff)return;
+  const sel=document.getElementById('pi-log-month');
+  const ym=sel?sel.value:todayStr().substring(0,7);
+  const term=getTermDates(ym);
+  const dows=['日','月','火','水','木','金','土'];
+  // 有給残
+  const usedPaid=DB.paid.filter(p=>p.staffId===piStaff.id).length;
+  const remEl=document.getElementById('pi-paid-remain-val');
+  if(remEl)remEl.textContent=Math.max(0,20-usedPaid)+'日';
+  // 月間サマリー
+  const summary=calcMonthSummary(piStaff.id,ym);
+  const sumEl=document.getElementById('pi-month-summary');
+  if(sumEl)sumEl.innerHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+    <div style="text-align:center;"><div style="font-size:9px;color:var(--t2);">出勤日数</div><div style="font-weight:700;">${summary.weekdays+summary.holdays}日</div></div>
+    <div style="text-align:center;"><div style="font-size:9px;color:var(--t2);">総勤務時間</div><div style="font-weight:700;">${msToHHMM(summary.totalMs)}</div></div>
+    <div style="text-align:center;"><div style="font-size:9px;color:var(--t2);">有給取得</div><div style="font-weight:700;">${summary.paidDays}日</div></div>
+    </div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px;">
+    <div style="text-align:center;"><div style="font-size:9px;color:var(--t2);">遅刻</div><div style="font-weight:700;">${fmtMin(summary.totalLateMin)}</div></div>
+    <div style="text-align:center;"><div style="font-size:9px;color:var(--t2);">早退</div><div style="font-weight:700;">${fmtMin(summary.totalEarlyMin)}</div></div>
+    <div style="text-align:center;"><div style="font-size:9px;color:var(--t2);">時間外</div><div style="font-weight:700;">${msToHHMM((summary.otA||0)+(summary.otB||0))}</div></div>
+    </div>`;
+  // 日別一覧
+  const recs=DB.records.filter(r=>r.staffId===piStaff.id&&term.dates.includes(r.date)).sort((a,b)=>a.date<b.date?-1:1);
+  const el=document.getElementById('pi-log-list');if(!el)return;
+  if(!recs.length){el.innerHTML='<div style="color:var(--t2);font-size:11px;padding:12px;text-align:center;">打刻データがありません</div>';return;}
+  const groups={};recs.forEach(r=>{if(!groups[r.date])groups[r.date]=[];groups[r.date].push(r);});
+  el.innerHTML=Object.entries(groups).map(([date,rs])=>{
+    const dt=new Date(date);const w=dows[dt.getDay()];
+    const work=calcWork(piStaff.id,date);const workStr=work.total>0?msToHHMM(work.total):'';
+    return`<div style="padding:8px 0;border-bottom:1px solid var(--br);">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <div style="font-size:11px;font-weight:600;">${date}（${w}）</div>
+        ${workStr?`<div style="font-size:11px;color:var(--gd);font-weight:600;">実務${workStr}</div>`:''}
+      </div>
+      ${rs.map(r=>`<div style="display:flex;gap:7px;font-size:11px;padding:1px 0;"><span style="color:var(--t2);min-width:38px;">${r.ts.substring(0,5)}</span><span>${TL[r.type]||r.type}</span></div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function renderPIList(type){
+  if(!piStaff)return;
+  const typeL={full:'全日',am:'午前半日',pm:'午後半日'};
+  let items=[];
+  if(type==='paid')items=DB.paid.filter(p=>p.staffId===piStaff.id).sort((a,b)=>a.date<b.date?-1:1).map(p=>`${p.date} ${typeL[p.type]||p.type}`);
+  if(type==='fare')items=DB.fare.filter(f=>f.staffId===piStaff.id).sort((a,b)=>a.date<b.date?-1:1).map(f=>f.date);
+  if(type==='lunch')items=DB.lunch.filter(l=>l.staffId===piStaff.id).sort((a,b)=>a.date<b.date?-1:1).map(l=>l.date);
+  const el=document.getElementById('pi-'+type+'-list');if(!el)return;
+  el.innerHTML=items.length?items.map(i=>`<div style="padding:6px 0;border-bottom:1px solid var(--br);font-size:11px;">${i}</div>`).join(''):'<div style="color:var(--t2);font-size:11px;padding:7px;">登録なし</div>';
+}
+
+function submitPIRequest(type){
+  if(!piStaff)return;
+  if(type==='paid'){
+    const date=document.getElementById('pi-paid-date').value;
+    const t=document.getElementById('pi-paid-type').value;
+    if(!date)return;
+    DB.paid=DB.paid.filter(p=>!(p.staffId===piStaff.id&&p.date===date));
+    DB.paid.push({staffId:piStaff.id,date,type:t,staffName:piStaff.name});
+    sDB();fbSaveSettings();showToast('有給を申請しました ✓');renderPIList('paid');
+  } else if(type==='fare'){
+    const date=document.getElementById('pi-fare-date').value;
+    if(!date)return;
+    if(!DB.fare.find(f=>f.staffId===piStaff.id&&f.date===date)){
+      DB.fare.push({staffId:piStaff.id,date,staffName:piStaff.name});
+      sDB();fbSaveSettings();showToast('交通費を申請しました ✓');
+    } else showToast('この日は既登録済み');
+    renderPIList('fare');
+  } else if(type==='lunch'){
+    const date=document.getElementById('pi-lunch-date').value;
+    if(!date)return;
+    if(!DB.lunch.find(l=>l.staffId===piStaff.id&&l.date===date)){
+      DB.lunch.push({staffId:piStaff.id,date,company:piStaff.company,staffName:piStaff.name});
+      sDB();fbSaveSettings();showToast('ランチデリを登録しました ✓');
+    } else showToast('この日は既登録済み');
+    renderPIList('lunch');
+  }
+}
+
+function changePIpw(){
+  if(!piStaff)return;
+  const old=document.getElementById('pi-pw-old').value;
+  const nw=document.getElementById('pi-pw-new').value;
+  const nw2=document.getElementById('pi-pw-new2').value;
+  if((piStaff.pw||'0000')!==old){showToast('現在のPWが違います');return;}
+  if(nw!==nw2){showToast('新PWが一致しません');return;}
+  if(nw.length<4){showToast('4文字以上で設定してください');return;}
+  const idx=DB.staff.findIndex(s=>s.id===piStaff.id);
+  if(idx>=0){DB.staff[idx].pw=nw;piStaff=DB.staff[idx];}
+  sDB();fbSaveStaff();showToast('PWを変更しました ✓');
+  ['pi-pw-old','pi-pw-new','pi-pw-new2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
 
 // ═══ 時計 ═══
