@@ -20,7 +20,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 .tabs::-webkit-scrollbar{display:none;}
 .tab{flex-shrink:0;padding:10px 13px;font-size:12px;font-weight:500;color:var(--t2);border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;cursor:pointer;font-family:inherit;white-space:nowrap;}
 .tab.active{color:var(--nv);border-bottom-color:var(--nv);}
-.pg{display:none;}.pg.active{display:block;}
+.pg{display:none;height:calc(100vh - 120px);overflow-y:auto;-webkit-overflow-scrolling:touch;}.pg.active{display:block;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;}
 .pad{padding:11px;}.card{background:#fff;border-radius:13px;border:1px solid var(--br);padding:13px;margin-bottom:9px;}
 .cl{font-size:10px;font-weight:600;color:var(--t2);letter-spacing:0.7px;text-transform:uppercase;margin-bottom:10px;}
 .sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;}
@@ -1169,12 +1169,12 @@ function showPg(p){
       if(bnEl)bnEl.classList.toggle('active',n==='personal');
     });
     // 自動スクロールトップ
-    setTimeout(()=>{window.scrollTo(0,0);if(pgPersonal)pgPersonal.scrollTop=0;},50);
+    window.scrollTo(0,0);document.body.scrollTop=0;document.documentElement.scrollTop=0;
     return;
   }
   // personalを非表示
   if(pgPersonal)pgPersonal.style.display='none';
-  ['punch','personal','admin'].forEach(n=>{const pgEl=document.getElementById('pg-'+n);const tbEl=document.getElementById('tab-'+n);const bnEl=document.getElementById('bn-'+n);if(pgEl)pgEl.classList.toggle('active',n===p);if(tbEl)tbEl.classList.toggle('active',n===p);if(bnEl)bnEl.classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}}
+  ['punch','personal','admin'].forEach(n=>{const pgEl=document.getElementById('pg-'+n);const tbEl=document.getElementById('tab-'+n);const bnEl=document.getElementById('bn-'+n);if(pgEl)pgEl.classList.toggle('active',n===p);if(tbEl)tbEl.classList.toggle('active',n===p);if(bnEl)bnEl.classList.toggle('active',n===p);});window.scrollTo(0,0);document.body.scrollTop=0;document.documentElement.scrollTop=0;if(p==='punch')renderSG();if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}}
 function showAS(sub){
   // 管理画面の会社名更新
   const el=document.getElementById('admin-co-label');
