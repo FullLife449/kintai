@@ -7,20 +7,21 @@
 <title>勤怠タッチ Pro</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
 :root{--nv:#1a1a2e;--gn:#1D9E75;--gl:#E1F5EE;--gd:#085041;--rd:#E24B4A;--rl:#FCEBEB;--am:#EF9F27;--al:#FAEEDA;--bl:#378ADD;--bll:#E6F1FB;--pu:#7F77DD;--pul:#EEEDFE;--gy:#f5f5f3;--br:#e0ddd6;--tx:#1a1a18;--t2:#6b6b66;}
 body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif;background:var(--gy);color:var(--tx);min-height:100vh;}
 #cs{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:var(--nv);}
 #cs h1{color:#fff;font-size:24px;font-weight:700;margin-bottom:8px;}
 #cs p{color:rgba(255,255,255,0.75);font-size:17px;font-weight:500;margin-bottom:52px;}
 .stbtn{width:100%;max-width:320px;padding:22px;border:none;border-radius:16px;cursor:pointer;font-size:18px;font-weight:700;text-align:center;background:#fff;color:var(--nv);-webkit-tap-highlight-color:transparent;}
-#ms{display:none;flex-direction:column;min-height:100vh;}
-.hd{background:var(--nv);padding:11px 15px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;}
+#ms{display:none;flex-direction:column;height:100vh;overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;}
+.hd{background:var(--nv);padding:11px 15px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;;flex-shrink:0;}
 .hco{color:rgba(255,255,255,0.5);font-size:10px;}.ht{color:#fff;font-size:14px;font-weight:700;flex:1;}.hk{color:rgba(255,255,255,0.8);font-size:13px;}
 .tabs{display:flex;background:#fff;border-bottom:1px solid var(--br);overflow-x:auto;}
 .tabs::-webkit-scrollbar{display:none;}
 .tab{flex-shrink:0;padding:10px 13px;font-size:12px;font-weight:500;color:var(--t2);border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;cursor:pointer;font-family:inherit;white-space:nowrap;}
 .tab.active{color:var(--nv);border-bottom-color:var(--nv);}
-.pg{display:none;height:calc(100vh - 120px);overflow-y:auto;-webkit-overflow-scrolling:touch;}.pg.active{display:block;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;}
+.pg{display:none;}.pg.active{display:block;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;position:relative;}
 .pad{padding:11px;}.card{background:#fff;border-radius:13px;border:1px solid var(--br);padding:13px;margin-bottom:9px;}
 .cl{font-size:10px;font-weight:600;color:var(--t2);letter-spacing:0.7px;text-transform:uppercase;margin-bottom:10px;}
 .sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;}
@@ -115,7 +116,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 .spit .sii{flex:1;}
 .toast{position:fixed;bottom:75px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--nv);color:#fff;padding:10px 20px;border-radius:999px;font-size:12px;white-space:nowrap;transition:transform 0.3s,opacity 0.3s;opacity:0;z-index:500;pointer-events:none;max-width:90vw;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
-.bnav{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--br);display:flex;z-index:99;}
+.bnav{background:#fff;border-top:1px solid var(--br);display:flex;flex-shrink:0;}
 .nb{flex:1;padding:9px 4px 7px;border:none;background:none;cursor:pointer;font-size:9px;color:var(--t2);font-weight:500;display:flex;flex-direction:column;align-items:center;gap:2px;-webkit-tap-highlight-color:transparent;font-family:inherit;}
 .nb.active{color:var(--nv);}.ni{font-size:19px;line-height:1;}
 .hidden{display:none!important;}
