@@ -133,11 +133,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 .action-out{background:var(--rl);color:#791F1F;}
 </style>
 
-<!-- Firebase SDK -->
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getDatabase, ref, set, get, onValue, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-
+<!-- Firebase SDK (compat版 - グローバルスコープ対応) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script>
 const firebaseConfig = {
   apiKey: "AIzaSyDiI2ihk_P2-n4-I7ZL09phNJFvxI2-7Ug",
   authDomain: "kintai-koyokai-fulllife.firebaseapp.com",
@@ -147,20 +146,16 @@ const firebaseConfig = {
   messagingSenderId: "703604624047",
   appId: "1:703604624047:web:bbe2ef3e3cc45c6fcc225a"
 };
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-// グローバルに公開
-window.fbDB = db;
-window.fbRef = ref;
-window.fbSet = set;
-window.fbGet = get;
-window.fbOnValue = onValue;
-window.fbUpdate = update;
+firebase.initializeApp(firebaseConfig);
+const fbDatabase = firebase.database();
+window.fbDB = fbDatabase;
+window.fbRef = function(db, path){ return db.ref(path); };
+window.fbSet = function(ref, data){ return ref.set(data); };
+window.fbGet = function(ref){ return ref.get(); };
+window.fbOnValue = function(ref, cb){ ref.on('value', cb); };
+window.fbUpdate = function(ref, data){ return ref.update(data); };
 window.firebaseReady = true;
-
-console.log('Firebase initialized');
+console.log('Firebase initialized (compat)');
 </script>
 </head>
 <body>
