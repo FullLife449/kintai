@@ -748,7 +748,8 @@ function selectCompany(co) {
   // 起動画面を隠してメイン表示
   document.getElementById('cs').style.display = 'none';
   document.getElementById('ms').style.display = 'flex';
-  showPg('punch');
+  // 初回のみpunchを表示、その後はナビで切り替え
+  if(!document.querySelector('.pg.active')){showPg('punch');}
   // Firebaseから最新データを読み込む
   fbLoadAndSync(co);
 }
@@ -1155,7 +1156,28 @@ function autoStart(){
     selectCompany('koyokai');
   }
 }
-function showPg(p){['punch','personal','admin'].forEach(n=>{const pgEl=document.getElementById('pg-'+n);const tbEl=document.getElementById('tab-'+n);const bnEl=document.getElementById('bn-'+n);if(pgEl)pgEl.classList.toggle('active',n===p);if(tbEl)tbEl.classList.toggle('active',n===p);if(bnEl)bnEl.classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}}
+function showPg(p){
+  // pg-personalは特別処理（activeクラスの問題を回避）
+  const pgPersonal=document.getElementById('pg-personal');
+  if(p==='personal'){
+    // 他のpgを非表示
+    ['punch','admin'].forEach(n=>{
+      const pgEl=document.getElementById('pg-'+n);
+      if(pgEl)pgEl.classList.remove('active');
+    });
+    if(pgPersonal){pgPersonal.style.display='block';}
+    // ナビとタブのactive更新
+    ['punch','personal','admin'].forEach(n=>{
+      const tbEl=document.getElementById('tab-'+n);
+      const bnEl=document.getElementById('bn-'+n);
+      if(tbEl)tbEl.classList.toggle('active',n==='personal');
+      if(bnEl)bnEl.classList.toggle('active',n==='personal');
+    });
+    return;
+  }
+  // personalを非表示
+  if(pgPersonal)pgPersonal.style.display='none';
+  ['punch','personal','admin'].forEach(n=>{const pgEl=document.getElementById('pg-'+n);const tbEl=document.getElementById('tab-'+n);const bnEl=document.getElementById('bn-'+n);if(pgEl)pgEl.classList.toggle('active',n===p);if(tbEl)tbEl.classList.toggle('active',n===p);if(bnEl)bnEl.classList.toggle('active',n===p);});if(p==='punch')renderSG();if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}}
 function showAS(sub){
   // 管理画面の会社名更新
   const el=document.getElementById('admin-co-label');
