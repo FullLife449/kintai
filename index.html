@@ -134,7 +134,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 .action-resume{background:var(--bll);color:#0C447C;}
 .action-out{background:var(--rl);color:#791F1F;}
 
-.pg.pg-flex.active{display:flex !important;flex-direction:column;}
+.pg.pg-flex.active{display:flex !important;flex-direction:column !important;height:100%;}
 .pg.pg-flex.active > .pad{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 </style>
 
@@ -191,7 +191,7 @@ console.log('Firebase initialized (compat)');
     <button class="nb" id="bn-personal" onclick="showPg('personal')"><span class="ni">👤</span>個人</button>
     <button class="nb" id="bn-admin" onclick="checkAdminPw()"><span class="ni">⚙️</span>管理</button>
   </div>
-  <div id="pg-punch" class="pg active"><div class="pad">
+  <div id="pg-punch" class="pg pg-flex active"><div class="pad">
   <!-- 会社タブ＋スタッフ一覧（最初から表示） -->
   <div class="card" style="padding:0;overflow:hidden;">
     <div style="display:flex;border-bottom:1px solid var(--br);">
@@ -417,7 +417,7 @@ console.log('Firebase initialized (compat)');
   
     </div>
   </div></div></div></div>
-  <div id="pg-personal" class="pg"><div class="pad">
+  <div id="pg-personal" class="pg pg-flex"><div class="pad">
     <div id="personal-inline-login">
       <div class="card">
         <div class="cl">個人ページ ログイン</div>
