@@ -15,12 +15,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 #cs p{color:rgba(255,255,255,0.75);font-size:17px;font-weight:500;margin-bottom:52px;}
 .stbtn{width:100%;max-width:320px;padding:22px;border:none;border-radius:16px;cursor:pointer;font-size:18px;font-weight:700;text-align:center;background:#fff;color:var(--nv);-webkit-tap-highlight-color:transparent;}
 #ms{display:none;flex-direction:column;min-height:100vh;}
-.hd{background:var(--nv);padding:11px 15px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;;flex-shrink:0;}
+.hd{background:var(--nv);padding:11px 15px;display:flex;align-items:center;gap:10px;flex-shrink:0;}
 .hco{color:rgba(255,255,255,0.5);font-size:10px;}.ht{color:#fff;font-size:14px;font-weight:700;flex:1;}.hk{color:rgba(255,255,255,0.8);font-size:13px;}
 .tabs{display:flex;background:#fff;border-bottom:1px solid var(--br);overflow-x:auto;}
 .tabs::-webkit-scrollbar{display:none;}
-.tab{flex-shrink:0;padding:10px 13px;font-size:12px;font-weight:500;color:var(--t2);border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;cursor:pointer;font-family:inherit;white-space:nowrap;}
-.tab.active{color:var(--nv);border-bottom-color:var(--nv);}
+
+
 .pg{display:none;}.pg.active{display:block;}
 .pad{padding:11px;}.card{background:#fff;border-radius:13px;border:1px solid var(--br);padding:13px;margin-bottom:9px;}
 .cl{font-size:10px;font-weight:600;color:var(--t2);letter-spacing:0.7px;text-transform:uppercase;margin-bottom:10px;}
@@ -83,9 +83,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 .rt .ttr td{font-weight:700;background:#f0fdf4;color:var(--gd);}
 .s3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;}
 .sc{background:var(--gy);border-radius:9px;padding:9px;}.slb{font-size:9px;color:var(--t2);margin-bottom:2px;}.sv{font-size:16px;font-weight:700;}
-.ats{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px;}
-.at{padding:6px 11px;border-radius:7px;border:1px solid var(--br);background:#fff;font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--t2);}
-.at.active{background:var(--nv);color:#fff;border-color:var(--nv);}
+.ats{display:flex;gap:5px;overflow-x:auto;padding:8px 9px;border-bottom:1px solid var(--br);background:#fff;-webkit-overflow-scrolling:touch;white-space:nowrap;}
+.at{padding:6px 11px;border-radius:7px;border:1px solid var(--br);background:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--tx);white-space:nowrap;flex-shrink:0;}
+.at.active{background:#fff;color:var(--nv);border:2px solid var(--nv);font-weight:700;}
 .asc{display:none;}.asc.active{display:block;}
 .sl2{display:flex;flex-direction:column;gap:8px;}
 .si{background:#fff;border-radius:9px;border:1px solid var(--br);padding:11px;}
@@ -116,7 +116,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 .spit .sii{flex:1;}
 .toast{position:fixed;bottom:75px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--nv);color:#fff;padding:10px 20px;border-radius:999px;font-size:12px;white-space:nowrap;transition:transform 0.3s,opacity 0.3s;opacity:0;z-index:500;pointer-events:none;max-width:90vw;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
-.bnav{background:#fff;border-top:1px solid var(--br);display:flex;flex-shrink:0;}
+.bnav{background:#fff;border-top:1px solid var(--br);display:flex;position:sticky;bottom:0;z-index:100;}
 .nb{flex:1;padding:9px 4px 7px;border:none;background:none;cursor:pointer;font-size:9px;color:var(--t2);font-weight:500;display:flex;flex-direction:column;align-items:center;gap:2px;-webkit-tap-highlight-color:transparent;font-family:inherit;}
 .nb.active{color:var(--nv);}.ni{font-size:19px;line-height:1;}
 .hidden{display:none!important;}
@@ -182,11 +182,7 @@ console.log('Firebase initialized (compat)');
     <div><div class="hco" id="hco-label">勤怠タッチ Pro</div><div class="ht" id="hco-name">-</div></div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">β v1.0</div></div>
   </div>
-  <div class="tabs">
-    <button class="tab active" id="tab-punch" onclick="showPg('punch')">打刻</button>
-    <button class="tab" id="tab-personal" onclick="showPg('personal')">個人</button>
-    <button class="tab" id="tab-admin" onclick="checkAdminPw()">管理</button>
-  </div>
+  
   <div id="pg-punch" class="pg active"><div class="pad">
   <!-- 会社タブ＋スタッフ一覧（最初から表示） -->
   <div class="card" style="padding:0;overflow:hidden;">
@@ -235,8 +231,7 @@ console.log('Firebase initialized (compat)');
       </div>
     </div>
   </div></div>
-  <div id="pg-admin" class="pg"><div class="pad">
-    <div class="ats">
+  <div id="pg-admin" class="pg"><div class="ats" style="position:sticky;top:0;z-index:90;">
       <button class="at active" id="atab-staff" onclick="showAS('staff')">スタッフ</button>
       <button class="at" id="atab-shift" onclick="showAS('shift')">日次シフト</button>
       <button class="at" id="atab-rec" onclick="showAS('rec')">打刻修正</button>
@@ -1164,9 +1159,7 @@ function showPg(p){
     if(pgPersonal){pgPersonal.style.display='block';}
     // ナビとタブのactive更新
     ['punch','personal','admin'].forEach(n=>{
-      const tbEl=document.getElementById('tab-'+n);
       const bnEl=document.getElementById('bn-'+n);
-      if(tbEl)tbEl.classList.toggle('active',n==='personal');
       if(bnEl)bnEl.classList.toggle('active',n==='personal');
     });
     // 自動スクロールトップ
