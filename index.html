@@ -83,7 +83,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 .rt .ttr td{font-weight:700;background:#f0fdf4;color:var(--gd);}
 .s3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;}
 .sc{background:var(--gy);border-radius:9px;padding:9px;}.slb{font-size:9px;color:var(--t2);margin-bottom:2px;}.sv{font-size:16px;font-weight:700;}
-.ats{display:flex;gap:5px;overflow-x:auto;padding:8px 9px;border-bottom:1px solid var(--br);background:#fff;-webkit-overflow-scrolling:touch;white-space:nowrap;}
+.ats{display:flex;gap:5px;overflow-x:auto;padding:8px 9px;border-bottom:1px solid var(--br);background:#fff;-webkit-overflow-scrolling:touch;white-space:nowrap;position:sticky;top:0;z-index:90;}
 .at{padding:6px 11px;border-radius:7px;border:1px solid var(--br);background:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--tx);white-space:nowrap;flex-shrink:0;}
 .at.active{background:#fff;color:var(--nv);border:2px solid var(--nv);font-weight:700;}
 .asc{display:none;}.asc.active{display:block;}
@@ -116,7 +116,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 .spit .sii{flex:1;}
 .toast{position:fixed;bottom:75px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--nv);color:#fff;padding:10px 20px;border-radius:999px;font-size:12px;white-space:nowrap;transition:transform 0.3s,opacity 0.3s;opacity:0;z-index:500;pointer-events:none;max-width:90vw;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
-.bnav{background:#fff;border-bottom:2px solid var(--br);border-top:none;display:flex;}
+.bnav{background:#fff;border-bottom:2px solid var(--br);border-top:none;display:flex;position:sticky;top:0;z-index:100;}
 .nb{flex:1;padding:9px 4px 7px;border:none;background:none;cursor:pointer;font-size:9px;color:var(--t2);font-weight:500;display:flex;flex-direction:column;align-items:center;gap:2px;-webkit-tap-highlight-color:transparent;font-family:inherit;}
 .nb.active{color:var(--nv);font-weight:700;}.ni{font-size:19px;line-height:1;}
 .hidden{display:none!important;}
@@ -447,16 +447,32 @@ console.log('Firebase initialized (compat)');
       </div>
       <!-- 打刻ログ -->
       <div id="pi-view-log" class="card">
+        <!-- 有給残日数（最上部） -->
+        <div style="background:linear-gradient(135deg,#E1F5EE,#C8F5E2);border-radius:10px;padding:11px 14px;margin-bottom:10px;border:1px solid var(--gn);">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div style="font-size:11px;color:var(--gd);font-weight:600;">有給残日数</div>
+              <div style="font-size:8px;color:#5d6d65;margin-top:2px;" id="pi-paid-validity">有効期限: -</div>
+            </div>
+            <div style="font-size:24px;font-weight:700;color:var(--gd);" id="pi-paid-remain-val">-</div>
+          </div>
+        </div>
+        <!-- 月選択＋時間外 -->
         <div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;">
-          <div class="cl" style="margin-bottom:0;flex:1;">打刻ログ・勤務実績</div>
-          <select id="pi-log-month" onchange="renderPILog()" style="padding:5px 7px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"></select>
+          <select id="pi-log-month" onchange="renderPILog()" style="flex:1;padding:7px;border:1px solid var(--br);border-radius:7px;font-size:12px;background:#fff;font-family:inherit;"></select>
         </div>
-        <div id="pi-paid-remain" style="background:var(--gl);border-radius:9px;padding:9px 12px;margin-bottom:9px;display:flex;align-items:center;justify-content:space-between;">
-          <div style="font-size:11px;color:var(--gd);">有給残日数</div>
-          <div style="font-size:20px;font-weight:700;color:var(--gd);" id="pi-paid-remain-val">-</div>
+        <div id="pi-month-overtime" style="background:#FFF8E1;border:1px solid #FFD54F;border-radius:9px;padding:9px 12px;margin-bottom:9px;display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:11px;color:#5D4037;font-weight:600;">該当月の時間外労働</div>
+          <div style="font-size:18px;font-weight:700;color:#E65100;" id="pi-month-ot-val">-</div>
         </div>
-        <div id="pi-month-summary" style="background:var(--gy);border-radius:9px;padding:9px 12px;margin-bottom:9px;font-size:11px;"></div>
-        <div id="pi-log-list" style="max-height:350px;overflow-y:auto;"></div>
+        
+        <!-- タブ切替: 月別 / 年間 -->
+        <div style="display:flex;gap:5px;margin-bottom:9px;">
+          <button class="ptab active" id="pi-sub-month" onclick="setPISub('month')" style="flex:1;">月別ログ</button>
+          <button class="ptab" id="pi-sub-year" onclick="setPISub('year')" style="flex:1;">年間サマリー</button>
+        </div>
+        <div id="pi-log-list" style="max-height:400px;overflow-y:auto;"></div>
+        <div id="pi-year-list" style="display:none;max-height:400px;overflow-y:auto;"></div>
       </div>
       <!-- 有給 -->
       <div id="pi-view-paid" class="card" style="display:none;">
@@ -2430,7 +2446,7 @@ function showPITab(tab){
     if(v)v.style.display=t===tab?'block':'none';
     if(b)b.classList.toggle('active',t===tab);
   });
-  if(tab==='log'){initPILogMonth();renderPILog();}
+  if(tab==='log'){initPILogMonth();renderPILog();setPISub('month');}
   if(tab==='paid')renderPIList('paid');
   if(tab==='fare')renderPIList('fare');
   if(tab==='lunch')renderPIList('lunch');
@@ -2447,6 +2463,32 @@ function initPILogMonth(){
   }
 }
 
+let piSubView='month';
+function setPISub(v){
+  piSubView=v;
+  document.getElementById('pi-sub-month').classList.toggle('active',v==='month');
+  document.getElementById('pi-sub-year').classList.toggle('active',v==='year');
+  document.getElementById('pi-log-list').style.display=v==='month'?'block':'none';
+  document.getElementById('pi-year-list').style.display=v==='year'?'block':'none';
+  if(v==='year')renderPIYear();
+}
+function renderPIYear(){
+  if(!piStaff)return;
+  const el=document.getElementById('pi-year-list');
+  if(!el)return;
+  // 直近12ヶ月のサマリーを表示
+  const n=new Date();
+  let html='<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="background:var(--gy);"><th style="padding:6px 4px;text-align:left;border-bottom:1px solid var(--br);">月</th><th style="padding:6px 4px;text-align:right;border-bottom:1px solid var(--br);">出勤</th><th style="padding:6px 4px;text-align:right;border-bottom:1px solid var(--br);">総勤務</th><th style="padding:6px 4px;text-align:right;border-bottom:1px solid var(--br);">時間外</th><th style="padding:6px 4px;text-align:right;border-bottom:1px solid var(--br);">有給</th></tr></thead><tbody>';
+  for(let i=0;i<12;i++){
+    const d=new Date(n.getFullYear(),n.getMonth()-i,1);
+    const ym=d.getFullYear()+'-'+pad(d.getMonth()+1);
+    const s=calcMonthSummary(piStaff.id,ym);
+    const ot=msToHHMM((s.otA||0)+(s.otB||0));
+    html+=`<tr style="border-bottom:1px solid var(--br);"><td style="padding:6px 4px;">${d.getFullYear()}/${d.getMonth()+1}</td><td style="padding:6px 4px;text-align:right;">${(s.weekdays||0)+(s.holdays||0)}日</td><td style="padding:6px 4px;text-align:right;">${msToHHMM(s.totalMs||0)}</td><td style="padding:6px 4px;text-align:right;color:#E65100;font-weight:600;">${ot||'0:00'}</td><td style="padding:6px 4px;text-align:right;">${s.paidDays||0}</td></tr>`;
+  }
+  html+='</tbody></table>';
+  el.innerHTML=html;
+}
 function renderPILog(){
   if(!piStaff)return;
   const sel=document.getElementById('pi-log-month');
@@ -2457,10 +2499,23 @@ function renderPILog(){
   const usedPaid=DB.paid.filter(p=>p.staffId===piStaff.id).length;
   const remEl=document.getElementById('pi-paid-remain-val');
   if(remEl)remEl.textContent=Math.max(0,20-usedPaid)+'日';
-  // 月間サマリー
+  // 有給有効期限（仮：今年12月31日）
+  const validityEl=document.getElementById('pi-paid-validity');
+  if(validityEl){
+    const now=new Date();
+    const expiry=new Date(now.getFullYear()+2,11,31);
+    validityEl.textContent='有効期限: '+expiry.getFullYear()+'年'+(expiry.getMonth()+1)+'月'+expiry.getDate()+'日まで';
+  }
+  // 該当月の時間外労働
   const summary=calcMonthSummary(piStaff.id,ym);
+  const otEl=document.getElementById('pi-month-ot-val');
+  if(otEl){
+    const otTotal=(summary.otA||0)+(summary.otB||0);
+    otEl.textContent=otTotal>0?msToHHMM(otTotal):'0:00';
+  }
+  // 旧サマリー表示は無効化
   const sumEl=document.getElementById('pi-month-summary');
-  if(sumEl)sumEl.innerHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+  if(sumEl)sumEl.innerHTML=`<div style="display:none;">
     <div style="text-align:center;"><div style="font-size:9px;color:var(--t2);">出勤日数</div><div style="font-weight:700;">${summary.weekdays+summary.holdays}日</div></div>
     <div style="text-align:center;"><div style="font-size:9px;color:var(--t2);">総勤務時間</div><div style="font-weight:700;">${msToHHMM(summary.totalMs)}</div></div>
     <div style="text-align:center;"><div style="font-size:9px;color:var(--t2);">有給取得</div><div style="font-weight:700;">${summary.paidDays}日</div></div>
