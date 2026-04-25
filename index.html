@@ -1168,6 +1168,8 @@ function showPg(p){
       if(tbEl)tbEl.classList.toggle('active',n==='personal');
       if(bnEl)bnEl.classList.toggle('active',n==='personal');
     });
+    // 自動スクロールトップ
+    setTimeout(()=>{window.scrollTo(0,0);if(pgPersonal)pgPersonal.scrollTop=0;},50);
     return;
   }
   // personalを非表示
