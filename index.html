@@ -116,9 +116,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 .spit .sii{flex:1;}
 .toast{position:fixed;bottom:75px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--nv);color:#fff;padding:10px 20px;border-radius:999px;font-size:12px;white-space:nowrap;transition:transform 0.3s,opacity 0.3s;opacity:0;z-index:500;pointer-events:none;max-width:90vw;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
-.bnav{background:#fff;border-top:1px solid var(--br);display:flex;}
+.bnav{background:#fff;border-bottom:2px solid var(--br);display:flex;}
 .nb{flex:1;padding:9px 4px 7px;border:none;background:none;cursor:pointer;font-size:9px;color:var(--t2);font-weight:500;display:flex;flex-direction:column;align-items:center;gap:2px;-webkit-tap-highlight-color:transparent;font-family:inherit;}
-.nb.active{color:var(--nv);}.ni{font-size:19px;line-height:1;}
+.nb.active{color:var(--nv);font-weight:700;}.ni{font-size:19px;line-height:1;}
 .hidden{display:none!important;}
 .late-warn{color:#C62828;font-size:10px;font-weight:600;}
 
@@ -182,7 +182,11 @@ console.log('Firebase initialized (compat)');
     <div><div class="hco" id="hco-label">勤怠タッチ Pro</div><div class="ht" id="hco-name">-</div></div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">β v1.0</div></div>
   </div>
-  
+  <div class="bnav">
+    <button class="nb active" id="bn-punch" onclick="showPg('punch')"><span class="ni">👆</span>打刻</button>
+    <button class="nb" id="bn-personal" onclick="showPg('personal')"><span class="ni">👤</span>個人</button>
+    <button class="nb" id="bn-admin" onclick="checkAdminPw()"><span class="ni">⚙️</span>管理</button>
+  </div>
   <div id="pg-punch" class="pg active"><div class="pad">
   <!-- 会社タブ＋スタッフ一覧（最初から表示） -->
   <div class="card" style="padding:0;overflow:hidden;">
@@ -488,11 +492,6 @@ console.log('Firebase initialized (compat)');
       </div>
     </div>
   </div></div>
-  <div class="bnav">
-    <button class="nb active" id="bn-punch" onclick="showPg('punch')"><span class="ni">👆</span>打刻</button>
-    <button class="nb" id="bn-personal" onclick="showPg('personal')"><span class="ni">👤</span>個人</button>
-    <button class="nb" id="bn-admin" onclick="checkAdminPw()"><span class="ni">⚙️</span>管理</button>
-  </div>
 </div>
 <!-- 打刻モーダル -->
 <div class="ov hidden" id="pm" onclick="closePM(event)"><div class="mo" onclick="event.stopPropagation()">
