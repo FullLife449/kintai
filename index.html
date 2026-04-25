@@ -760,7 +760,10 @@ function fbLoadAndSync(co) {
     if(snap.exists()) {
       const data = snap.val();
       // オブジェクト→配列変換
-      DB.staff = Array.isArray(data) ? data : Object.values(data);
+      let loadedStaff = Array.isArray(data) ? data : Object.values(data);
+      // companyが未設定の場合は補完
+      loadedStaff = loadedStaff.map(s=>({...s, company: s.company||(co==='fulllife'?'fulllife':'koyokai')}));
+      DB.staff = loadedStaff;
       console.log('Staff loaded:', DB.staff.length);
     } else {
       // データなし→現在のlocalStorageのスタッフをアップロード
@@ -843,7 +846,7 @@ let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lu
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
-const STAFF_VER='v2000'; // 19:30変更バージョン
+const STAFF_VER='v2001'; // 19:30変更バージョン
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -1147,27 +1150,24 @@ function autoStart(){
   }
 }
 function showPg(p){
-  // pg-personalは特別処理（activeクラスの問題を回避）
-  const pgPersonal=document.getElementById('pg-personal');
-  if(p==='personal'){
-    // 他のpgを非表示
-    ['punch','admin'].forEach(n=>{
-      const pgEl=document.getElementById('pg-'+n);
-      if(pgEl)pgEl.classList.remove('active');
-    });
-    if(pgPersonal){pgPersonal.style.display='block';}
-    // ナビとタブのactive更新
-    ['punch','personal','admin'].forEach(n=>{
-      const bnEl=document.getElementById('bn-'+n);
-      if(bnEl)bnEl.classList.toggle('active',n==='personal');
-    });
-    // 自動スクロールトップ
-    window.scrollTo(0,0);document.body.scrollTop=0;document.documentElement.scrollTop=0;
-    return;
-  }
-  // personalを非表示
-  if(pgPersonal)pgPersonal.style.display='none';
-  ['punch','personal','admin'].forEach(n=>{const pgEl=document.getElementById('pg-'+n);const tbEl=document.getElementById('tab-'+n);const bnEl=document.getElementById('bn-'+n);if(pgEl)pgEl.classList.toggle('active',n===p);if(tbEl)tbEl.classList.toggle('active',n===p);if(bnEl)bnEl.classList.toggle('active',n===p);});window.scrollTo(0,0);document.body.scrollTop=0;document.documentElement.scrollTop=0;if(p==='punch')renderSG();if(p==='log'){renderLog();initLogYM();}if(p==='report'){initMS();renderRep();updIS();}if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}}
+  // 全pgを非表示
+  ['punch','personal','admin'].forEach(n=>{
+    const pgEl=document.getElementById('pg-'+n);
+    if(pgEl){pgEl.classList.remove('active');pgEl.style.display='';}
+    const bnEl=document.getElementById('bn-'+n);
+    if(bnEl)bnEl.classList.toggle('active',n===p);
+  });
+  // 対象pgを表示
+  const target=document.getElementById('pg-'+p);
+  if(target){target.classList.add('active');}
+  // 各ページ初期化
+  window.scrollTo(0,0);
+  if(p==='punch')renderSG();
+  if(p==='log'){renderLog();initLogYM();}
+  if(p==='report'){initMS();renderRep();updIS();}
+  if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}
+}
+
 function showAS(sub){
   // 管理画面の会社名更新
   const el=document.getElementById('admin-co-label');
