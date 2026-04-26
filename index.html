@@ -1210,7 +1210,8 @@ function showAS(sub){
     const admin=currentAdmin||{name:'管理者',company:'both'};
     const coName={koyokai:'香庸会',fulllife:'フルラフ',both:'両社'}[admin.company]||'';
     el.textContent=admin.name+(coName?'（'+coName+'）':'');
-  }['staff','shift','rec','paid','lunch','special','log','report','data'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid')initPH();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();renderRep();}}
+  }
+  ['staff','shift','rec','paid','lunch','special','log','report','data'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid')initPH();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();renderRep();}}
 
 // ═══ 打刻グリッド ═══
 function renderSG(){
