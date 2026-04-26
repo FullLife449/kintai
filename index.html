@@ -224,7 +224,7 @@ console.log('Firebase initialized (compat)');
   </div></div></div>
   <div id="pg-report" class="pg"><div class="pad">
     <div class="card">
-      <div class="fr" style="flex-wrap:wrap;gap:5px;"><select id="rep-co" style="padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"><option value="koyokai">香庸会</option><option value="fulllife">フルラフ</option><option value="all">両社</option></select><select id="rm" style="flex:1;"></select><button class="bg" onclick="renderRep()">表示</button><button class="bn" onclick="exportXLSX()">月次XLSX</button></div>
+      <div class="fr" style="flex-wrap:wrap;gap:5px;"><select id="rep-co" onchange="updIS()" style="padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"><option value="koyokai">香庸会</option><option value="fulllife">フルラフ</option><option value="all">両社</option></select><select id="rm" style="flex:1;"></select><button class="bg" onclick="renderRep()">表示</button><button class="bn" onclick="exportXLSX()">月次XLSX</button></div>
       <div class="s3" id="rs"></div>
       <div class="rw"><table class="rt"><thead id="rth"></thead><tbody id="rtb"></tbody></table></div>
     </div>
@@ -402,7 +402,7 @@ console.log('Firebase initialized (compat)');
     <div class="asc" id="asc-report">
       <div class="pad">
     <div class="card">
-      <div class="fr" style="flex-wrap:wrap;gap:5px;"><select id="rep-co" style="padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"><option value="koyokai">香庸会</option><option value="fulllife">フルラフ</option><option value="all">両社</option></select><select id="rm" style="flex:1;"></select><button class="bg" onclick="renderRep()">表示</button><button class="bn" onclick="exportXLSX()">月次XLSX</button></div>
+      <div class="fr" style="flex-wrap:wrap;gap:5px;"><select id="rep-co" onchange="updIS()" style="padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"><option value="koyokai">香庸会</option><option value="fulllife">フルラフ</option><option value="all">両社</option></select><select id="rm" style="flex:1;"></select><button class="bg" onclick="renderRep()">表示</button><button class="bn" onclick="exportXLSX()">月次XLSX</button></div>
       <div class="s3" id="rs"></div>
       <div class="rw"><table class="rt"><thead id="rth"></thead><tbody id="rtb"></tbody></table></div>
     </div>
@@ -1302,7 +1302,7 @@ function renderLog(){
 }
 
 // ═══ レポート ═══
-function initMS(){['rm','im'].forEach(id=>{const sel=document.getElementById(id);if(sel.options.length>1)return;const n=new Date();for(let i=0;i<6;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);sel.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}});}
+function initMS(){['rm','im'].forEach(id=>{const sel=document.getElementById(id);if(sel.options.length>1)return;const n=new Date();for(let i=0;i<12;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);sel.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}});}
 function renderRep(){
   const ym=document.getElementById('rm').value;if(!ym)return;
   const repCo=document.getElementById('rep-co')?document.getElementById('rep-co').value:'koyokai';
@@ -1365,7 +1365,15 @@ function renderRep(){
     <div class="sc"><div class="slb">合計行</div><div class="sv" style="font-size:11px;color:var(--gd);">なし✓</div></div>`;
 }
 
-function updIS(){const sel=document.getElementById('isel');sel.innerHTML='<option value="">スタッフを選択</option>';DB.staff.filter(s=>s.company===CO).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}</option>`);}
+function updIS(){
+  const sel=document.getElementById('isel');
+  if(!sel)return;
+  sel.innerHTML='<option value="">スタッフを選択</option>';
+  // レポートの会社選択に応じてスタッフ表示
+  const repCo=document.getElementById('rep-co')?document.getElementById('rep-co').value:'koyokai';
+  const list=repCo==='all'?DB.staff:DB.staff.filter(s=>s.company===repCo);
+  list.forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}（${s.company==='koyokai'?'香':'フ'}）</option>`);
+}
 
 function renderIndPreview(){
   const sid=parseInt(document.getElementById('isel').value);
