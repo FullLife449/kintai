@@ -820,6 +820,7 @@ function fbLoadAndSync(co) {
       if(s.fare) DB.fare = Array.isArray(s.fare) ? s.fare : Object.values(s.fare);
       if(s.lunch) DB.lunch = Array.isArray(s.lunch) ? s.lunch : Object.values(s.lunch);
       if(s.lunchEnabled) DB.lunchEnabled = Array.isArray(s.lunchEnabled) ? s.lunchEnabled : Object.values(s.lunchEnabled);
+      if(s.expenses) DB.expenses = Array.isArray(s.expenses) ? s.expenses : Object.values(s.expenses);
       if(s.adminPw) DB.adminPw = s.adminPw;
     }
     sDB();
@@ -866,6 +867,7 @@ function fbSaveSettings() {
     fare: DB.fare,
     lunch: DB.lunch,
     lunchEnabled: DB.lunchEnabled,
+    expenses: DB.expenses||[],
     adminPw: DB.adminPw
   }).catch(e => console.error('fbSaveSettings error:', e));
 }
@@ -2165,7 +2167,7 @@ function logoutPersonal(){
 }
 
 function showPTab(tab){
-  ['log','paid','fare','lunch','pw'].forEach(t=>{
+  ['log','paid','fare','lunch','expense','pw'].forEach(t=>{
     const v=document.getElementById('pview-'+t);
     const b=document.getElementById('ptab-'+t);
     if(v)v.style.display=t===tab?'block':'none';
@@ -2452,7 +2454,7 @@ function loginPersonalInline(){
   document.getElementById('pi-co').textContent=coName[staff.company]||staff.company;
   // 日付初期設定
   const t=todayStr();
-  ['pi-paid-date','pi-fare-date','pi-lunch-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
+  ['pi-paid-date','pi-fare-date','pi-lunch-date','pi-expense-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
   initPILogMonth();
   showPITab('log');
 }
@@ -2467,7 +2469,7 @@ function logoutPersonalInline(){
 }
 
 function showPITab(tab){
-  ['log','paid','fare','lunch','pw'].forEach(t=>{
+  ['log','paid','fare','lunch','expense','pw'].forEach(t=>{
     const v=document.getElementById('pi-view-'+t);
     const b=document.getElementById('pi-tab-'+t);
     if(v)v.style.display=t===tab?'block':'none';
@@ -2477,6 +2479,7 @@ function showPITab(tab){
   if(tab==='paid')renderPIList('paid');
   if(tab==='fare')renderPIList('fare');
   if(tab==='lunch')renderPIList('lunch');
+  if(tab==='expense')renderPIList('expense');
 }
 
 function initPILogMonth(){
@@ -2570,6 +2573,9 @@ function renderPIDetail(){
       <td style="padding:4px 5px;text-align:right;border:1px solid var(--br);">${r.earlyLeaveMin||''}</td>
       <td style="padding:4px 5px;text-align:right;border:1px solid var(--br);font-weight:600;">${msToHHMM(r.total)||''}</td>
       <td style="padding:4px 5px;text-align:center;border:1px solid var(--br);color:#558B2F;">${pr?ptypeL[pr.type]:''}</td>
+      <td style="padding:4px 5px;text-align:right;border:1px solid var(--br);">${fr.length?fr.reduce((s,f)=>s+(f.amount||0),0)+'円':''}</td>
+      <td style="padding:4px 5px;text-align:center;border:1px solid var(--br);">${lc.length?lc.length+'回':''}</td>
+      <td style="padding:4px 5px;text-align:right;border:1px solid var(--br);">${(()=>{const exps=(DB.expenses||[]).filter(e=>e.staffId===piStaff.id&&e.date===date);return exps.length?exps.reduce((s,e)=>s+(e.amount||0),0)+'円':'';})()}</td>
     </tr>`);
   }
   
@@ -2591,6 +2597,9 @@ function renderPIDetail(){
         <th style="padding:6px 5px;border:1px solid var(--br);">早退</th>
         <th style="padding:6px 5px;border:1px solid var(--br);">日計</th>
         <th style="padding:6px 5px;border:1px solid var(--br);">有給</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">交通費</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">ランチ</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">経費</th>
       </tr>
     </thead>
     <tbody>
@@ -2604,6 +2613,9 @@ function renderPIDetail(){
         <td style="padding:7px 5px;text-align:right;border:1px solid var(--br);">${earlyTotal||0}</td>
         <td style="padding:7px 5px;text-align:right;border:1px solid var(--br);">${msToHHMM(grand)}</td>
         <td style="padding:7px 5px;text-align:center;border:1px solid var(--br);">${pTotal}</td>
+        <td style="padding:7px 5px;text-align:right;border:1px solid var(--br);color:#FFB74D;">${(()=>{const m=DB.fare.filter(f=>f.staffId===piStaff.id&&termDates.includes(f.date)).reduce((s,f)=>s+(f.amount||0),0);return m?m+'円':'';})()}</td>
+        <td style="padding:7px 5px;text-align:center;border:1px solid var(--br);color:#FFB74D;">${lTotal||0}回</td>
+        <td style="padding:7px 5px;text-align:right;border:1px solid var(--br);color:#FFB74D;">${(()=>{const m=(DB.expenses||[]).filter(e=>e.staffId===piStaff.id&&termDates.includes(e.date)).reduce((s,e)=>s+(e.amount||0),0);return m?m+'円':'';})()}</td>
       </tr>
     </tbody>
   </table></div>`;
@@ -2691,15 +2703,33 @@ function renderPIList(type){
   if(!piStaff)return;
   const typeL={full:'全日',am:'午前半日',pm:'午後半日'};
   let items=[];
-  if(type==='paid')items=DB.paid.filter(p=>p.staffId===piStaff.id).sort((a,b)=>a.date<b.date?-1:1).map(p=>`${p.date} ${typeL[p.type]||p.type}`);
-  if(type==='fare')items=DB.fare.filter(f=>f.staffId===piStaff.id).sort((a,b)=>a.date<b.date?-1:1).map(f=>f.date);
-  if(type==='lunch')items=DB.lunch.filter(l=>l.staffId===piStaff.id).sort((a,b)=>a.date<b.date?-1:1).map(l=>l.date);
+  if(type==='paid')items=DB.paid.filter(p=>p.staffId===piStaff.id).sort((a,b)=>a.date<b.date?-1:1).map(p=>({date:p.date,disp:typeL[p.type]||p.type}));
+  if(type==='fare')items=DB.fare.filter(f=>f.staffId===piStaff.id).sort((a,b)=>a.date<b.date?-1:1).map(f=>({date:f.date,disp:(f.amount?f.amount+'円':'')+(f.memo?' '+f.memo:'')}));
+  if(type==='lunch')items=DB.lunch.filter(l=>l.staffId===piStaff.id).sort((a,b)=>a.date<b.date?-1:1).map(l=>({date:l.date,disp:''}));
+  if(type==='expense'){
+    const expenses=DB.expenses||[];
+    items=expenses.filter(e=>e.staffId===piStaff.id).sort((a,b)=>a.date<b.date?-1:1).map(e=>({date:e.date,disp:e.amount+'円 '+(e.memo||'')}));
+  }
   const el=document.getElementById('pi-'+type+'-list');if(!el)return;
-  el.innerHTML=items.length?items.map(i=>`<div style="padding:6px 0;border-bottom:1px solid var(--br);font-size:11px;">${i}</div>`).join(''):'<div style="color:var(--t2);font-size:11px;padding:7px;">登録なし</div>';
+  if(!items.length){el.innerHTML='<div style="color:var(--t2);font-size:11px;padding:7px;">登録なし</div>';return;}
+  el.innerHTML=items.map(i=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--br);font-size:11px;"><span>${i.date}</span><span style="color:var(--t2);">${i.disp}</span></div>`).join('');
 }
 
 function submitPIRequest(type){
   if(!piStaff)return;
+  if(type==='expense'){
+    const date=document.getElementById('pi-expense-date').value;
+    const amount=parseInt(document.getElementById('pi-expense-amount').value)||0;
+    const memo=document.getElementById('pi-expense-memo').value.trim();
+    if(!date||!amount){showToast('日付と金額を入力してください');return;}
+    if(!DB.expenses)DB.expenses=[];
+    DB.expenses.push({staffId:piStaff.id,date,amount,memo,staffName:piStaff.name,company:piStaff.company});
+    sDB();fbSaveSettings();showToast('経費を申請しました ✓');
+    document.getElementById('pi-expense-amount').value='';
+    document.getElementById('pi-expense-memo').value='';
+    renderPIList('expense');
+    return;
+  }
   if(type==='paid'){
     const date=document.getElementById('pi-paid-date').value;
     const t=document.getElementById('pi-paid-type').value;
@@ -2709,11 +2739,14 @@ function submitPIRequest(type){
     sDB();fbSaveSettings();showToast('有給を申請しました ✓');renderPIList('paid');
   } else if(type==='fare'){
     const date=document.getElementById('pi-fare-date').value;
-    if(!date)return;
-    if(!DB.fare.find(f=>f.staffId===piStaff.id&&f.date===date)){
-      DB.fare.push({staffId:piStaff.id,date,staffName:piStaff.name});
-      sDB();fbSaveSettings();showToast('交通費を申請しました ✓');
-    } else showToast('この日は既登録済み');
+    const amount=parseInt(document.getElementById('pi-fare-amount').value)||0;
+    const memo=document.getElementById('pi-fare-memo').value.trim();
+    if(!date||!amount){showToast('日付と金額を入力してください');return;}
+    DB.fare=DB.fare.filter(f=>!(f.staffId===piStaff.id&&f.date===date));
+    DB.fare.push({staffId:piStaff.id,date,amount,memo,staffName:piStaff.name,company:piStaff.company});
+    sDB();fbSaveSettings();showToast('交通費を申請しました ✓');
+    document.getElementById('pi-fare-amount').value='';
+    document.getElementById('pi-fare-memo').value='';
     renderPIList('fare');
   } else if(type==='lunch'){
     const date=document.getElementById('pi-lunch-date').value;
