@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#1a1a2e">
-<title>勤怠タッチ Pro v1777125286</title>
+<title>勤怠タッチ Pro</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 
@@ -168,7 +168,7 @@ console.log('Firebase initialized (compat)');
   <div style="text-align:center;padding:40px 20px 30px;">
     <div style="color:rgba(255,255,255,0.5);font-size:11px;margin-bottom:6px;">勤怠タッチ Pro</div>
     <div style="color:#fff;font-size:20px;font-weight:700;margin-bottom:4px;">会社を選択してください</div>
-    <div style="color:rgba(255,255,255,0.4);font-size:10px;margin-bottom:36px;">β v2.2 (1777125286)</div>
+    <div style="color:rgba(255,255,255,0.4);font-size:10px;margin-bottom:36px;">β v2.1 (1776926840)</div>
     <div style="display:flex;flex-direction:column;gap:12px;max-width:300px;margin:0 auto;">
       <button onclick="selectCompany('koyokai')" style="width:100%;padding:18px;border:none;border-radius:14px;cursor:pointer;font-size:15px;font-weight:700;background:#fff;color:#1a1a2e;font-family:inherit;">
         <div style="font-size:11px;color:#888;margin-bottom:3px;">医療法人</div>
@@ -184,7 +184,7 @@ console.log('Firebase initialized (compat)');
 <div id="ms">
   <div class="hd">
     <div><div class="hco" id="hco-label">勤怠タッチ Pro</div><div class="ht" id="hco-name">-</div></div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">β v2.2</div></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">β v1.0</div></div>
   </div>
   <div class="bnav">
     <button class="nb active" id="bn-punch" onclick="showPg('punch')"><span class="ni">👆</span>打刻</button>
@@ -203,7 +203,7 @@ console.log('Firebase initialized (compat)');
       <div class="sg" id="sg"></div>
     </div>
   </div>
-</div></div></div>
+</div></div>
   <div id="pg-admin" class="pg"><div class="ats">
       <button class="at active" id="atab-staff" onclick="showAS('staff')">スタッフ</button>
       <button class="at" id="atab-shift" onclick="showAS('shift')">日次シフト</button>
@@ -382,8 +382,7 @@ console.log('Firebase initialized (compat)');
     </div>
   
     </div>
-  </div></div></div>
-  </div>
+  </div></div></div></div>
   <div id="pg-personal" class="pg"><div class="pad">
     <div id="personal-inline-login">
       <div class="card">
@@ -478,7 +477,46 @@ console.log('Firebase initialized (compat)');
         <button class="fb" style="width:100%;margin-top:7px;" onclick="changePIpw()">変更する</button>
       </div>
     </div>
-  </div>
+  </div></div>
+</div>
+<div id="pg-log" class="pg"><div class="pad"><div class="card">
+    <div style="margin-bottom:9px;">
+      <div class="cl" style="margin-bottom:6px;">出力月を選択</div>
+      <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+        <select id="log-co" style="padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;">
+          <option value="koyokai">香庸会</option>
+          <option value="fulllife">フルラフ</option>
+          <option value="all">両社</option>
+        </select>
+        <select id="log-ym" onchange="updateLogTermLabel()" style="flex:1;padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"></select>
+        <button class="bg" style="font-size:10px;padding:7px 10px;white-space:nowrap;" onclick="exportLogCSV()">📄 ログCSV</button>
+        <button class="bn" style="font-size:10px;padding:7px 10px;white-space:nowrap;" onclick="exportMonthLog()">📊 月次XLSX</button>
+      </div>
+      <div style="font-size:9px;color:var(--t2);margin-top:4px;" id="log-term-label"></div>
+    </div>
+    <div class="cl" style="margin-bottom:6px;">本日の打刻ログ</div>
+    <div class="ll" id="ll"><div style="color:var(--t2);font-size:12px;padding:14px;text-align:center;">まだ打刻がありません</div></div>
+  </div></div></div>
+  <div id="pg-report" class="pg"><div class="pad">
+    <div class="card">
+      <div class="fr" style="flex-wrap:wrap;gap:5px;"><select id="rep-co" style="padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"><option value="koyokai">香庸会</option><option value="fulllife">フルラフ</option><option value="all">両社</option></select><select id="rm" style="flex:1;"></select><button class="bg" onclick="renderRep()">表示</button><button class="bn" onclick="exportXLSX()">月次XLSX</button></div>
+      <div class="s3" id="rs"></div>
+      <div class="rw"><table class="rt"><thead id="rth"></thead><tbody id="rtb"></tbody></table></div>
+    </div>
+    <div class="card"><div class="cl">個人別明細</div>
+      <div class="fr" style="flex-wrap:wrap;gap:5px;">
+        <select id="isel" onchange="renderIndPreview()" style="flex:1;min-width:120px;"><option value="">スタッフを選択</option></select>
+        <select id="im" onchange="renderIndPreview()" style="flex:1;min-width:100px;"></select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px;">
+        <button class="fb" style="padding:10px;font-size:12px;" onclick="renderIndPreview()">👁 画面で確認</button>
+        <button class="bn" style="padding:10px;font-size:12px;" onclick="exportIndXLSX()">📊 XLSXダウンロード</button>
+      </div>
+    </div>
+  </div></div>
+  
+
+  
 </div>
 <!-- 打刻モーダル -->
 <div class="ov hidden" id="pm" onclick="closePM(event)"><div class="mo" onclick="event.stopPropagation()">
