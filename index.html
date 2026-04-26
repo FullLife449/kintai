@@ -927,10 +927,10 @@ function getDIM(ym){const[y,m]=ym.split('-').map(Number);return new Date(y,m,0).
 // ═══ 集計期間：前月16日〜当月15日 ═══
 function getTermDates(ym){
   const[yr,mo]=ym.split('-').map(Number);
-  // 開始: 前月16日
-  const startDt=new Date(yr,mo-2,16); // mo-2 because months are 0-indexed
-  // 終了: 当月15日
-  const endDt=new Date(yr,mo-1,15);
+  // 開始: 当月1日
+  const startDt=new Date(yr,mo-1,1);
+  // 終了: 当月末日
+  const endDt=new Date(yr,mo,0);
   const dates=[];
   for(let d=new Date(startDt);d<=endDt;d.setDate(d.getDate()+1)){
     dates.push(d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()));
@@ -1217,7 +1217,7 @@ function showAS(sub){
     const coName={koyokai:'香庸会',fulllife:'フルラフ',both:'両社'}[admin.company]||'';
     el.textContent=admin.name+(coName?'（'+coName+'）':'');
   }
-  ['staff','shift','rec','paid','lunch','special','log','report','data'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid')initPH();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();renderRep();}}
+  ['staff','shift','rec','paid','lunch','special','log','report','data'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid')initPH();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}}
 
 // ═══ 打刻グリッド ═══
 function renderSG(){
