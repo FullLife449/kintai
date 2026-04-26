@@ -1005,6 +1005,9 @@ function calcWork(sid,date){
   const recs=DB.records.filter(r=>r.staffId===sid&&r.date===date).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
   if(!recs.length)return{};
   const isSp=DB.specials.some(s=>s.staffId===sid&&s.date===date);
+  // 日次シフトのtypeを優先、なければスタッフのtype
+  const dayShiftRec=DB.dayShifts.find(d=>d.staffId===sid&&d.date===date);
+  const effectiveType=(dayShiftRec&&dayShiftRec.type)?dayShiftRec.type:staff.type;
   const earlyRec=recs.find(r=>r.type==='early');
   const isLegal=isLegalHoliday(date);
   let segs=[],inT=null,bkT=null;
