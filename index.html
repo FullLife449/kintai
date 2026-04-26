@@ -436,13 +436,18 @@ console.log('Firebase initialized (compat)');
           <div style="font-size:18px;font-weight:700;color:#E65100;" id="pi-month-ot-val">-</div>
         </div>
         
-        <!-- タブ切替: 月別 / 年間 -->
+        <!-- タブ切替: 月別 / 月明細 / 年間 -->
         <div style="display:flex;gap:5px;margin-bottom:9px;">
           <button class="ptab active" id="pi-sub-month" onclick="setPISub('month')" style="flex:1;">月別ログ</button>
+          <button class="ptab" id="pi-sub-detail" onclick="setPISub('detail')" style="flex:1;">日次明細</button>
           <button class="ptab" id="pi-sub-year" onclick="setPISub('year')" style="flex:1;">年間サマリー</button>
+        </div>
+        <div style="display:flex;gap:5px;margin-bottom:9px;" id="pi-export-bar">
+          <button class="bn" style="flex:1;font-size:11px;padding:7px;" onclick="downloadPIxlsx()">📊 月明細XLSX</button>
         </div>
         <div id="pi-log-list" style="max-height:400px;overflow-y:auto;"></div>
         <div id="pi-year-list" style="display:none;max-height:400px;overflow-y:auto;"></div>
+        <div id="pi-detail-list" style="display:none;max-height:500px;overflow:auto;"></div>
       </div>
       <!-- 有給 -->
       <div id="pi-view-paid" class="card" style="display:none;">
@@ -1339,9 +1344,9 @@ function renderRep(){
       p1Ms:m.p1Ms,p2Ms:m.p2Ms,p3Ms:m.p3Ms,p4Ms:m.p4Ms,
       fareCount:m.fareCount,lunchCount:m.lunchCount
     };
-    html+=`<tr>
+    html+=`<tr style="cursor:pointer;" onclick="showAdminInd(${s.id},'${ym}')" title="クリックで個人明細表示">
       <td style="font-size:9px;color:var(--t2);">${s.employeeId||s.id}</td>
-      <td>${s.name}</td>
+      <td style="color:var(--nv);text-decoration:underline;">${s.name}</td>
       ${labels.map(l=>`<td>${fmtVal(row[l.k],l.fmt)}</td>`).join('')}
       <td>${m.weekdays+m.holdays}</td>
     </tr>`;
@@ -2422,6 +2427,16 @@ function resetToActionView(){
 // ═══ 個人ページ（インライン） ═══
 let piStaff = null;
 
+
+function showAdminInd(sid,ym){
+  const staff=DB.staff.find(s=>s.id===sid);
+  if(!staff)return;
+  // モーダル表示
+  document.getElementById('isel').value=sid;
+  document.getElementById('im').value=ym;
+  renderIndPreview();
+}
+
 function loginPersonalInline(){
   const eid=document.getElementById('pi-id').value.trim();
   const pw=document.getElementById('pi-pw').value;
@@ -2478,11 +2493,129 @@ function initPILogMonth(){
 let piSubView='month';
 function setPISub(v){
   piSubView=v;
-  document.getElementById('pi-sub-month').classList.toggle('active',v==='month');
-  document.getElementById('pi-sub-year').classList.toggle('active',v==='year');
+  ['month','detail','year'].forEach(t=>{
+    const tEl=document.getElementById('pi-sub-'+t);
+    if(tEl)tEl.classList.toggle('active',v===t);
+  });
   document.getElementById('pi-log-list').style.display=v==='month'?'block':'none';
+  document.getElementById('pi-detail-list').style.display=v==='detail'?'block':'none';
   document.getElementById('pi-year-list').style.display=v==='year'?'block':'none';
   if(v==='year')renderPIYear();
+  if(v==='detail')renderPIDetail();
+}
+
+function renderPIDetail(){
+  if(!piStaff)return;
+  const sel=document.getElementById('pi-log-month');
+  const ym=sel?sel.value:todayStr().substring(0,7);
+  const term=getTermDates(ym);const termDates=term.dates;
+  const dows=['日','月','火','水','木','金','土'];
+  const[yr,mo]=ym.split('-').map(Number);
+  
+  // 週次OT計算
+  const allDay={};
+  for(const date of termDates){allDay[date]=calcWork(piStaff.id,date);}
+  const weekGroups=[];let cw={};
+  for(let di=0;di<termDates.length;di++){
+    const date=termDates[di];cw[date]=allDay[date];
+    if(new Date(date).getDay()===6||di===termDates.length-1){
+      weekGroups.push({...cw});cw={};
+    }
+  }
+  const adjusted={};weekGroups.forEach(wk=>{Object.assign(adjusted,applyWeeklyOT(wk));});
+  
+  // 集計
+  let grand=0,wkDays=0,pTotal=0,fTotal=0,lTotal=0,lateTotal=0,earlyTotal=0;
+  let monthOtA=0,monthOtB=0,monthOtD=0;
+  const rows=[];
+  for(const date of termDates){
+    const dt=new Date(date);
+    const d=dt.getDate();
+    const dow=dows[dt.getDay()];
+    const hol=isHoliday(date)?'祝':'';
+    const isLeg=isLegalHoliday(date);
+    const recs=DB.records.filter(r=>r.staffId===piStaff.id&&r.date===date).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
+    const inRec=recs.find(r=>r.type==='in'||r.type==='early');
+    const outRec=[...recs].reverse().find(r=>r.type==='out');
+    const brkRec=recs.find(r2=>r2.type==='break');
+    const resRec=recs.find(r2=>r2.type==='resume');
+    const earlyRec=recs.find(r=>r.type==='early');
+    const r=adjusted[date]||{};const bd=r.breakdown||{};
+    const pr=DB.paid.find(p=>p.staffId===piStaff.id&&p.date===date);
+    const fr=DB.fare.filter(f=>f.staffId===piStaff.id&&f.date===date);
+    const lc=DB.lunch.filter(l=>l.staffId===piStaff.id&&l.date===date);
+    if(r.total>0)wkDays++;
+    grand+=r.total||0;
+    if(pr)pTotal+=(pr.type==='full'?1:0.5);
+    fTotal+=fr.length;lTotal+=lc.length;
+    lateTotal+=(r.lateMin||0);earlyTotal+=(r.earlyLeaveMin||0);
+    monthOtA+=(r.otA||0);monthOtB+=(r.otB||0);monthOtD+=(r.otD||0);
+    
+    const isWeekend=dt.getDay()===0||dt.getDay()===6||hol;
+    const rowBg=isLeg?'#FEE':isWeekend?'#FFF8E7':'#fff';
+    const ptypeL={full:'全日',am:'午前',pm:'午後'};
+    rows.push(`<tr style="background:${rowBg};">
+      <td style="padding:4px 5px;text-align:center;border:1px solid var(--br);font-weight:600;">${mo}/${d}</td>
+      <td style="padding:4px 5px;text-align:center;border:1px solid var(--br);">${dow}</td>
+      <td style="padding:4px 5px;text-align:center;border:1px solid var(--br);color:#C00;">${hol}</td>
+      <td style="padding:4px 5px;text-align:center;border:1px solid var(--br);">${inRec?inRec.ts.substring(0,5):''}</td>
+      <td style="padding:4px 5px;text-align:center;border:1px solid var(--br);">${brkRec?brkRec.ts.substring(0,5):''}</td>
+      <td style="padding:4px 5px;text-align:center;border:1px solid var(--br);">${resRec?resRec.ts.substring(0,5):''}</td>
+      <td style="padding:4px 5px;text-align:center;border:1px solid var(--br);">${outRec?outRec.ts.substring(0,5):''}</td>
+      <td style="padding:4px 5px;text-align:right;border:1px solid var(--br);">${msToHHMM(bd['平日午前']||0)||''}</td>
+      <td style="padding:4px 5px;text-align:right;border:1px solid var(--br);">${msToHHMM(bd['平日午後']||bd['平日勤務']||0)||''}</td>
+      <td style="padding:4px 5px;text-align:right;border:1px solid var(--br);">${msToHHMM(bd['休日勤務']||0)||''}</td>
+      <td style="padding:4px 5px;text-align:right;border:1px solid var(--br);color:#E65100;">${msToHHMM((r.otA||0)+(r.otB||0))||''}</td>
+      <td style="padding:4px 5px;text-align:right;border:1px solid var(--br);">${r.lateMin||''}</td>
+      <td style="padding:4px 5px;text-align:right;border:1px solid var(--br);">${r.earlyLeaveMin||''}</td>
+      <td style="padding:4px 5px;text-align:right;border:1px solid var(--br);font-weight:600;">${msToHHMM(r.total)||''}</td>
+      <td style="padding:4px 5px;text-align:center;border:1px solid var(--br);color:#558B2F;">${pr?ptypeL[pr.type]:''}</td>
+    </tr>`);
+  }
+  
+  const html=`<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:10px;">
+    <thead>
+      <tr style="background:var(--nv);color:#fff;">
+        <th style="padding:6px 5px;border:1px solid var(--br);">日</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">曜</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">祝</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">出勤</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">休憩</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">再開</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">退勤</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">平日午前</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">平日午後</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">休日</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">時間外</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">遅刻</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">早退</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">日計</th>
+        <th style="padding:6px 5px;border:1px solid var(--br);">有給</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows.join('')}
+      <tr style="background:#1d2747;color:#fff;font-weight:700;">
+        <td colspan="3" style="padding:7px 5px;text-align:center;border:1px solid var(--br);">月計</td>
+        <td colspan="4" style="padding:7px 5px;text-align:center;border:1px solid var(--br);">出勤${wkDays}日</td>
+        <td colspan="3" style="padding:7px 5px;text-align:right;border:1px solid var(--br);">${msToHHMM(grand)}</td>
+        <td style="padding:7px 5px;text-align:right;border:1px solid var(--br);color:#FFB74D;">${msToHHMM(monthOtA+monthOtB)||'0:00'}</td>
+        <td style="padding:7px 5px;text-align:right;border:1px solid var(--br);">${lateTotal||0}</td>
+        <td style="padding:7px 5px;text-align:right;border:1px solid var(--br);">${earlyTotal||0}</td>
+        <td style="padding:7px 5px;text-align:right;border:1px solid var(--br);">${msToHHMM(grand)}</td>
+        <td style="padding:7px 5px;text-align:center;border:1px solid var(--br);">${pTotal}</td>
+      </tr>
+    </tbody>
+  </table></div>`;
+  
+  document.getElementById('pi-detail-list').innerHTML=html;
+}
+
+function downloadPIxlsx(){
+  if(!piStaff)return;
+  const sel=document.getElementById('pi-log-month');
+  const ym=sel?sel.value:todayStr().substring(0,7);
+  loadXLSX(()=>doExportInd(piStaff.id,ym));
 }
 function renderPIYear(){
   if(!piStaff)return;
