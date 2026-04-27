@@ -138,6 +138,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 
 </style>
 
+<!-- face-api.js (顔認証) -->
+<script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
 <!-- Firebase SDK (compat版 - グローバルスコープ対応) -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
@@ -193,6 +196,9 @@ console.log('Firebase initialized (compat)');
   </div>
   <div id="pg-punch" class="pg active"><div class="pad">
   <!-- 会社タブ＋スタッフ一覧（最初から表示） -->
+  <div style="display:flex;justify-content:flex-end;margin-bottom:9px;">
+    <button id="punch-mode-toggle" onclick="togglePunchMode()" style="padding:7px 14px;background:#fff;border:1px solid var(--br);border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--t2);">👤 手動打刻に切替</button>
+  </div>
   <div class="card" style="padding:0;overflow:hidden;">
     <div style="display:flex;border-bottom:1px solid var(--br);">
       <button id="co-tab-koyokai" onclick="setCoTab('koyokai')" style="flex:1;padding:10px;border:none;background:var(--nv);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">香庸会</button>
@@ -1312,7 +1318,7 @@ function showPg(p){
   if(target){target.classList.add('active');}
   // 各ページ初期化
   window.scrollTo(0,0);
-  if(p==='punch')renderSG();
+  if(p==='punch'){renderSG();autoStartFacePunch();}
   if(p==='log'){renderLog();initLogYM();}
   if(p==='report'){initMS();renderRep();updIS();}
   if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}
@@ -1652,7 +1658,7 @@ function renderAL(){
   if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:12px;padding:14px;text-align:center;">スタッフが登録されていません</div>';return;}
   el.innerHTML=list.map(s=>{
     let ss='';if(s.type==='contract'&&s.dowShifts){const wds=['mon','tue','wed','thu','fri'];const wdA=wds.map(d=>(s.dowShifts[d]||[]).map(sh=>sh.s+'〜'+sh.e).join(',')).filter(Boolean);const uniq=[...new Set(wdA)];if(uniq.length===1)ss='<br><b>平日:</b> '+uniq[0];else if(uniq.length>1)ss='<br><b>平日:</b> 曜日別設定あり';if(s.dowShifts.sat){const sa=Object.entries(s.dowShifts.sat).filter(([_,v])=>v&&v.length>0);if(sa.length)ss+='<br><b>土曜:</b> 第'+sa.map(([k,v])=>k+'('+v.map(x=>x.s+'〜'+x.e).join(')')).join(' 第');}}
-    return`<div class="si"><div class="sh"><div class="sav">${ini(s.name)}</div><div><div class="sni">${s.name}</div><div class="sdp">${tl[s.type]||''} / 社員番号:${s.employeeId||'-'} / 所定${Math.floor((s.stdMin||480)/60)}h${(s.stdMin||480)%60?(s.stdMin||480)%60+'m':''}</div></div><button class="fe" onclick="openEdit(${s.id})">編集</button><button class="fd" onclick="delSt(${s.id})">削除</button></div><div class="sde"><b>タイプ:</b> ${tl[s.type]||''}${s.freeEnd?'<span style="color:var(--bl);font-size:9px;font-weight:600;margin-left:4px;">終了フリー</span>':''}${s.type==='contract'?'<br><b>休憩:</b> '+s.breakMin+'分':''}${ss}<br><b>交通費:</b> ${s.fare||0}円/日</div></div>`;
+    return`<div class="si"><div class="sh"><div class="sav">${ini(s.name)}</div><div><div class="sni">${s.name}</div><div class="sdp">${tl[s.type]||''} / 社員番号:${s.employeeId||'-'} / 所定${Math.floor((s.stdMin||480)/60)}h${(s.stdMin||480)%60?(s.stdMin||480)%60+'m':''}</div></div><button class="fe" onclick="openEdit(${s.id})">編集</button><button class="fe" style="background:#E1F5FE;color:#0277BD;border-color:#0277BD;" onclick="openFaceRegisterModal(${s.id})">${s.faceDescriptor?'📷✓':'📷'}</button><button class="fd" onclick="delSt(${s.id})">削除</button></div><div class="sde"><b>タイプ:</b> ${tl[s.type]||''}${s.freeEnd?'<span style="color:var(--bl);font-size:9px;font-weight:600;margin-left:4px;">終了フリー</span>':''}${s.type==='contract'?'<br><b>休憩:</b> '+s.breakMin+'分':''}${ss}<br><b>交通費:</b> ${s.fare||0}円/日</div></div>`;
   }).join('');
 }
 function selDow(dow,btn){document.querySelectorAll('.dow-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.dow-panel').forEach(p=>p.classList.remove('active'));document.getElementById('dp-'+dow).classList.add('active');}
@@ -2553,6 +2559,250 @@ function resetToActionView(){
 // ═══ 個人ページ（インライン） ═══
 let piStaff = null;
 
+
+
+let punchMode='face'; // 'face' or 'manual'
+
+function togglePunchMode(){
+  if(punchMode==='face'){
+    // 顔認証 → 手動
+    punchMode='manual';
+    closeFacePunchModal();
+    document.getElementById('punch-mode-toggle').innerHTML='📷 顔認証に切替';
+    showToast('手動打刻モードに切替えました');
+  }else{
+    // 手動 → 顔認証
+    punchMode='face';
+    document.getElementById('punch-mode-toggle').innerHTML='👤 手動打刻に切替';
+    openFacePunchModal();
+  }
+}
+
+// 打刻画面を開いた時に自動的に顔認証起動
+function autoStartFacePunch(){
+  if(punchMode==='face'&&document.getElementById('pg-punch')&&document.getElementById('pg-punch').classList.contains('active')){
+    // 顔登録済みのスタッフが1人以上いる場合のみ自動起動
+    const hasFaces=DB.staff.some(s=>s.faceDescriptor&&s.faceDescriptor.length===128);
+    if(hasFaces)setTimeout(()=>openFacePunchModal(),300);
+  }
+}
+
+
+// ═══ 顔認証 ═══
+let faceModelsLoaded=false;
+let faceDescriptors=[];
+let videoStream=null;
+
+async function loadFaceModels(){
+  if(faceModelsLoaded)return true;
+  if(typeof faceapi==='undefined'){showToast('顔認証ライブラリが読込まれていません');return false;}
+  try{
+    const MODEL_URL='https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    faceModelsLoaded=true;
+    return true;
+  }catch(e){console.error('Face model:',e);showToast('モデル読込失敗');return false;}
+}
+
+function buildFaceDescriptors(){
+  faceDescriptors=[];
+  DB.staff.forEach(s=>{
+    if(s.faceDescriptor&&Array.isArray(s.faceDescriptor)&&s.faceDescriptor.length===128){
+      faceDescriptors.push({staffId:s.id,name:s.name,company:s.company,descriptor:new Float32Array(s.faceDescriptor)});
+    }
+  });
+  return faceDescriptors.length;
+}
+
+async function startFaceCamera(videoElId){
+  try{
+    if(videoStream){videoStream.getTracks().forEach(t=>t.stop());videoStream=null;}
+    videoStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}}});
+    const v=document.getElementById(videoElId);
+    if(v){v.srcObject=videoStream;await v.play();}
+    return true;
+  }catch(e){console.error('Camera:',e);showToast('カメラ起動失敗');return false;}
+}
+function stopFaceCamera(){
+  if(videoStream){videoStream.getTracks().forEach(t=>t.stop());videoStream=null;}
+}
+
+async function extractFaceDescriptor(imgEl){
+  if(!await loadFaceModels())return null;
+  const det=await faceapi.detectSingleFace(imgEl,new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+  return det?det.descriptor:null;
+}
+
+let faceRecognitionInterval=null;
+let faceRecognitionActive=false;
+async function startFaceRecognitionLoop(videoElId,onMatch,onError){
+  if(!await loadFaceModels()){onError&&onError('モデル読込失敗');return;}
+  buildFaceDescriptors();
+  if(faceDescriptors.length===0){onError&&onError('登録済みの顔写真がありません');return;}
+  
+  const video=document.getElementById(videoElId);
+  if(!video){onError&&onError('カメラ未起動');return;}
+  
+  const labeled=faceDescriptors.map(f=>new faceapi.LabeledFaceDescriptors(String(f.staffId),[f.descriptor]));
+  const matcher=new faceapi.FaceMatcher(labeled,0.5);
+  
+  faceRecognitionActive=true;
+  let lastMatchSid=null;
+  let lastMatchAt=0;
+  
+  faceRecognitionInterval=setInterval(async()=>{
+    if(!faceRecognitionActive)return;
+    try{
+      const det=await faceapi.detectSingleFace(video,new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+      if(!det)return;
+      const best=matcher.findBestMatch(det.descriptor);
+      if(best.label!=='unknown'){
+        const sid=parseInt(best.label);
+        const now=Date.now();
+        if(lastMatchSid===sid&&now-lastMatchAt>1500){
+          stopFaceRecognitionLoop();
+          onMatch(sid,best.distance);
+        }else if(lastMatchSid!==sid){
+          lastMatchSid=sid;lastMatchAt=now;
+        }
+      }else{lastMatchSid=null;}
+    }catch(e){console.error('Recog:',e);}
+  },500);
+}
+function stopFaceRecognitionLoop(){
+  faceRecognitionActive=false;
+  if(faceRecognitionInterval){clearInterval(faceRecognitionInterval);faceRecognitionInterval=null;}
+}
+
+async function openFacePunchModal(){
+  const modal=document.getElementById('facePunchModal');
+  if(!modal)return;
+  modal.classList.remove('hidden');
+  document.getElementById('fp-status').textContent='カメラ起動中...';
+  document.getElementById('fp-result').innerHTML='';
+  
+  const ok=await startFaceCamera('fp-video');
+  if(!ok){document.getElementById('fp-status').textContent='カメラ起動失敗';return;}
+  
+  document.getElementById('fp-status').textContent='顔を画面中央に向けてください...';
+  
+  startFaceRecognitionLoop('fp-video',async(sid,distance)=>{
+    const staff=DB.staff.find(s=>s.id===sid);
+    if(!staff){document.getElementById('fp-status').textContent='不明なスタッフ';return;}
+    document.getElementById('fp-status').textContent='✓ '+staff.name+' さんを検出';
+    document.getElementById('fp-result').innerHTML='<div style="background:#E8F5E9;padding:11px;border-radius:9px;margin-top:9px;text-align:center;"><div style="font-size:14px;font-weight:700;color:#2E7D32;">'+staff.name+' さん</div><div style="font-size:10px;color:var(--t2);margin-top:4px;">類似度: '+Math.round((1-distance)*100)+'%</div></div>';
+    
+    setTimeout(()=>{
+      const recs=DB.records.filter(r=>r.staffId===sid&&r.date===todayStr()).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
+      const last=recs[recs.length-1];
+      let actType='in';
+      if(!last)actType='in';
+      else if(last.type==='in'||last.type==='resume'||last.type==='early')actType='break';
+      else if(last.type==='break')actType='resume';
+      else if(last.type==='out')actType='in';
+      doP(sid,actType);
+      closeFacePunchModal();
+      const actL={in:'出勤',break:'休憩',resume:'再開',out:'退勤'};
+      showToast(staff.name+' さん '+actL[actType]+' 打刻完了 ✓');
+      // 連続打刻のため再度顔認証起動
+      if(punchMode==='face'){setTimeout(()=>openFacePunchModal(),1500);}
+    },800);
+  },(err)=>{
+    document.getElementById('fp-status').textContent='エラー: '+err;
+  });
+}
+function closeFacePunchModal(byUser){
+  stopFaceRecognitionLoop();
+  stopFaceCamera();
+  document.getElementById('facePunchModal').classList.add('hidden');
+  if(byUser===true){
+    // ユーザーがキャンセル → 手動モードに
+    punchMode='manual';
+    const tb=document.getElementById('punch-mode-toggle');
+    if(tb)tb.innerHTML='📷 顔認証に切替';
+  }
+}
+
+let regSid=null;
+async function openFaceRegisterModal(sid){
+  regSid=sid;
+  const staff=DB.staff.find(s=>s.id===sid);
+  if(!staff)return;
+  document.getElementById('fr-title').textContent=staff.name+' さんの顔写真登録';
+  document.getElementById('fr-status').textContent=staff.faceDescriptor?'✓ 登録済み':'未登録';
+  document.getElementById('fr-result').innerHTML='';
+  document.getElementById('fr-camera-area').style.display='none';
+  document.getElementById('faceRegisterModal').classList.remove('hidden');
+}
+function closeFaceRegisterModal(){
+  stopFaceCamera();
+  document.getElementById('faceRegisterModal').classList.add('hidden');
+}
+
+async function frStartCamera(){
+  document.getElementById('fr-camera-area').style.display='block';
+  document.getElementById('fr-status').textContent='カメラ起動中...';
+  const ok=await startFaceCamera('fr-video');
+  if(ok)document.getElementById('fr-status').textContent='正面を向いて「撮影」を押してください';
+}
+async function frCapture(){
+  const video=document.getElementById('fr-video');
+  const canvas=document.createElement('canvas');
+  canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+  canvas.getContext('2d').drawImage(video,0,0);
+  document.getElementById('fr-status').textContent='顔を解析中...';
+  const desc=await extractFaceDescriptor(canvas);
+  if(!desc){document.getElementById('fr-status').textContent='顔が検出できませんでした';return;}
+  await saveFaceDescriptor(desc);
+  stopFaceCamera();
+  document.getElementById('fr-camera-area').style.display='none';
+}
+
+async function frUploadFile(input){
+  const f=input.files[0];if(!f)return;
+  document.getElementById('fr-status').textContent='画像を読込中...';
+  const url=URL.createObjectURL(f);
+  const img=new Image();
+  img.onload=async()=>{
+    document.getElementById('fr-status').textContent='顔を解析中...';
+    const desc=await extractFaceDescriptor(img);
+    URL.revokeObjectURL(url);
+    if(!desc){document.getElementById('fr-status').textContent='顔が検出できませんでした';return;}
+    await saveFaceDescriptor(desc);
+  };
+  img.src=url;
+}
+
+async function saveFaceDescriptor(desc){
+  if(!regSid)return;
+  const staff=DB.staff.find(s=>s.id===regSid);
+  if(!staff)return;
+  staff.faceDescriptor=Array.from(desc);
+  sDB();fbSaveStaff();
+  document.getElementById('fr-status').textContent='✓ 登録完了';
+  document.getElementById('fr-result').innerHTML='<div style="background:#E8F5E9;padding:11px;border-radius:9px;margin-top:9px;text-align:center;color:#2E7D32;font-weight:700;">'+staff.name+' さんの顔写真を登録しました</div>';
+  buildFaceDescriptors();
+  showToast(staff.name+' さんの顔写真を登録しました ✓');
+  if(typeof renderAL==='function')renderAL();
+}
+
+async function frClearFace(){
+  if(!regSid)return;
+  if(!confirm('顔写真の登録を削除しますか？'))return;
+  const staff=DB.staff.find(s=>s.id===regSid);
+  if(!staff)return;
+  delete staff.faceDescriptor;
+  sDB();fbSaveStaff();
+  document.getElementById('fr-status').textContent='未登録';
+  document.getElementById('fr-result').innerHTML='';
+  buildFaceDescriptors();
+  showToast('削除しました');
+  if(typeof renderAL==='function')renderAL();
+}
+
+
 function loginPersonalInline(){
   const eid=document.getElementById('pi-id').value.trim();
   const pw=document.getElementById('pi-pw').value;
@@ -2815,5 +3065,56 @@ lDB();autoStart();setInterval(tick,30000);tick();
 // Firebase同期はselectCompany()で起動
 // GitHub同期は無効（Firebase移行済み）
 </script>
+
+<!-- 顔認証打刻モーダル -->
+<div class="ov hidden" id="facePunchModal" onclick="if(event.target===this)closeFacePunchModal(true)">
+  <div class="mo" onclick="event.stopPropagation()" style="max-width:480px;width:90%;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="cl" style="margin:0;">📷 顔認証で打刻</div>
+      <button onclick="closeFacePunchModal(true)" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--t2);">×</button>
+    </div>
+    <div id="fp-status" style="font-size:12px;color:var(--t2);margin-bottom:9px;text-align:center;">準備中...</div>
+    <div style="background:#000;border-radius:9px;overflow:hidden;position:relative;aspect-ratio:4/3;">
+      <video id="fp-video" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60%;aspect-ratio:1;border:3px solid rgba(255,255,255,0.5);border-radius:50%;pointer-events:none;"></div>
+    </div>
+    <div id="fp-result"></div>
+    <button onclick="closeFacePunchModal(true)" style="width:100%;margin-top:10px;padding:10px;background:#fff;border:1px solid var(--br);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;">キャンセル</button>
+  </div>
+</div>
+
+<!-- 顔写真登録モーダル -->
+<div class="ov hidden" id="faceRegisterModal" onclick="if(event.target===this)closeFaceRegisterModal()">
+  <div class="mo" onclick="event.stopPropagation()" style="max-width:480px;width:90%;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="cl" id="fr-title" style="margin:0;">顔写真登録</div>
+      <button onclick="closeFaceRegisterModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--t2);">×</button>
+    </div>
+    <div id="fr-status" style="font-size:12px;color:var(--t2);margin-bottom:9px;text-align:center;font-weight:600;">未登録</div>
+    
+    <div id="fr-camera-area" style="display:none;">
+      <div style="background:#000;border-radius:9px;overflow:hidden;aspect-ratio:4/3;margin-bottom:9px;">
+        <video id="fr-video" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
+      </div>
+      <button onclick="frCapture()" class="fb" style="width:100%;margin-bottom:7px;">📸 撮影して登録</button>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:9px;">
+      <button onclick="frStartCamera()" class="bg" style="padding:11px;font-size:12px;">📷 カメラで撮影</button>
+      <label class="bn" style="padding:11px;font-size:12px;text-align:center;cursor:pointer;display:block;">
+        🖼 ファイルから選択
+        <input type="file" accept="image/*" capture="user" onchange="frUploadFile(this)" style="display:none;">
+      </label>
+    </div>
+    
+    <div id="fr-result"></div>
+    
+    <div style="display:flex;gap:7px;margin-top:11px;">
+      <button onclick="frClearFace()" class="bn" style="flex:1;padding:9px;font-size:11px;background:#fff;color:#C62828;border-color:#C62828;">登録を削除</button>
+      <button onclick="closeFaceRegisterModal()" class="bg" style="flex:1;padding:9px;font-size:11px;">閉じる</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
