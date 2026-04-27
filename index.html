@@ -2597,7 +2597,7 @@ async function loadFaceModels(){
   if(faceModelsLoaded)return true;
   if(typeof faceapi==='undefined'){showToast('顔認証ライブラリが読込まれていません');return false;}
   try{
-    const MODEL_URL='https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+    const MODEL_URL='https://justadudewhohacks.github.io/face-api.js/models';
     await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
     await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
     await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
