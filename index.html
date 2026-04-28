@@ -1689,6 +1689,39 @@ function onTC(){
   document.getElementById('fca').style.display=t==='contract'?'':'none';
   const f1=document.getElementById('free1-opt');
   if(f1)f1.style.display=t==='free1'?'block':'none';
+  // 年俸型: シフト・休憩・終了時刻フリーを非表示
+  const isAnnual=t==='annual';
+  const setHide=(el,hide)=>{if(!el)return;if(hide){el.setAttribute('data-hidden','1');el.style.setProperty('display','none','important');}else{el.removeAttribute('data-hidden');el.style.removeProperty('display');}};
+  // シフト関連の親カード（曜日別シフト設定全体）
+  // 「曜日別シフト設定」のラベルを含む親要素を探す
+  const dowLabel=Array.from(document.querySelectorAll('.cl')).find(el=>el.textContent.includes('曜日別シフト設定'));
+  if(dowLabel)setHide(dowLabel,isAnnual);
+  // 曜日タブ
+  const dowTabs=document.querySelector('.dow-tabs');
+  setHide(dowTabs,isAnnual);
+  // 各曜日パネル
+  ['mon','tue','wed','thu','fri','sat','sun'].forEach(d=>{
+    const el=document.getElementById('dp-'+d);
+    setHide(el,isAnnual);
+  });
+  // 休憩時間（fbkの親 .frw）
+  const fbk=document.getElementById('fbk');
+  if(fbk){
+    let p=fbk.parentElement;
+    while(p&&!p.classList.contains('frw'))p=p.parentElement;
+    setHide(p||fbk.parentElement,isAnnual);
+  }
+  // 終了時刻フリーのチェックボックス
+  const fftBox=document.getElementById('fft-box');
+  if(fftBox){
+    let fftCard=fftBox.parentElement;
+    // background:var(--bll)を持つ親を探す
+    while(fftCard&&!(fftCard.style&&fftCard.style.background&&fftCard.style.background.includes('var(--bll)'))&&fftCard.parentElement){
+      fftCard=fftCard.parentElement;
+      if(fftCard.tagName==='BODY'||fftCard.tagName==='HTML'){fftCard=null;break;}
+    }
+    setHide(fftCard,isAnnual);
+  }
 }
 function toggleFft(){
   const cur=document.getElementById('fft').value==='1';
