@@ -1093,14 +1093,11 @@ function calcNight(segs){
 // ═══ 遅刻・早退計算 ═══
 function calcLateEarly(sid,date,inMin,outMin,shifts,earlyRec){
   if(!shifts||!shifts.length||isLegalHoliday(date)) return{lateMin:0,earlyLeaveMin:0};
-  const staff=DB.staff.find(s=>s.id===sid);
   // 早出ボタンの場合は遅刻なし
+  // シフト開始時刻より遅い打刻のみ遅刻（早めの打刻は遅刻なし）
   const lateMin = earlyRec ? 0 : Math.max(0, inMin - parseHM(shifts[0].s));
-  // 終了時刻フリーの場合は早退なし
-  if(staff&&staff.freeEnd) return{lateMin,earlyLeaveMin:0};
-  const lastEnd = parseHM(shifts[shifts.length-1].e);
-  const earlyLeaveMin = outMin!==null ? Math.max(0, lastEnd - outMin) : 0;
-  return{lateMin,earlyLeaveMin};
+  // 早退判定は無効化（早く帰っても早退扱いにしない）
+  return{lateMin,earlyLeaveMin:0};
 }
 
 // ═══ 勤務時間計算（遅刻・早退含む） ═══
@@ -1897,8 +1894,33 @@ function clearLunchDay(date){
 }
 
 // ═══ バイト枠 ═══
-function saveSP(){const sid=parseInt(document.getElementById('sp-s').value);const date=document.getElementById('sp-d').value;if(!sid||!date){showToast('スタッフと日付を選択してください');return;}DB.specials=DB.specials.filter(s=>!(s.staffId===sid&&s.date===date));DB.specials.push({id:Date.now(),staffId:sid,date,memo:document.getElementById('sp-m').value});sDB();showToast('バイト枠を登録しました');renderSPL();renderSG();}
-function renderSPL(){const el=document.getElementById('spl');const list=DB.specials.filter(s=>{const st=DB.staff.find(x=>x.id===s.staffId);return st&&st.company===CO;}).sort((a,b)=>a.date<b.date?1:-1);el.innerHTML=list.length?list.map(s=>{const st=DB.staff.find(x=>x.id===s.staffId);return`<div class="spit"><div class="sii"><b>${st?st.name:'?'}</b> ${s.date}${s.memo?' — '+s.memo:''}</div><button class="fd" onclick="delSP(${s.id})">削除</button></div>`;}).join(''):'<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div>';}
+function saveSP(){
+  const sid=parseInt(document.getElementById('sp-s').value);
+  const date=document.getElementById('sp-d').value;
+  if(!sid||!date){showToast('スタッフと日付を選択してください');return;}
+  const startTime=document.getElementById('sp-st').value;
+  const endTime=document.getElementById('sp-et').value;
+  const breakMin=parseInt(document.getElementById('sp-bm').value)||0;
+  const memo=document.getElementById('sp-m').value;
+  DB.specials=DB.specials.filter(s=>!(s.staffId===sid&&s.date===date));
+  DB.specials.push({id:Date.now(),staffId:sid,date,startTime,endTime,breakMin,memo});
+  sDB();fbSaveSettings();showToast('特別枠を登録しました');renderSPL();renderSG();
+  // 入力欄をクリア
+  document.getElementById('sp-st').value='';
+  document.getElementById('sp-et').value='';
+  document.getElementById('sp-bm').value='';
+  document.getElementById('sp-m').value='';
+}
+function renderSPL(){
+  const el=document.getElementById('spl');
+  const list=DB.specials.filter(s=>{const st=DB.staff.find(x=>x.id===s.staffId);return st&&st.company===CO;}).sort((a,b)=>a.date<b.date?1:-1);
+  el.innerHTML=list.length?list.map(s=>{
+    const st=DB.staff.find(x=>x.id===s.staffId);
+    const timeInfo=(s.startTime&&s.endTime)?` ${s.startTime}〜${s.endTime}`:'';
+    const brkInfo=s.breakMin?` 休憩${s.breakMin}分`:'';
+    return`<div class="spit"><div class="sii"><b>${st?st.name:'?'}</b> ${s.date}${timeInfo}${brkInfo}${s.memo?' — '+s.memo:''}</div><button class="fd" onclick="delSP(${s.id})">削除</button></div>`;
+  }).join(''):'<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div>';
+}
 function delSP(id){DB.specials=DB.specials.filter(s=>s.id!==id);sDB();renderSPL();showToast('削除しました');}
 
 
