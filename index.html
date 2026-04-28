@@ -324,35 +324,22 @@ console.log('Firebase initialized (compat)');
       <div class="card"><div class="cl">バイト枠一覧</div><div id="spl"><div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div></div></div>
     </div>
     <div class="asc" id="asc-data">
-      <div class="card" style="border:2px solid #FFD54F;background:#FFFDE7;">
-        <div class="cl" style="color:#F57F17;">🔑 GitHub同期トークン設定</div>
-        <div style="font-size:11px;color:#5D4037;margin-bottom:9px;">同期機能を使うには各端末で1回だけトークンを設定してください。</div>
-        <div id="token-status-box" style="margin-bottom:9px;padding:7px 9px;border-radius:7px;font-size:11px;"></div>
-        <div style="display:flex;gap:6px;margin-bottom:6px;">
-          <input class="fi" id="gh-token-input" type="password" placeholder="ghp_... を貼り付け" style="flex:1;font-size:12px;">
-          <button class="fb" style="padding:9px 14px;font-size:12px;white-space:nowrap;" onclick="saveGHToken()">保存</button>
+      <div class="card" style="border:2px solid #4CAF50;background:#E8F5E9;">
+        <div class="cl" style="color:#2E7D32;">✅ Firebase 自動同期</div>
+        <div style="font-size:11px;color:#1B5E20;margin-bottom:8px;">
+          すべてのデバイス間でデータが自動的に同期されています。<br>
+          打刻・スタッフ設定・有給・経費等、リアルタイムで反映されます。
         </div>
-        <div style="font-size:9px;color:#795548;">このブラウザのみに保存。HTMLには含まれません。</div>
+        <div id="sync-status" style="font-size:10px;color:#558B2F;padding:6px 9px;background:#fff;border-radius:7px;">同期状態を確認中...</div>
       </div>
       <div class="card">
-        <div class="cl">データ移行（PC ⇔ タブレット）</div>
+        <div class="cl">データバックアップ（手動）</div>
         <div class="fs2">
-          PCで設定したデータをタブレットに移すには、<b>エクスポート→コピー→タブレットでインポート</b>の手順で行います。
+          念のため、定期的にデータをエクスポートしてバックアップとして保存することをおすすめします。
         </div>
         <div style="margin-bottom:11px;">
-          <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">① このデバイスからエクスポート</div>
-          <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">スタッフ設定</div>
-          <button class="fb" style="width:100%;margin-bottom:6px;" onclick="syncFromGitHub()">🔄 GitHubから取得（設定）</button>
-          <button class="fb" style="width:100%;background:#0C447C;margin-bottom:11px;" onclick="syncToGitHub()">☁️ GitHubへ保存（設定）</button>
-          <div style="border-top:1px solid var(--br);padding-top:11px;font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">打刻データ</div>
-          <button class="fb" style="width:100%;margin-bottom:6px;background:#1D9E75;" onclick="syncRecordsFromGitHub()">⬇️ GitHubから取得（打刻）</button>
-          <button class="fb" style="width:100%;background:#085041;margin-bottom:11px;" onclick="syncRecordsToGitHub()">⬆️ GitHubへ保存（打刻）</button>
-          <div style="font-size:9px;color:var(--t2);padding:7px 9px;background:var(--gy);border-radius:7px;">
-            打刻データは自動同期されません。<br>業務終了時に「打刻→GitHub保存」、別端末使用前に「打刻→GitHub取得」をしてください。
-          </div>
-          <div style="border-top:1px solid var(--br);margin:11px 0;"></div>
-          <button class="fb" style="width:100%;background:var(--t2);" onclick="exportData()">📤 データをエクスポート（コピー）</button>
-          <div style="font-size:10px;color:var(--t2);margin-top:5px;">クリップボードにコピーされます。メモ帳・メール等に貼り付けて別端末に送ってください。</div>
+          <button class="fb" style="width:100%;background:var(--t2);" onclick="exportData()">📤 データをエクスポート（クリップボードにコピー）</button>
+          <div style="font-size:10px;color:var(--t2);margin-top:5px;">テキスト形式でクリップボードにコピーされます。メモ帳等に貼り付けて保存してください。</div>
         </div>
         <div style="border-top:1px solid var(--br);padding-top:11px;">
           <div style="font-size:11px;font-weight:600;color:var(--tx);margin-bottom:6px;">② 別のデバイスでインポート</div>
@@ -2155,7 +2142,17 @@ function openDataTab(){
     if(t){
       box.style.background='var(--gl)';box.style.color='var(--gd)';
       box.textContent='✓ 設定済み（'+t.slice(0,12)+'...）変更する場合は下に入力して保存';
+      const ss=document.getElementById('sync-status');
+  if(ss){
+    if(window.firebaseReady){
+      ss.innerHTML='✓ Firebase 接続中 - データはすべての端末で自動同期されています';
+      ss.style.color='#2E7D32';
     }else{
+      ss.innerHTML='⚠ Firebase 未接続';
+      ss.style.color='#E65100';
+    }
+  }
+}else{
       box.style.background='var(--rl)';box.style.color='#791F1F';
       box.textContent='⚠ 未設定 — 下にトークンを貼り付けて「保存」してください';
     }
