@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -559,7 +559,7 @@ console.log('Firebase initialized (compat)');
     <div class="fs2">契約時間より早い打刻は契約開始時刻から計算。早出ボタン押下時はその時刻から計算。</div>
     
     </div>
-    <div class="cl" style="margin-bottom:8px;">曜日別シフト設定（5分刻み）</div>
+    <div class="cl" style="margin-bottom:8px;">曜日別シフト設定（15分刻み）</div>
     <div class="dow-tabs">
       <button class="dow-tab active" onclick="selDow('mon',this)">月</button>
       <button class="dow-tab" onclick="selDow('tue',this)">火</button>
@@ -1689,8 +1689,8 @@ function onTC(){
   document.getElementById('fca').style.display=t==='contract'?'':'none';
   const f1=document.getElementById('free1-opt');
   if(f1)f1.style.display=t==='free1'?'block':'none';
-  // 年俸型: シフト・休憩・終了時刻フリーを非表示
-  const isAnnual=t==='annual';
+  // 契約型以外: シフト・休憩・終了時刻フリーを非表示
+  const isAnnual=t!=='contract';
   const setHide=(el,hide)=>{if(!el)return;if(hide){el.setAttribute('data-hidden','1');el.style.setProperty('display','none','important');}else{el.removeAttribute('data-hidden');el.style.removeProperty('display');}};
   // シフト関連の親カード（曜日別シフト設定全体）
   // 「曜日別シフト設定」のラベルを含む親要素を探す
