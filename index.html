@@ -314,10 +314,32 @@ console.log('Firebase initialized (compat)');
       </div>
     </div>
     <div class="asc" id="asc-special">
-      <div class="card"><div class="cl">バイト枠登録（支給項目4）</div>
-        <div class="fs2">年俸制スタッフの特定日をバイト枠として別集計します</div>
+      <div class="card"><div class="cl">特別枠（バイト枠）登録</div>
+        <div class="fs2">年俸型スタッフが年俸枠外で勤務する場合に登録します</div>
         <div class="frw"><label class="fl">スタッフ</label><select class="fsl" id="sp-s"></select></div>
         <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="sp-d"></div>
+        <div class="frw"><label class="fl">時刻ルール</label>
+          <select class="fi" id="sp-rule" onchange="onSpRule()">
+            <option value="free1">フリー①型（XX:45 自動切り上げ）</option>
+            <option value="free">フリー型（登録時刻優先）</option>
+          </select>
+        </div>
+        <div class="frw" id="sp-st-wrap" style="display:none;">
+          <label class="fl">勤務開始</label>
+          <input class="fi" type="time" id="sp-st" step="900">
+        </div>
+        <div style="margin:8px 0;padding:9px 11px;background:var(--bll);border:1px solid var(--bl);border-radius:8px;display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="toggleSpFreeEnd()">
+          <div id="sp-fe-box" style="width:22px;height:22px;border-radius:5px;border:2px solid var(--br);background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"></div>
+          <div>
+            <div style="font-weight:600;font-size:12px;">終了時刻フリー</div>
+            <div style="font-size:10px;color:var(--t2);">退勤打刻通り（早退判定なし）</div>
+          </div>
+        </div>
+        <div class="frw" id="sp-et-wrap">
+          <label class="fl">勤務終了</label>
+          <input class="fi" type="time" id="sp-et" step="900">
+        </div>
+        <div class="frw"><label class="fl">休憩（分）</label><input class="fi" type="number" id="sp-bm" placeholder="0" min="0"></div>
         <div class="frw"><label class="fl">メモ（任意）</label><input class="fi" id="sp-m" placeholder="例: 土曜バイト"></div>
         <button class="fb" style="width:100%;" onclick="saveSP()">登録する</button>
       </div>
@@ -1149,7 +1171,53 @@ function calcWork(sid,date){
     }
     return{total:net,breakdown:{[effectiveType==='annual'?'年俸勤務':effectiveType==='free1'?'フリー①勤務':'総勤務']:net},otA:0,otB:0,otC:0,otD:nightMs,otE:0,lateMin:0,earlyLeaveMin:0};
   }
-  if(isSp){const net=Math.max(0,rawMs-(staff.breakMin||0)*60000);return{total:net,breakdown:{'バイト枠':net},otA:0,otB:0,otC:0,otD:nightMs,otE:0,lateMin:0,earlyLeaveMin:0};}
+  if(isSp){
+    // 特別枠: 時刻ルール + 終了時刻フリーで4パターン
+    const spec=DB.specials.find(s=>s.staffId===sid&&s.date===date);
+    let net=0;
+    if(spec){
+      const rule=spec.rule||'free1'; // 'free' or 'free1'
+      const freeEnd=!!spec.freeEnd;
+      const brk=(spec.breakMin||0)*60000;
+      // 開始時刻決定
+      let startMin;
+      if(rule==='free1'){
+        // フリー①型: 打刻時刻をXX:45切り上げ
+        if(inRec){
+          const inDt=new Date(inRec.tsISO);
+          const inM=inDt.getHours()*60+inDt.getMinutes();
+          const basMin=staff.free1Min!==undefined?staff.free1Min:45;
+          const prevBase=Math.floor(inM/60)*60+basMin;
+          const nextBase=prevBase+60;
+          if(inM<=prevBase)startMin=prevBase;
+          else startMin=nextBase;
+        }else{startMin=null;}
+      }else{
+        // フリー型: 登録時刻優先
+        startMin=spec.startTime?parseHM(spec.startTime):null;
+      }
+      // 終了時刻決定
+      let endMin;
+      if(freeEnd){
+        // 打刻通り
+        endMin=outRec?(new Date(outRec.tsISO).getHours()*60+new Date(outRec.tsISO).getMinutes()):null;
+      }else{
+        // 登録時刻
+        endMin=spec.endTime?parseHM(spec.endTime):null;
+      }
+      // 計算
+      if(startMin!=null&&endMin!=null&&endMin>startMin){
+        net=Math.max(0,(endMin-startMin)*60000-brk);
+      }else{
+        // フォールバック: 打刻通り
+        net=Math.max(0,rawMs-(staff.breakMin||0)*60000);
+      }
+    }else{
+      // spec見つからない場合は打刻通り
+      net=Math.max(0,rawMs-(staff.breakMin||0)*60000);
+    }
+    return{total:net,breakdown:{'バイト枠':net},otA:0,otB:0,otC:0,otD:nightMs,otE:0,lateMin:0,earlyLeaveMin:0};
+  }
   const inRec=recs.find(r=>r.type==='in'||r.type==='early');
   const outRec=[...recs].reverse().find(r=>r.type==='out');
   if(!inRec)return{};
@@ -1928,29 +1996,63 @@ function clearLunchDay(date){
 }
 
 // ═══ バイト枠 ═══
+
+let spFreeEnd=false;
+function onSpRule(){
+  const rule=document.getElementById('sp-rule').value;
+  // フリー型なら開始時刻を表示、フリー①型なら非表示
+  document.getElementById('sp-st-wrap').style.display=rule==='free'?'':'none';
+}
+function toggleSpFreeEnd(){
+  spFreeEnd=!spFreeEnd;
+  const box=document.getElementById('sp-fe-box');
+  if(spFreeEnd){
+    box.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#0C447C" stroke-width="3" stroke-linecap="round"/></svg>';
+    box.style.background='#fff';
+    box.style.borderColor='#0C447C';
+  }else{
+    box.innerHTML='';
+    box.style.borderColor='var(--br)';
+  }
+  // 終了時刻フリーON時は終了時刻入力を非表示
+  document.getElementById('sp-et-wrap').style.display=spFreeEnd?'none':'';
+}
+
 function saveSP(){
   const sid=parseInt(document.getElementById('sp-s').value);
   const date=document.getElementById('sp-d').value;
   if(!sid||!date){showToast('スタッフと日付を選択してください');return;}
+  const rule=document.getElementById('sp-rule').value; // 'free' or 'free1'
   const startTime=document.getElementById('sp-st').value;
   const endTime=document.getElementById('sp-et').value;
   const breakMin=parseInt(document.getElementById('sp-bm').value)||0;
   const memo=document.getElementById('sp-m').value;
+  const freeEnd=spFreeEnd;
+  // バリデーション
+  if(rule==='free'&&!startTime){showToast('フリー型では勤務開始時刻が必要です');return;}
+  if(!freeEnd&&!endTime){showToast('終了時刻フリーOFFの時は勤務終了時刻が必要です');return;}
   DB.specials=DB.specials.filter(s=>!(s.staffId===sid&&s.date===date));
-  DB.specials.push({id:Date.now(),staffId:sid,date,startTime,endTime,breakMin,memo});
+  DB.specials.push({id:Date.now(),staffId:sid,date,rule,startTime,endTime,freeEnd,breakMin,memo});
   sDB();fbSaveSettings();showToast('特別枠を登録しました');renderSPL();renderSG();
   // 入力欄をクリア
   document.getElementById('sp-st').value='';
   document.getElementById('sp-et').value='';
   document.getElementById('sp-bm').value='';
   document.getElementById('sp-m').value='';
+  spFreeEnd=false;
+  document.getElementById('sp-fe-box').innerHTML='';
+  document.getElementById('sp-fe-box').style.borderColor='var(--br)';
+  document.getElementById('sp-et-wrap').style.display='';
 }
 function renderSPL(){
   const el=document.getElementById('spl');
   const list=DB.specials.filter(s=>{const st=DB.staff.find(x=>x.id===s.staffId);return st&&st.company===CO;}).sort((a,b)=>a.date<b.date?1:-1);
   el.innerHTML=list.length?list.map(s=>{
     const st=DB.staff.find(x=>x.id===s.staffId);
-    const timeInfo=(s.startTime&&s.endTime)?` ${s.startTime}〜${s.endTime}`:'';
+    const ruleLabel=s.rule==='free'?'フリー型':'フリー①型';
+    const stPart=s.startTime?s.startTime:'打刻';
+    const etPart=s.freeEnd?'打刻':(s.endTime||'打刻');
+    const timeInfo=` [${ruleLabel}] ${stPart}〜${etPart}`;
     const brkInfo=s.breakMin?` 休憩${s.breakMin}分`:'';
     return`<div class="spit"><div class="sii"><b>${st?st.name:'?'}</b> ${s.date}${timeInfo}${brkInfo}${s.memo?' — '+s.memo:''}</div><button class="fd" onclick="delSP(${s.id})">削除</button></div>`;
   }).join(''):'<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div>';
