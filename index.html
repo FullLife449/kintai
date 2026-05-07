@@ -664,7 +664,6 @@ console.log('Firebase initialized (compat)');
         <option value="">なし（管理画面に入れない）</option>
         <option value="normal_koyokai">一般管理者（香庸会のみ）</option>
         <option value="normal_fulllife">一般管理者（フルラフのみ）</option>
-        <option value="normal_both">一般管理者（両社）</option>
         <option value="super_both">スーパー管理者（両社・PW変更可）</option>
       </select>
     </div>
@@ -1415,9 +1414,10 @@ function initPwmStaffSelect(){
   const sel=document.getElementById('pwm-staff');
   if(!sel)return;
   sel.innerHTML='<option value="">スタッフを選択</option>';
-  // 香庸会 → フルラフの順、社員番号順
-  const koyo=DB.staff.filter(s=>s.company==='koyokai').sort((a,b)=>a.id-b.id);
-  const full=DB.staff.filter(s=>s.company==='fulllife').sort((a,b)=>a.id-b.id);
+  // 自社フィルタ
+  const filter=window.adminCompanyFilter; // null なら両社、'koyokai'/'fulllife' なら自社
+  const koyo=(filter&&filter!=='koyokai')?[]:DB.staff.filter(s=>s.company==='koyokai').sort((a,b)=>a.id-b.id);
+  const full=(filter&&filter!=='fulllife')?[]:DB.staff.filter(s=>s.company==='fulllife').sort((a,b)=>a.id-b.id);
   if(koyo.length){
     const og1=document.createElement('optgroup');og1.label='香庸会';
     koyo.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.id+' '+s.name;og1.appendChild(o);});
@@ -1446,6 +1446,10 @@ function onPwmStaffChange(){
   document.getElementById('pwm-info-admin').innerHTML='⚙️ 管理画面: '+(hasAdmin?(isAdminDefault?'<span style="color:#558B2F;">初期値（2525）</span>':'<span style="color:#0277BD;font-weight:600;">変更済み</span>'):'<span style="color:var(--t2);">権限なし</span>');
   info.style.display='block';
   actions.style.display='block';
+  // 一般管理者は管理画面PWボタン非表示
+  const isSuper=currentAdmin&&currentAdmin.role==='super';
+  const adminBtn=document.querySelector('button[onclick="resetAdminPw()"]');
+  if(adminBtn)adminBtn.style.display=isSuper?'':'none';
 }
 function resetPersonalPw(){
   const sid=parseInt(document.getElementById('pwm-staff').value);
@@ -1855,7 +1859,7 @@ function openEdit(id){const s=DB.staff.find(x=>x.id===id);if(!s)return;eSid=id;d
     if(s.adminRole==='super')arEl.value='super_both';
     else if(s.adminRole==='normal'&&s.adminPerm==='koyokai')arEl.value='normal_koyokai';
     else if(s.adminRole==='normal'&&s.adminPerm==='fulllife')arEl.value='normal_fulllife';
-    else if(s.adminRole==='normal'&&s.adminPerm==='both')arEl.value='normal_both';
+    
     else arEl.value='';
     // スーパー管理者でなければ権限欄を編集不可に
     arEl.disabled=!(currentAdmin&&currentAdmin.role==='super');
@@ -1934,7 +1938,6 @@ const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)
   if(arVal==='super_both'){adminRole='super';adminPerm='both';}
   else if(arVal==='normal_koyokai'){adminRole='normal';adminPerm='koyokai';}
   else if(arVal==='normal_fulllife'){adminRole='normal';adminPerm='fulllife';}
-  else if(arVal==='normal_both'){adminRole='normal';adminPerm='both';}
   // スーパー管理者のみ権限変更可（自分自身は変更可）
   const isCurrSuper=currentAdmin&&currentAdmin.role==='super';
   if(eSid){
@@ -2538,7 +2541,12 @@ function dlIndXLSX(){
 
 
 function switchCompany(){
-  if(!confirm('会社を切り替えます。現在の画面は閉じられます。〈8にりますか？'))return;
+  // 一般管理者は会社切替不可
+  if(currentAdmin&&currentAdmin.role!=='super'){
+    showToast('一般管理者は会社を切り替えられません');
+    return;
+  }
+  if(!confirm('会社を切り替えます。現在の画面は閉じられます。よろしいですか？'))return;
   currentCompany='';
   localStorage.removeItem('kintai_company');
   document.getElementById('ms').style.display='none';
@@ -2828,9 +2836,25 @@ function applyAdminPermissions(admin){
   }
   // レポート出力を会社でフィルタ
   window.adminCompanyFilter = (isSuperAdmin || admin.company === 'both') ? null : admin.company;
-  // PW管理タブはスーパー管理者のみ表示
+  // PW管理タブは管理者なら全員表示（中身でフィルタ）
   const pwTab=document.getElementById('atab-pw');
-  if(pwTab)pwTab.style.display=isSuperAdmin?'':'none';
+  if(pwTab)pwTab.style.display='';
+  // 一般管理者は会社切替ボタンを非表示
+  const switchBtn=document.querySelector('button[onclick="switchCompany()"]');
+  if(switchBtn)switchBtn.style.display=isSuperAdmin?'':'none';
+  // 一般管理者は打刻画面の会社タブを非表示（自社固定）
+  const coTabs=document.getElementById('co-tabs');
+  if(coTabs)coTabs.style.display=isSuperAdmin?'':'none';
+  // 一般管理者はレポート/ログの会社プルダウンを自社固定
+  if(!isSuperAdmin){
+    ['log-co','rep-co','pg-co'].forEach(id=>{
+      const sel=document.getElementById(id);
+      if(sel){
+        sel.value=admin.company;
+        sel.disabled=true;
+      }
+    });
+  }
 }
 
 // レポート出力時に会社フィルタ適用
