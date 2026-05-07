@@ -2682,13 +2682,11 @@ let currentAdmin = null;
 
 function checkAdminPw(){
   // 管理者ログインモーダルを表示
-  document.getElementById('pw-setup-area').style.display='none';
-  document.getElementById('pw-label').textContent='管理者IDまたはPW';
-  document.getElementById('pw-btn').textContent='ログイン';
+  document.getElementById('pw-id').value='';
   document.getElementById('pw-input').value='';
   document.getElementById('pw-error').textContent='';
   document.getElementById('pwm').classList.remove('hidden');
-  setTimeout(()=>document.getElementById('pw-input').focus(),100);
+  setTimeout(()=>document.getElementById('pw-id').focus(),100);
 }
 
 function submitPW(){
