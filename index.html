@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -218,7 +218,7 @@ console.log('Firebase initialized (compat)');
       <button class="at" id="atab-special" onclick="showAS('special')">特別枠</button>
       <button class="at" id="atab-log" onclick="showAS('log')">ログ</button>
       <button class="at" id="atab-report" onclick="showAS('report')">レポート</button>
-      <button class="at" id="atab-data" onclick="showAS('data')">データ移行</button>
+      <button class="at" id="atab-data" onclick="showAS('data')">データ移行</button><button class="at" id="atab-pw" onclick="showAS('pw')">PW管理</button>
     </div>
     <div class="pad">
     <div class="card" style="margin-bottom:8px;background:var(--bll);border:1px solid var(--bl);">
@@ -371,6 +371,27 @@ console.log('Firebase initialized (compat)');
         </div>
       </div>
     </div>
+    <div class="asc" id="asc-pw">
+      <div class="card" style="border:2px solid #FFB74D;background:#FFF3E0;">
+        <div class="cl" style="color:#E65100;">🔑 PW管理（スーパー管理者専用）</div>
+        <div class="fs2" style="color:#5D4037;">スタッフの個人画面PWと管理画面PWを初期化できます</div>
+        <div class="frw">
+          <label class="fl">スタッフ</label>
+          <select class="fsl" id="pwm-staff" onchange="onPwmStaffChange()">
+            <option value="">スタッフを選択</option>
+          </select>
+        </div>
+        <div id="pwm-info" style="display:none;background:#fff;padding:10px 12px;border-radius:7px;margin:10px 0;font-size:11px;">
+          <div id="pwm-info-personal" style="margin-bottom:5px;"></div>
+          <div id="pwm-info-admin"></div>
+        </div>
+        <div id="pwm-actions" style="display:none;">
+          <button class="fb" style="width:100%;margin-bottom:7px;background:#1976D2;" onclick="resetPersonalPw()">📱 個人画面PWを初期化（0000）</button>
+          <button class="fb" style="width:100%;background:#E65100;" onclick="resetAdminPw()">⚙️ 管理画面PWを初期化（2525）</button>
+        </div>
+      </div>
+    </div>
+    
     <div class="asc" id="asc-log">
       <div class="pad"><div class="card">
     <div style="margin-bottom:9px;">
@@ -1388,6 +1409,66 @@ function showPg(p){
   if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}
 }
 
+
+// ═══ PW管理（スーパー管理者専用）═══
+function initPwmStaffSelect(){
+  const sel=document.getElementById('pwm-staff');
+  if(!sel)return;
+  sel.innerHTML='<option value="">スタッフを選択</option>';
+  // 香庸会 → フルラフの順、社員番号順
+  const koyo=DB.staff.filter(s=>s.company==='koyokai').sort((a,b)=>a.id-b.id);
+  const full=DB.staff.filter(s=>s.company==='fulllife').sort((a,b)=>a.id-b.id);
+  if(koyo.length){
+    const og1=document.createElement('optgroup');og1.label='香庸会';
+    koyo.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.id+' '+s.name;og1.appendChild(o);});
+    sel.appendChild(og1);
+  }
+  if(full.length){
+    const og2=document.createElement('optgroup');og2.label='フルラフ';
+    full.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.id+' '+s.name;og2.appendChild(o);});
+    sel.appendChild(og2);
+  }
+}
+function onPwmStaffChange(){
+  const sid=parseInt(document.getElementById('pwm-staff').value);
+  const info=document.getElementById('pwm-info');
+  const actions=document.getElementById('pwm-actions');
+  if(!sid){info.style.display='none';actions.style.display='none';return;}
+  const s=DB.staff.find(x=>x.id===sid);
+  if(!s){info.style.display='none';actions.style.display='none';return;}
+  // 状況表示
+  const personalPw=s.pw||'0000';
+  const isPersonalDefault=(personalPw==='0000');
+  const hasAdmin=!!s.adminRole;
+  const adminPw=s.adminPw||'';
+  const isAdminDefault=(adminPw==='2525');
+  document.getElementById('pwm-info-personal').innerHTML='📱 個人画面PW: '+(isPersonalDefault?'<span style="color:#558B2F;">初期値（0000）</span>':'<span style="color:#0277BD;font-weight:600;">変更済み</span>');
+  document.getElementById('pwm-info-admin').innerHTML='⚙️ 管理画面: '+(hasAdmin?(isAdminDefault?'<span style="color:#558B2F;">初期値（2525）</span>':'<span style="color:#0277BD;font-weight:600;">変更済み</span>'):'<span style="color:var(--t2);">権限なし</span>');
+  info.style.display='block';
+  actions.style.display='block';
+}
+function resetPersonalPw(){
+  const sid=parseInt(document.getElementById('pwm-staff').value);
+  const s=DB.staff.find(x=>x.id===sid);
+  if(!s)return;
+  if(!confirm(s.name+' さんの個人画面PWを「0000」に初期化しますか？'))return;
+  s.pw='0000';
+  sDB();fbSaveStaff();
+  showToast(s.name+' さんの個人画面PWを初期化しました');
+  onPwmStaffChange();
+}
+function resetAdminPw(){
+  const sid=parseInt(document.getElementById('pwm-staff').value);
+  const s=DB.staff.find(x=>x.id===sid);
+  if(!s)return;
+  if(!s.adminRole){showToast('このスタッフは管理権限がありません');return;}
+  if(!confirm(s.name+' さんの管理画面PWを「2525」に初期化しますか？'))return;
+  s.adminPw='2525';
+  sDB();fbSaveStaff();
+  showToast(s.name+' さんの管理画面PWを初期化しました');
+  onPwmStaffChange();
+}
+
 function showAS(sub){
   // 管理画面の会社名更新
   const el=document.getElementById('admin-co-label');
@@ -1396,7 +1477,8 @@ function showAS(sub){
     const coName={koyokai:'香庸会',fulllife:'フルラフ',both:'両社'}[admin.company]||'';
     el.textContent=admin.name+(coName?'（'+coName+'）':'');
   }
-  ['staff','shift','rec','paid','lunch','special','log','report','data'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();}if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}}
+  ['staff','shift','rec','paid','lunch','special','log','report','data','pw'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();}
+  if(sub==='pw')initPwmStaffSelect();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}}
 
 // ═══ 打刻グリッド ═══
 function renderSG(){
@@ -2733,7 +2815,7 @@ function applyAdminPermissions(admin){
   // company: 自社のみ
   const isSuperAdmin = admin.role==='super';
   // 会社選択フィルタを設定
-  if(!isSuperAdmin){
+  if(!isSuperAdmin && admin.company !== 'both'){
     currentCoTab = admin.company;
     setCoTab(admin.company);
   }
@@ -2741,10 +2823,14 @@ function applyAdminPermissions(admin){
   const el=document.getElementById('admin-co-label');
   if(el){
     const coName={koyokai:'香庸会',fulllife:'フルラフ',both:'両社'}[admin.company]||'';
-    el.textContent=admin.name+'（'+coName+'）';
+    const roleName=isSuperAdmin?'スーパー管理者':'管理者';
+    el.textContent=admin.name+'（'+roleName+'・'+coName+'）';
   }
   // レポート出力を会社でフィルタ
-  window.adminCompanyFilter = isSuperAdmin ? null : admin.company;
+  window.adminCompanyFilter = (isSuperAdmin || admin.company === 'both') ? null : admin.company;
+  // PW管理タブはスーパー管理者のみ表示
+  const pwTab=document.getElementById('atab-pw');
+  if(pwTab)pwTab.style.display=isSuperAdmin?'':'none';
 }
 
 // レポート出力時に会社フィルタ適用
