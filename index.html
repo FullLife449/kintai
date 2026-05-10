@@ -227,6 +227,8 @@ console.log('Firebase initialized (compat)');
         <button onclick="switchCompany()" style="padding:8px 14px;border:1px solid var(--bl);border-radius:8px;background:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--bl);">会社を切替</button>
       </div>
     </div>
+    <!-- 打刻警告カード -->
+    <div id="punch-warnings-card" style="display:none;margin-bottom:8px;"></div>
     <div class="asc active" id="asc-staff">
       <div class="card"><div class="cl">スタッフ一覧</div><div class="sl2" id="asl"></div>
         <button class="ab" style="margin-top:10px;" onclick="openAdd()">＋ スタッフを追加</button>
@@ -462,6 +464,8 @@ console.log('Firebase initialized (compat)');
           <button id="pi-btn-out" onclick="piPunch('out')" style="flex:1;padding:14px;border:none;border-radius:10px;background:#E65100;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">⏹ 退勤</button>
         </div>
       </div>
+      <!-- 個人警告カード -->
+      <div id="pi-warnings-card" style="display:none;margin-bottom:9px;"></div>
       <!-- タブ -->
       <div style="display:flex;gap:4px;margin-bottom:9px;overflow-x:auto;padding-bottom:2px;">
         <button class="ptab active" id="pi-tab-log" onclick="showPITab('log')">打刻ログ</button>
@@ -1489,6 +1493,8 @@ function resetAdminPw(){
 }
 
 function showAS(sub){
+  // 警告も再描画
+  if(typeof renderPunchWarnings==='function')renderPunchWarnings();
   // 管理画面の会社名更新
   const el=document.getElementById('admin-co-label');
   if(el){
@@ -1550,7 +1556,104 @@ function tapS(sid){
   document.getElementById('pm').classList.remove('hidden');
 }
 function closePM(e){if(!e||e.target===document.getElementById('pm'))document.getElementById('pm').classList.add('hidden');}
-function doP(sid,action){const s=DB.staff.find(x=>x.id===sid);const n=new Date();DB.records.unshift({id:Date.now(),staffId:sid,staffName:s.name,company:CO,type:action,date:todayStr(),ts:nowStr(),tsISO:n.toISOString()});sDB();fbSaveRecords();document.getElementById('pm').classList.add('hidden');showToast(s.name+' — '+TL[action]);renderSG();}
+function doP(sid,action){
+  const s=DB.staff.find(x=>x.id===sid);
+  if(!s)return;
+  // 連続出勤・連続退勤の防止（in/out のみ）
+  if(action==='in'||action==='out'){
+    const recs=DB.records.filter(r=>r.staffId===sid&&r.date===todayStr()&&(r.type==='in'||r.type==='out')).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
+    const last=recs[recs.length-1];
+    if(last&&last.type===action){
+      // 同じタイプの連続は無視
+      const pm=document.getElementById('pm');
+      if(pm)pm.classList.add('hidden');
+      return;
+    }
+  }
+  const n=new Date();
+  DB.records.unshift({id:Date.now(),staffId:sid,staffName:s.name,company:s.company||CO,type:action,date:todayStr(),ts:nowStr(),tsISO:n.toISOString()});
+  sDB();fbSaveRecords();
+  const pm=document.getElementById('pm');
+  if(pm)pm.classList.add('hidden');
+  showToast(s.name+' — '+(TL[action]||action));
+  if(typeof renderSG==='function')renderSG();
+}
+// 打刻不完全な日を検出（過去30日）
+function detectPunchWarnings(){
+  const warnings=[];
+  const today=new Date();
+  const filter=window.adminCompanyFilter; // 一般管理者は自社のみ
+  // 過去30日
+  for(let d=0;d<30;d++){
+    const dt=new Date(today.getFullYear(),today.getMonth(),today.getDate()-d);
+    const dateStr=dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+    DB.staff.forEach(s=>{
+      if(filter&&s.company!==filter)return;
+      const recs=DB.records.filter(r=>r.staffId===s.id&&r.date===dateStr&&(r.type==='in'||r.type==='out'));
+      if(!recs.length)return; // その日打刻なし → 警告対象外
+      const ins=recs.filter(r=>r.type==='in').length;
+      const outs=recs.filter(r=>r.type==='out').length;
+      if(ins!==outs){
+        let msg='';
+        if(ins>outs)msg='退勤打刻なし';
+        else msg='出勤打刻なし';
+        warnings.push({sid:s.id,name:s.name,date:dateStr,msg,company:s.company});
+      }
+    });
+  }
+  return warnings.sort((a,b)=>a.date<b.date?1:-1);
+}
+
+// 警告カードを描画
+function renderPunchWarnings(){
+  const card=document.getElementById('punch-warnings-card');
+  if(!card)return;
+  const warnings=detectPunchWarnings();
+  if(!warnings.length){
+    card.style.display='none';
+    return;
+  }
+  card.style.display='block';
+  const items=warnings.map(w=>{
+    const coTag=w.company==='koyokai'?'香':'フ';
+    return `<div style="padding:6px 9px;border-bottom:1px solid #FFE0B2;font-size:11px;display:flex;justify-content:space-between;align-items:center;"><span><b>${w.sid}</b> ${w.name}（${coTag}） ${w.date}</span><span style="color:#C62828;font-weight:600;">${w.msg}</span></div>`;
+  }).join('');
+  card.innerHTML=`<div style="background:#FFF3E0;border:2px solid #FFB74D;border-radius:9px;padding:11px;"><div style="color:#E65100;font-weight:700;font-size:12px;margin-bottom:8px;">⚠️ 打刻不完全（要確認）<span style="font-size:10px;font-weight:normal;color:#5D4037;margin-left:6px;">${warnings.length}件</span></div>${items}</div>`;
+}
+
+// 個人画面用警告検出
+function detectPersonalPunchWarnings(sid){
+  const warnings=[];
+  const today=new Date();
+  for(let d=0;d<30;d++){
+    const dt=new Date(today.getFullYear(),today.getMonth(),today.getDate()-d);
+    const dateStr=dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+    const recs=DB.records.filter(r=>r.staffId===sid&&r.date===dateStr&&(r.type==='in'||r.type==='out'));
+    if(!recs.length)continue;
+    const ins=recs.filter(r=>r.type==='in').length;
+    const outs=recs.filter(r=>r.type==='out').length;
+    if(ins!==outs){
+      let msg=ins>outs?'退勤打刻なし':'出勤打刻なし';
+      warnings.push({date:dateStr,msg});
+    }
+  }
+  return warnings.sort((a,b)=>a.date<b.date?1:-1);
+}
+
+function renderPersonalPunchWarnings(){
+  const card=document.getElementById('pi-warnings-card');
+  if(!card||!piStaff)return;
+  const warnings=detectPersonalPunchWarnings(piStaff.id);
+  if(!warnings.length){
+    card.style.display='none';
+    return;
+  }
+  card.style.display='block';
+  const items=warnings.map(w=>`<div style="padding:5px 9px;border-bottom:1px solid #FFE0B2;font-size:11px;display:flex;justify-content:space-between;"><span>${w.date}</span><span style="color:#C62828;font-weight:600;">${w.msg}</span></div>`).join('');
+  card.innerHTML=`<div style="background:#FFF3E0;border:2px solid #FFB74D;border-radius:9px;padding:10px;"><div style="color:#E65100;font-weight:700;font-size:11px;margin-bottom:6px;">⚠️ 打刻不完全（管理者にご相談ください）</div>${items}</div>`;
+}
+
+
 function doFare(sid){const s=DB.staff.find(x=>x.id===sid);DB.fare.push({id:Date.now(),staffId:sid,staffName:s.name,company:CO,date:todayStr(),amount:s.fare});sDB();document.getElementById('pm').classList.add('hidden');showToast(s.name+' — 交通費申請（'+s.fare.toLocaleString()+'円）');renderSG();}
 function openPD(sid){pPaid=sid;document.getElementById('pd-dt').value=todayStr();document.getElementById('pd-tp').value='full';document.getElementById('pd-mo').value='';document.getElementById('pm').classList.add('hidden');document.getElementById('pdm').classList.remove('hidden');}
 function closePD(e){if(!e||e.target===document.getElementById('pdm'))document.getElementById('pdm').classList.add('hidden');}
@@ -2874,6 +2977,8 @@ function applyAdminPermissions(admin){
       }
     });
   }
+  // 警告チェック
+  if(typeof renderPunchWarnings==='function')setTimeout(renderPunchWarnings,200);
 }
 
 // レポート出力時に会社フィルタ適用
@@ -3230,10 +3335,18 @@ async function frClearFace(){
 // 個人画面からの打刻
 function piPunch(type){
   if(!piStaff){showToast('ログインしてください');return;}
+  // 連続出勤・連続退勤の検出
+  const recs=DB.records.filter(r=>r.staffId===piStaff.id&&r.date===todayStr()&&(r.type==='in'||r.type==='out')).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
+  const last=recs[recs.length-1];
+  if(last&&last.type===type){
+    showToast(type==='in'?'すでに出勤中です':'すでに退勤しています');
+    return;
+  }
   doP(piStaff.id,type);
   const lbl={in:'出勤',out:'退勤'};
   showToast(lbl[type]+' 打刻しました ✓');
   updatePiPunchUI();
+  renderPersonalPunchWarnings();
 }
 function updatePiPunchUI(){
   if(!piStaff)return;
@@ -3275,6 +3388,7 @@ function loginPersonalInline(){
   initPILogMonth();
   showPITab('log');
   if(typeof updatePiPunchUI==="function")updatePiPunchUI();
+  if(typeof renderPersonalPunchWarnings==="function")renderPersonalPunchWarnings();
 }
 
 function logoutPersonalInline(){
