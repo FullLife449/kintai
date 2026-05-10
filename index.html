@@ -1811,7 +1811,7 @@ function doExportInd(sid,ym){
 // ═══ スタッフ管理 ═══
 function renderAL(){
   const el=document.getElementById('asl');const tl={contract:'契約型',free:'フリー型',annual:'年俸型'};
-  const list=(window.adminCompanyFilter?DB.staff.filter(s=>s.company===window.adminCompanyFilter):DB.staff);
+  const list=DB.staff.filter(s=>s.company===CO);
   if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:12px;padding:14px;text-align:center;">スタッフが登録されていません</div>';return;}
   el.innerHTML=list.map(s=>{
     let ss='';if(s.type==='contract'&&s.dowShifts){const wds=['mon','tue','wed','thu','fri'];const wdA=wds.map(d=>(s.dowShifts[d]||[]).map(sh=>sh.s+'〜'+sh.e).join(',')).filter(Boolean);const uniq=[...new Set(wdA)];if(uniq.length===1)ss='<br><b>平日:</b> '+uniq[0];else if(uniq.length>1)ss='<br><b>平日:</b> 曜日別設定あり';if(s.dowShifts.sat){const sa=Object.entries(s.dowShifts.sat).filter(([_,v])=>v&&v.length>0);if(sa.length)ss+='<br><b>土曜:</b> 第'+sa.map(([k,v])=>k+'('+v.map(x=>x.s+'〜'+x.e).join(')')).join(' 第');}}
