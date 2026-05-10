@@ -827,6 +827,8 @@ let currentCompany = localStorage.getItem('kintai_company') || '';
 
 function selectCompany(co) {
   currentCompany = co;
+  CO = co; // 表示用変数も更新
+  currentCoTab = co;
   localStorage.setItem('kintai_company', co);
   // ヘッダー更新
   const info = COMPANIES[co] || {};
@@ -841,6 +843,11 @@ function selectCompany(co) {
   if(!document.querySelector('.pg.active')){showPg('punch');}
   // Firebaseから最新データを読み込む
   fbLoadAndSync(co);
+  // 各画面を再描画
+  if(typeof renderSG==='function')renderSG();
+  if(typeof renderAL==='function')renderAL();
+  // 顔認証モードの場合、自動起動
+  setTimeout(autoStartFacePunch,800);
 }
 
 // Firebase: データ読み込み＋リアルタイム監視
