@@ -2996,8 +2996,8 @@ async function startFullscreenFaceAuth(){
         if(document.getElementById('pg-punch').classList.contains('active')){
           startFullscreenFaceAuth();
         }
-      },2000);
-    },800);
+      },1000);
+    },500);
   },(err)=>{
     statusEl.textContent='エラー: '+err;
   });
@@ -3084,7 +3084,7 @@ async function startFaceRecognitionLoop(videoElId,onMatch,onError){
       if(best.label!=='unknown'){
         const sid=parseInt(best.label);
         const now=Date.now();
-        if(lastMatchSid===sid&&now-lastMatchAt>1500){
+        if(lastMatchSid===sid&&now-lastMatchAt>1000){
           stopFaceRecognitionLoop();
           onMatch(sid,best.distance);
         }else if(lastMatchSid!==sid){
@@ -3092,7 +3092,7 @@ async function startFaceRecognitionLoop(videoElId,onMatch,onError){
         }
       }else{lastMatchSid=null;}
     }catch(e){console.error('Recog:',e);}
-  },500);
+  },300);
 }
 function stopFaceRecognitionLoop(){
   faceRecognitionActive=false;
@@ -3130,7 +3130,7 @@ async function openFacePunchModal(){
       const actL={in:'出勤',break:'休憩',resume:'再開',out:'退勤'};
       showToast(staff.name+' さん '+actL[actType]+' 打刻完了 ✓');
       // 連続打刻のため再度顔認証起動
-      if(punchMode==='face'){setTimeout(()=>openFacePunchModal(),1500);}
+      if(punchMode==='face'){setTimeout(()=>openFacePunchModal(),1000);}
     },800);
   },(err)=>{
     document.getElementById('fp-status').textContent='エラー: '+err;
