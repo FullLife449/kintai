@@ -816,7 +816,7 @@ const JP_HOL=new Set(['2024-01-01','2024-01-08','2024-02-11','2024-02-12','2024-
 function isHoliday(d){return JP_HOL.has(d);}
 function isLegalHoliday(d){return new Date(d).getDay()===0||isHoliday(d);}
 
-const CO='koyokai'; // 後方互換用
+let CO='koyokai'; // 後方互換用
 
 // ═══ Firebase設定 ═══
 const COMPANIES = {
