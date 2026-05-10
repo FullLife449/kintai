@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -190,8 +190,7 @@ console.log('Firebase initialized (compat)');
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">β v1.0</div></div>
   </div>
   <div class="bnav">
-    <button class="nb active" id="bn-punch" onclick="showPg('punch')"><span class="ni">👆</span>打刻</button>
-    <button class="nb" id="bn-personal" onclick="showPg('personal')"><span class="ni">👤</span>個人</button>
+    <button class="nb active" id="bn-personal" onclick="showPg('personal')"><span class="ni">👤</span>個人</button>
     <button class="nb" id="bn-admin" onclick="checkAdminPw()"><span class="ni">⚙️</span>管理</button>
   </div>
   <div id="pg-punch" class="pg active"><div class="pad">
@@ -839,8 +838,8 @@ function selectCompany(co) {
   // 起動画面を隠してメイン表示
   document.getElementById('cs').style.display = 'none';
   document.getElementById('ms').style.display = 'flex';
-  // 初回のみpunchを表示、その後はナビで切り替え
-  if(!document.querySelector('.pg.active')){showPg('punch');}
+  // 初回のみpersonalを表示
+  if(!document.querySelector('.pg.active')){showPg('personal');}
   // Firebaseから最新データを読み込む
   fbLoadAndSync(co);
   // 各画面を再描画
@@ -1388,17 +1387,14 @@ function stLbl(s){return{none:'未出勤',in:'勤務中',out:'退勤済',break:'
 // ═══ 起動・ページ ═══
 function start(){document.getElementById('cs').style.display='none';document.getElementById('ms').style.display='flex';showPg('punch');}
 function autoStart(){
-  // 会社が選択済みなら自動起動
-  if(currentCompany && COMPANIES[currentCompany]){
-    selectCompany(currentCompany);
-  } else if(DB.staff&&DB.staff.length>0){
-    // 旧バージョン互換：koyokaiとして起動
-    selectCompany('koyokai');
-  }
+  // 会社選択画面はスキップ - デフォルトで香庸会として起動
+  // 個人画面ログイン時にスタッフの会社で自動切替
+  if(!currentCompany)currentCompany='koyokai';
+  selectCompany(currentCompany);
 }
 function showPg(p){
   // 全pgを非表示
-  ['punch','personal','admin'].forEach(n=>{
+  ['personal','admin','punch'].forEach(n=>{
     const pgEl=document.getElementById('pg-'+n);
     if(pgEl){pgEl.classList.remove('active');pgEl.style.display='';}
     const bnEl=document.getElementById('bn-'+n);
