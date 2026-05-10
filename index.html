@@ -2546,7 +2546,7 @@ function switchCompany(){
     showToast('一般管理者は会社を切り替えられません');
     return;
   }
-  if(!confirm('会社を切り替えます。現在の画面は閉じられます。よろしいですか？'))return;
+  // 確認なしで即座に会社選択画面へ
   currentCompany='';
   localStorage.removeItem('kintai_company');
   document.getElementById('ms').style.display='none';
