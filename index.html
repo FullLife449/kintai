@@ -193,22 +193,19 @@ console.log('Firebase initialized (compat)');
     <button class="nb active" id="bn-personal" onclick="showPg('personal')"><span class="ni">👤</span>個人</button>
     <button class="nb" id="bn-admin" onclick="checkAdminPw()"><span class="ni">⚙️</span>管理</button>
   </div>
-  <div id="pg-punch" class="pg active"><div class="pad">
-  <!-- 会社タブ＋スタッフ一覧（最初から表示） -->
-  <div style="display:flex;justify-content:flex-end;margin-bottom:9px;">
-    <button id="punch-mode-toggle" onclick="togglePunchMode()" style="padding:7px 14px;background:#fff;border:1px solid var(--br);border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--t2);">👤 手動打刻に切替</button>
-  </div>
-  <div class="card" style="padding:0;overflow:hidden;">
-    <div style="display:flex;border-bottom:1px solid var(--br);">
-      <button id="co-tab-koyokai" onclick="setCoTab('koyokai')" style="flex:1;padding:10px;border:none;background:var(--nv);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">香庸会</button>
-      <button id="co-tab-fulllife" onclick="setCoTab('fulllife')" style="flex:1;padding:10px;border:none;background:#fff;color:var(--t2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border-left:1px solid var(--br);">フルラフ</button>
+  <div id="pg-punch" class="pg active">
+  <!-- 顔認証フルスクリーン -->
+  <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;">
+    <div id="fp-status-fs" style="position:absolute;top:80px;left:0;right:0;text-align:center;color:#fff;font-size:14px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,0.7);">準備中...</div>
+    <div style="width:90%;max-width:480px;aspect-ratio:4/3;background:#000;border-radius:14px;overflow:hidden;position:relative;border:2px solid rgba(255,255,255,0.2);">
+      <video id="fp-video-fs" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60%;aspect-ratio:1;border:3px solid rgba(255,255,255,0.5);border-radius:50%;pointer-events:none;"></div>
     </div>
-    <div style="padding:11px;">
-      <div class="cl" id="dlbl" style="margin-bottom:8px;"></div>
-      <div class="sg" id="sg"></div>
-    </div>
+    <div id="fp-result-fs" style="position:absolute;bottom:120px;left:0;right:0;text-align:center;color:#fff;font-size:13px;"></div>
+    <button onclick="goToPersonalLogin()" style="position:absolute;bottom:30px;right:20px;padding:11px 22px;border:1px solid rgba(255,255,255,0.4);border-radius:9px;background:rgba(255,255,255,0.1);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;backdrop-filter:blur(4px);">👤 個人画面へ</button>
   </div>
-</div></div><div id="pg-admin" class="pg"><div class="ats">
+</div>
+<div id="pg-admin" class="pg"><div class="ats">
       <button class="at active" id="atab-staff" onclick="showAS('staff')">スタッフ</button>
       <button class="at" id="atab-shift" onclick="showAS('shift')">日次シフト</button>
       <button class="at" id="atab-rec" onclick="showAS('rec')">打刻修正</button>
@@ -454,6 +451,14 @@ console.log('Firebase initialized (compat)');
             <div style="font-size:10px;color:var(--t2);" id="pi-co"></div>
           </div>
           <button onclick="logoutPersonalInline()" style="padding:5px 10px;border:1px solid var(--br);border-radius:7px;background:#fff;font-size:11px;cursor:pointer;font-family:inherit;">ログアウト</button>
+        </div>
+      </div>
+      <!-- 打刻ボタン -->
+      <div class="card" id="pi-punch-card" style="padding:11px;background:linear-gradient(135deg,#1a1a2e,#0C447C);border:none;">
+        <div style="text-align:center;color:#fff;font-size:11px;margin-bottom:9px;">本日の打刻 <span id="pi-punch-status" style="font-weight:700;"></span></div>
+        <div style="display:flex;gap:9px;">
+          <button id="pi-btn-in" onclick="piPunch('in')" style="flex:1;padding:14px;border:none;border-radius:10px;background:#4CAF50;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">▶ 出勤</button>
+          <button id="pi-btn-out" onclick="piPunch('out')" style="flex:1;padding:14px;border:none;border-radius:10px;background:#E65100;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">⏹ 退勤</button>
         </div>
       </div>
       <!-- タブ -->
@@ -838,8 +843,8 @@ function selectCompany(co) {
   // 起動画面を隠してメイン表示
   document.getElementById('cs').style.display = 'none';
   document.getElementById('ms').style.display = 'flex';
-  // 初回のみpersonalを表示
-  if(!document.querySelector('.pg.active')){showPg('personal');}
+  // 初回のみpunch（顔認証）を表示
+  if(!document.querySelector('.pg.active')){showPg('punch');}
   // Firebaseから最新データを読み込む
   fbLoadAndSync(co);
   // 各画面を再描画
@@ -1393,6 +1398,12 @@ function autoStart(){
   selectCompany(currentCompany);
 }
 function showPg(p){
+  // punchから離れる時はカメラ停止
+  const cur=document.querySelector('.pg.active');
+  if(cur&&cur.id==='pg-punch'&&p!=='punch'){
+    if(typeof stopFaceRecognitionLoop==='function')stopFaceRecognitionLoop();
+    if(typeof stopFaceCamera==='function')stopFaceCamera();
+  }
   // 全pgを非表示
   ['personal','admin','punch'].forEach(n=>{
     const pgEl=document.getElementById('pg-'+n);
@@ -1405,7 +1416,7 @@ function showPg(p){
   if(target){target.classList.add('active');}
   // 各ページ初期化
   window.scrollTo(0,0);
-  if(p==='punch'){renderSG();autoStartFacePunch();}
+  if(p==='punch'){startFullscreenFaceAuth();}
   if(p==='log'){renderLog();initLogYM();}
   if(p==='report'){initMS();renderRep();updIS();}
   if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}
@@ -2938,11 +2949,60 @@ function togglePunchMode(){
 
 // 打刻画面を開いた時に自動的に顔認証起動
 function autoStartFacePunch(){
-  if(punchMode==='face'&&document.getElementById('pg-punch')&&document.getElementById('pg-punch').classList.contains('active')){
-    // 顔登録済みのスタッフが1人以上いる場合のみ自動起動
-    const hasFaces=DB.staff.some(s=>s.faceDescriptor&&s.faceDescriptor.length===128);
-    if(hasFaces)setTimeout(()=>openFacePunchModal(),300);
+  // 打刻画面（フルスクリーン顔認証）が表示中なら起動
+  const punchPg=document.getElementById('pg-punch');
+  if(punchPg&&punchPg.classList.contains('active')){
+    startFullscreenFaceAuth();
   }
+}
+
+// フルスクリーン顔認証を起動
+async function startFullscreenFaceAuth(){
+  const statusEl=document.getElementById('fp-status-fs');
+  const resultEl=document.getElementById('fp-result-fs');
+  if(!statusEl||!resultEl)return;
+  statusEl.textContent='カメラ起動中...';
+  resultEl.innerHTML='';
+  
+  const ok=await startFaceCamera('fp-video-fs');
+  if(!ok){statusEl.textContent='カメラ起動失敗';return;}
+  
+  statusEl.textContent='顔を画面中央に向けてください...';
+  
+  startFaceRecognitionLoop('fp-video-fs',async(sid,distance)=>{
+    const staff=DB.staff.find(s=>s.id===sid);
+    if(!staff){statusEl.textContent='不明なスタッフ';return;}
+    statusEl.textContent='✓ '+staff.name+' さんを検出';
+    resultEl.innerHTML='<div style="background:rgba(46,125,50,0.9);padding:11px 22px;border-radius:9px;display:inline-block;color:#fff;"><div style="font-size:14px;font-weight:700;">'+staff.name+' さん</div><div style="font-size:10px;margin-top:4px;opacity:0.8;">類似度: '+Math.round((1-distance)*100)+'%</div></div>';
+    
+    setTimeout(()=>{
+      const recs=DB.records.filter(r=>r.staffId===sid&&r.date===todayStr()).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
+      const last=recs[recs.length-1];
+      // 出勤・退勤のみ判定（休憩・再開は廃止）
+      let actType='in';
+      if(!last)actType='in';
+      else if(last.type==='in'||last.type==='resume')actType='out';
+      else if(last.type==='out')actType='in';
+      doP(sid,actType);
+      const actL={in:'出勤',out:'退勤'};
+      statusEl.textContent='✓ '+staff.name+' さん '+actL[actType]+' 完了';
+      // 連続打刻のため再起動
+      setTimeout(()=>{
+        if(document.getElementById('pg-punch').classList.contains('active')){
+          startFullscreenFaceAuth();
+        }
+      },2000);
+    },800);
+  },(err)=>{
+    statusEl.textContent='エラー: '+err;
+  });
+}
+
+// 個人画面へ遷移
+function goToPersonalLogin(){
+  stopFaceRecognitionLoop();
+  stopFaceCamera();
+  showPg('personal');
 }
 
 
@@ -3161,6 +3221,36 @@ async function frClearFace(){
 }
 
 
+
+// 個人画面からの打刻
+function piPunch(type){
+  if(!piStaff){showToast('ログインしてください');return;}
+  doP(piStaff.id,type);
+  const lbl={in:'出勤',out:'退勤'};
+  showToast(lbl[type]+' 打刻しました ✓');
+  updatePiPunchUI();
+}
+function updatePiPunchUI(){
+  if(!piStaff)return;
+  const recs=DB.records.filter(r=>r.staffId===piStaff.id&&r.date===todayStr()).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
+  const last=recs[recs.length-1];
+  const inBtn=document.getElementById('pi-btn-in');
+  const outBtn=document.getElementById('pi-btn-out');
+  const statusEl=document.getElementById('pi-punch-status');
+  if(!inBtn||!outBtn||!statusEl)return;
+  let status='未出勤';
+  let canIn=true,canOut=false;
+  if(last){
+    if(last.type==='in'||last.type==='resume'){status='勤務中（'+last.ts.substring(0,5)+'〜）';canIn=false;canOut=true;}
+    else if(last.type==='out'){status='退勤済（最終: '+last.ts.substring(0,5)+'）';canIn=true;canOut=false;}
+  }
+  statusEl.textContent=status;
+  inBtn.style.opacity=canIn?'1':'0.4';
+  inBtn.disabled=!canIn;
+  outBtn.style.opacity=canOut?'1':'0.4';
+  outBtn.disabled=!canOut;
+}
+
 function loginPersonalInline(){
   const eid=document.getElementById('pi-id').value.trim();
   const pw=document.getElementById('pi-pw').value;
@@ -3179,6 +3269,7 @@ function loginPersonalInline(){
   ['pi-paid-date','pi-fare-date','pi-lunch-date','pi-expense-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
   initPILogMonth();
   showPITab('log');
+  if(typeof updatePiPunchUI==="function")updatePiPunchUI();
 }
 
 function logoutPersonalInline(){
