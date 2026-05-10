@@ -190,6 +190,7 @@ console.log('Firebase initialized (compat)');
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">β v1.0</div></div>
   </div>
   <div class="bnav">
+    <button class="nb" id="bn-punch" onclick="showPg('punch')"><span class="ni">📷</span>打刻</button>
     <button class="nb active" id="bn-personal" onclick="showPg('personal')"><span class="ni">👤</span>個人</button>
     <button class="nb" id="bn-admin" onclick="checkAdminPw()"><span class="ni">⚙️</span>管理</button>
   </div>
@@ -1500,11 +1501,15 @@ function showAS(sub){
 
 // ═══ 打刻グリッド ═══
 function renderSG(){
+  // dlbl/sg要素が存在しない（打刻画面廃止後）なら何もしない
+  const dlblEl=document.getElementById('dlbl');
+  const sgEl=document.getElementById('sg');
+  if(!dlblEl||!sgEl)return;
   const t=todayStr();const dw=new Date();const days=['日','月','火','水','木','金','土'];
   const isLeg=isLegalHoliday(t);
   let lbl=dw.getFullYear()+'年'+(dw.getMonth()+1)+'月'+dw.getDate()+'日（'+days[dw.getDay()]+'）';
   if(isLeg)lbl+=' 🔴法定休日';
-  document.getElementById('dlbl').textContent=lbl;
+  dlblEl.textContent=lbl;
   const list=DB.staff.filter(s=>s.company===(currentCoTab||'koyokai'));
   // 動作選択時のタイトル更新
   const dlbl=document.getElementById('dlbl');
