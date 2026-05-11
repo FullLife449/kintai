@@ -3552,7 +3552,11 @@ function submitPIRequest(type){
     const dup=DB.expenses.find(e=>e.staffId===piStaff.id&&e.date===date&&e.amount===amount&&(e.memo||'')===memo);
     if(dup){showToast('同じ経費が既に登録されています');return;}
     DB.expenses.push({staffId:piStaff.id,date,amount,memo,staffName:piStaff.name,company:piStaff.company});
-    sDB();fbSaveSettings();showToast('経費を申請しました ✓');
+    sDB();
+    // 一覧を即座に更新（Firebase同期前）
+    renderPIList('expense');
+    showToast('経費を申請しました ✓');
+    // 入力フィールドクリア
     document.getElementById('pi-expense-amount').value='';
     document.getElementById('pi-expense-memo').value='';
     // チェックボックスをリセット
@@ -3561,7 +3565,8 @@ function submitPIRequest(type){
     const btn=document.getElementById('pi-exp-submit-btn');
     if(box){box.innerHTML='';box.style.borderColor='var(--br)';}
     if(btn){btn.disabled=true;btn.style.opacity='0.4';btn.style.cursor='not-allowed';}
-    renderPIList('expense');
+    // Firebaseに保存（非同期、結果は気にしない）
+    fbSaveSettings();
     return;
   }
   if(type==='paid'){
@@ -3570,7 +3575,10 @@ function submitPIRequest(type){
     if(!date)return;
     DB.paid=DB.paid.filter(p=>!(p.staffId===piStaff.id&&p.date===date));
     DB.paid.push({staffId:piStaff.id,date,type:t,staffName:piStaff.name});
-    sDB();fbSaveSettings();showToast('有給を申請しました ✓');renderPIList('paid');
+    sDB();
+    renderPIList('paid');
+    showToast('有給を申請しました ✓');
+    fbSaveSettings();
   } else if(type==='fare'){
     const date=document.getElementById('pi-fare-date').value;
     const amount=parseInt(document.getElementById('pi-fare-amount').value)||0;
@@ -3580,10 +3588,13 @@ function submitPIRequest(type){
     const dupFare=DB.fare.find(f=>f.staffId===piStaff.id&&f.date===date&&f.amount===amount);
     if(dupFare){showToast('同じ交通費が既に登録されています');return;}
     DB.fare.push({staffId:piStaff.id,date,amount,memo,staffName:piStaff.name,company:piStaff.company});
-    sDB();fbSaveSettings();showToast('交通費を申請しました ✓');
+    sDB();
+    // 一覧を即座に更新
+    renderPIList('fare');
+    showToast('交通費を申請しました ✓');
     document.getElementById('pi-fare-amount').value='';
     document.getElementById('pi-fare-memo').value='';
-    renderPIList('fare');
+    fbSaveSettings();
   }
 }
 
