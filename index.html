@@ -966,7 +966,21 @@ function fmtHM(ms){if(!ms||ms<=0)return'';const m=Math.floor(ms/60000);return Ma
 function fmtMin(min){if(!min||min<=0)return'';return Math.floor(min/60)>0?Math.floor(min/60)+'時間'+((min%60)>0?(min%60)+'分':''):(min%60)+'分';}
 function parseHM(s){if(!s||s==='-')return null;const[h,m]=s.split(':').map(Number);return h*60+m;}
 function ini(n){return(n||'?').charAt(0);}
-function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2700);}
+function showToast(m){
+  const t=document.getElementById('toast');
+  if(!t)return;
+  t.textContent=m;
+  t.classList.add('show');
+  // 直接スタイル指定で確実に表示
+  t.style.opacity='1';
+  t.style.transform='translateX(-50%) translateY(0)';
+  clearTimeout(t._t);
+  t._t=setTimeout(()=>{
+    t.classList.remove('show');
+    t.style.opacity='0';
+    t.style.transform='translateX(-50%) translateY(60px)';
+  },2700);
+}
 function makeTimeOpts(sel=''){
   let h='<option value="">-</option>';
   for(let i=8;i<=20;i++)for(let j=0;j<60;j+=15){
@@ -3534,6 +3548,9 @@ function submitPIRequest(type){
     const memo=document.getElementById('pi-expense-memo').value.trim();
     if(!date||!amount){showToast('日付と金額を入力してください');return;}
     if(!DB.expenses)DB.expenses=[];
+    // 重複チェック: 同じ日付・金額・内容
+    const dup=DB.expenses.find(e=>e.staffId===piStaff.id&&e.date===date&&e.amount===amount&&(e.memo||'')===memo);
+    if(dup){showToast('同じ経費が既に登録されています');return;}
     DB.expenses.push({staffId:piStaff.id,date,amount,memo,staffName:piStaff.name,company:piStaff.company});
     sDB();fbSaveSettings();showToast('経費を申請しました ✓');
     document.getElementById('pi-expense-amount').value='';
@@ -3559,7 +3576,9 @@ function submitPIRequest(type){
     const amount=parseInt(document.getElementById('pi-fare-amount').value)||0;
     const memo=document.getElementById('pi-fare-memo').value.trim();
     if(!date||!amount){showToast('日付と金額を入力してください');return;}
-    DB.fare=DB.fare.filter(f=>!(f.staffId===piStaff.id&&f.date===date));
+    // 重複チェック: 同じ日付・金額
+    const dupFare=DB.fare.find(f=>f.staffId===piStaff.id&&f.date===date&&f.amount===amount);
+    if(dupFare){showToast('同じ交通費が既に登録されています');return;}
     DB.fare.push({staffId:piStaff.id,date,amount,memo,staffName:piStaff.name,company:piStaff.company});
     sDB();fbSaveSettings();showToast('交通費を申請しました ✓');
     document.getElementById('pi-fare-amount').value='';
