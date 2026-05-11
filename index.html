@@ -3186,7 +3186,7 @@ async function startFaceRecognitionLoop(videoElId,onMatch,onError){
         }
       }else{lastMatchSid=null;}
     }catch(e){console.error('Recog:',e);}
-  },400);
+  },600);
 }
 function stopFaceRecognitionLoop(){
   faceRecognitionActive=false;
