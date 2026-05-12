@@ -200,7 +200,7 @@ console.log('Firebase initialized (compat)');
     <div id="fp-status-fs" style="position:absolute;top:80px;left:0;right:0;text-align:center;color:#fff;font-size:14px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,0.7);">準備中...</div>
     <div style="width:90%;max-width:480px;aspect-ratio:4/3;background:#000;border-radius:14px;overflow:hidden;position:relative;border:2px solid rgba(255,255,255,0.2);">
       <video id="fp-video-fs" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
-      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60%;aspect-ratio:1;border:3px solid rgba(255,255,255,0.5);border-radius:50%;pointer-events:none;"></div>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;aspect-ratio:1;border:3px solid rgba(255,255,255,0.5);border-radius:50%;pointer-events:none;"></div>
     </div>
     <div id="fp-result-fs" style="position:absolute;bottom:120px;left:0;right:0;text-align:center;color:#fff;font-size:13px;"></div>
     <button onclick="goToPersonalLogin()" style="position:absolute;bottom:30px;right:20px;padding:11px 22px;border:1px solid rgba(255,255,255,0.4);border-radius:9px;background:rgba(255,255,255,0.1);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;backdrop-filter:blur(4px);">👤 個人画面へ</button>
@@ -3163,7 +3163,7 @@ async function startFaceRecognitionLoop(videoElId,onMatch,onError){
   if(!video){onError&&onError('カメラ未起動');return;}
   
   const labeled=faceDescriptors.map(f=>new faceapi.LabeledFaceDescriptors(String(f.staffId),[f.descriptor]));
-  const matcher=new faceapi.FaceMatcher(labeled,0.6);
+  const matcher=new faceapi.FaceMatcher(labeled,0.45);
   
   faceRecognitionActive=true;
   let lastMatchSid=null;
@@ -3647,7 +3647,7 @@ lDB();autoStart();setInterval(tick,30000);tick();
     <div id="fp-status" style="font-size:12px;color:var(--t2);margin-bottom:9px;text-align:center;">準備中...</div>
     <div style="background:#000;border-radius:9px;overflow:hidden;position:relative;aspect-ratio:4/3;">
       <video id="fp-video" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
-      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60%;aspect-ratio:1;border:3px solid rgba(255,255,255,0.5);border-radius:50%;pointer-events:none;"></div>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;aspect-ratio:1;border:3px solid rgba(255,255,255,0.5);border-radius:50%;pointer-events:none;"></div>
     </div>
     <div id="fp-result"></div>
     <button onclick="closeFacePunchModal(true)" style="width:100%;margin-top:10px;padding:10px;background:#fff;border:1px solid var(--br);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;">キャンセル</button>
