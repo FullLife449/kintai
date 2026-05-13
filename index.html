@@ -3163,7 +3163,7 @@ async function startFaceRecognitionLoop(videoElId,onMatch,onError){
   if(!video){onError&&onError('カメラ未起動');return;}
   
   const labeled=faceDescriptors.map(f=>new faceapi.LabeledFaceDescriptors(String(f.staffId),[f.descriptor]));
-  const matcher=new faceapi.FaceMatcher(labeled,0.45);
+  const matcher=new faceapi.FaceMatcher(labeled,0.35);
   
   faceRecognitionActive=true;
   let lastMatchSid=null;
