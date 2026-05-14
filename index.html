@@ -194,18 +194,23 @@ console.log('Firebase initialized (compat)');
     <button class="nb active" id="bn-personal" onclick="showPg('personal')"><span class="ni">👤</span>個人</button>
     <button class="nb" id="bn-admin" onclick="checkAdminPw()"><span class="ni">⚙️</span>管理</button>
   </div>
-  <div id="pg-punch" class="pg active">
-  <!-- 顔認証フルスクリーン -->
-  <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;">
-    <div id="fp-status-fs" style="position:absolute;top:80px;left:0;right:0;text-align:center;color:#fff;font-size:14px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,0.7);">準備中...</div>
-    <div style="width:90%;max-width:480px;aspect-ratio:4/3;background:#000;border-radius:14px;overflow:hidden;position:relative;border:2px solid rgba(255,255,255,0.2);">
-      <video id="fp-video-fs" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
-      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;aspect-ratio:1;border:3px solid rgba(255,255,255,0.5);border-radius:50%;pointer-events:none;"></div>
-    </div>
-    <div id="fp-result-fs" style="position:absolute;bottom:120px;left:0;right:0;text-align:center;color:#fff;font-size:13px;"></div>
-    <button onclick="goToPersonalLogin()" style="position:absolute;bottom:30px;right:20px;padding:11px 22px;border:1px solid rgba(255,255,255,0.4);border-radius:9px;background:rgba(255,255,255,0.1);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;backdrop-filter:blur(4px);">👤 個人画面へ</button>
+  <div id="pg-punch" class="pg active"><div class="pad">
+  <!-- 打刻結果フラッシュ表示 -->
+  <div id="punch-flash" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:1000;align-items:center;justify-content:center;flex-direction:column;">
+    <div id="punch-flash-action" style="font-size:80px;font-weight:900;color:#4CAF50;text-align:center;margin-bottom:20px;"></div>
+    <div id="punch-flash-name" style="font-size:36px;font-weight:700;color:#fff;text-align:center;"></div>
+    <div id="punch-flash-id" style="font-size:18px;color:rgba(255,255,255,0.7);text-align:center;margin-top:8px;"></div>
   </div>
-</div>
+  
+  <!-- ヘッダー -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;">
+    <div style="font-size:13px;font-weight:700;color:var(--nv);">名前をタップして打刻</div>
+    <div style="font-size:10px;color:var(--t2);" id="punch-today-label"></div>
+  </div>
+  
+  <!-- スタッフグリッド -->
+  <div id="punch-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;"></div>
+</div></div>
 <div id="pg-admin" class="pg"><div class="ats">
       <button class="at active" id="atab-staff" onclick="showAS('staff')">スタッフ</button>
       <button class="at" id="atab-shift" onclick="showAS('shift')">日次シフト</button>
@@ -215,7 +220,7 @@ console.log('Firebase initialized (compat)');
       <button class="at" id="atab-special" onclick="showAS('special')">特別枠</button>
       <button class="at" id="atab-log" onclick="showAS('log')">ログ</button>
       <button class="at" id="atab-report" onclick="showAS('report')">レポート</button>
-      <button class="at" id="atab-data" onclick="showAS('data')">データ移行</button><button class="at" id="atab-pw" onclick="showAS('pw')">PW管理</button>
+      <button class="at" id="atab-data" onclick="showAS('data')">データ移行</button><button class="at" id="atab-pw" onclick="showAS('pw')">PW管理</button><button class="at" id="atab-devset" onclick="showAS('devset')">端末表示設定</button>
     </div>
     <div class="pad">
     <div class="card" style="margin-bottom:8px;background:var(--bll);border:1px solid var(--bl);">
@@ -368,6 +373,29 @@ console.log('Firebase initialized (compat)');
         </div>
       </div>
     </div>
+    <div class="asc" id="asc-devset">
+      <div class="card" style="border:2px solid #FFB74D;background:#FFF3E0;">
+        <div class="cl" style="color:#E65100;">📱 端末表示設定</div>
+        <div class="fs2" style="color:#5D4037;">この端末の打刻画面に表示するスタッフを設定します（端末ごとに記憶）</div>
+        <div class="frw">
+          <label class="fl">表示モード</label>
+          <select class="fi" id="devset-mode" onchange="onDevsetModeChange()">
+            <option value="all">全員表示</option>
+            <option value="koyokai">香庸会のみ</option>
+            <option value="fulllife">フルラフのみ</option>
+            <option value="custom">特定スタッフのみ</option>
+          </select>
+        </div>
+        <div id="devset-custom-area" style="display:none;margin-top:10px;padding:11px;background:#fff;border-radius:8px;max-height:340px;overflow-y:auto;">
+          <div style="font-size:11px;color:var(--t2);margin-bottom:8px;">表示するスタッフにチェックを入れてください</div>
+          <div id="devset-staff-list"></div>
+        </div>
+        <button class="fb" style="width:100%;margin-top:10px;" onclick="saveDevset()">💾 この端末に保存</button>
+        <button class="bn" style="width:100%;margin-top:6px;" onclick="clearDevset()">リセット（全員表示に戻す）</button>
+        <div style="font-size:10px;color:var(--t2);margin-top:8px;padding:8px;background:#FFFDE7;border-radius:7px;">※この設定はこの端末のみ有効です。他の端末には影響しません。</div>
+      </div>
+    </div>
+    
     
     <div class="asc" id="asc-log">
       <div class="pad"><div class="card">
@@ -445,14 +473,7 @@ console.log('Firebase initialized (compat)');
           <button onclick="logoutPersonalInline()" style="padding:5px 10px;border:1px solid var(--br);border-radius:7px;background:#fff;font-size:11px;cursor:pointer;font-family:inherit;">ログアウト</button>
         </div>
       </div>
-      <!-- 打刻ボタン -->
-      <div class="card" id="pi-punch-card" style="padding:11px;background:linear-gradient(135deg,#1a1a2e,#0C447C);border:none;">
-        <div style="text-align:center;color:#fff;font-size:11px;margin-bottom:9px;">本日の打刻 <span id="pi-punch-status" style="font-weight:700;"></span></div>
-        <div style="display:flex;gap:9px;">
-          <button id="pi-btn-in" onclick="piPunch('in')" style="flex:1;padding:14px;border:none;border-radius:10px;background:#4CAF50;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">▶ 出勤</button>
-          <button id="pi-btn-out" onclick="piPunch('out')" style="flex:1;padding:14px;border:none;border-radius:10px;background:#E65100;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">⏹ 退勤</button>
-        </div>
-      </div>
+      
       <!-- 個人警告カード -->
       <div id="pi-warnings-card" style="display:none;margin-bottom:9px;"></div>
       <!-- タブ -->
@@ -1413,6 +1434,87 @@ function autoStart(){
   if(!currentCompany)currentCompany='koyokai';
   selectCompany(currentCompany);
 }
+
+// ═══ 名前タップ式打刻 ═══
+function renderPunchGrid(){
+  const grid=document.getElementById('punch-grid');
+  if(!grid)return;
+  // 表示フィルタを取得（端末別）
+  const filterStr=localStorage.getItem('kintai_punch_filter');
+  let displayStaff=DB.staff.slice();
+  if(filterStr){
+    try{
+      const f=JSON.parse(filterStr);
+      if(f.mode==='koyokai')displayStaff=displayStaff.filter(s=>s.company==='koyokai');
+      else if(f.mode==='fulllife')displayStaff=displayStaff.filter(s=>s.company==='fulllife');
+      else if(f.mode==='custom'&&f.ids&&f.ids.length){
+        displayStaff=displayStaff.filter(s=>f.ids.includes(s.id));
+      }
+    }catch(e){}
+  }
+  // 社員番号順
+  displayStaff.sort((a,b)=>a.id-b.id);
+  // 本日のラベル
+  const dw=new Date();const days=['日','月','火','水','木','金','土'];
+  const lbl=document.getElementById('punch-today-label');
+  if(lbl)lbl.textContent=(dw.getMonth()+1)+'月'+dw.getDate()+'日（'+days[dw.getDay()]+'）';
+  // グリッド生成
+  grid.innerHTML=displayStaff.map(s=>{
+    // 苗字・名前分割
+    const parts=s.name.split(/[\s　]/);
+    const lastName=parts[0]||s.name;
+    const firstName=parts.length>1?parts.slice(1).join(''):'';
+    const initial=firstName?firstName.charAt(0):'';
+    // 本日の最終打刻状態
+    const recs=DB.records.filter(r=>r.staffId===s.id&&r.date===todayStr()&&(r.type==='in'||r.type==='out')).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
+    const last=recs[recs.length-1];
+    let stateBg='#fff',stateColor='var(--nv)',stateLabel='';
+    if(last&&last.type==='in'){stateBg='#E8F5E9';stateColor='#2E7D32';stateLabel='勤務中';}
+    else if(last&&last.type==='out'){stateBg='#FFEBEE';stateColor='#C62828';stateLabel='退勤済';}
+    return `<button onclick="punchStaff(${s.id})" style="padding:10px 6px;border:1.5px solid var(--br);border-radius:10px;background:${stateBg};color:${stateColor};cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:75px;">
+      <div style="font-size:9px;opacity:0.6;">${s.id}</div>
+      <div style="font-size:18px;font-weight:800;line-height:1.1;">${lastName}</div>
+      ${initial?`<div style="font-size:10px;opacity:0.7;">${initial}</div>`:''}
+      ${stateLabel?`<div style="font-size:9px;font-weight:700;margin-top:2px;">${stateLabel}</div>`:''}
+    </button>`;
+  }).join('');
+}
+
+function punchStaff(sid){
+  const s=DB.staff.find(x=>x.id===sid);
+  if(!s)return;
+  // 本日の最終打刻
+  const recs=DB.records.filter(r=>r.staffId===sid&&r.date===todayStr()&&(r.type==='in'||r.type==='out')).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
+  const last=recs[recs.length-1];
+  let action='in';
+  if(!last)action='in';
+  else if(last.type==='in')action='out';
+  else action='in';
+  // 打刻
+  const n=new Date();
+  DB.records.unshift({id:Date.now(),staffId:sid,staffName:s.name,company:s.company||CO,type:action,date:todayStr(),ts:nowStr(),tsISO:n.toISOString()});
+  sDB();fbSaveRecords();
+  // フラッシュ表示
+  showPunchFlash(s,action);
+  renderPunchGrid();
+}
+
+function showPunchFlash(s,action){
+  const flash=document.getElementById('punch-flash');
+  const actEl=document.getElementById('punch-flash-action');
+  const nameEl=document.getElementById('punch-flash-name');
+  const idEl=document.getElementById('punch-flash-id');
+  if(!flash||!actEl||!nameEl)return;
+  const actL={in:'出勤',out:'退勤'};
+  const actColor={in:'#4CAF50',out:'#FF5722'};
+  actEl.textContent=actL[action]||action;
+  actEl.style.color=actColor[action]||'#fff';
+  nameEl.textContent=s.name+' さん';
+  idEl.textContent='社員番号 '+s.id;
+  flash.style.display='flex';
+  setTimeout(()=>{flash.style.display='none';},2000);
+}
+
 function showPg(p){
   // punchから離れる時はカメラ停止
   const cur=document.querySelector('.pg.active');
@@ -1432,7 +1534,7 @@ function showPg(p){
   if(target){target.classList.add('active');}
   // 各ページ初期化
   window.scrollTo(0,0);
-  if(p==='punch'){startFullscreenFaceAuth();}
+  if(p==='punch')renderPunchGrid();
   if(p==='log'){renderLog();initLogYM();}
   if(p==='report'){initMS();renderRep();updIS();}
   if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}
@@ -1503,6 +1605,83 @@ function resetAdminPw(){
   onPwmStaffChange();
 }
 
+
+// ═══ 端末表示設定 ═══
+function initDevset(){
+  const stored=localStorage.getItem('kintai_punch_filter');
+  let mode='all',ids=[];
+  if(stored){
+    try{
+      const f=JSON.parse(stored);
+      mode=f.mode||'all';
+      ids=f.ids||[];
+    }catch(e){}
+  }
+  const sel=document.getElementById('devset-mode');
+  if(sel)sel.value=mode;
+  // カスタム時はチェックリスト表示
+  const customArea=document.getElementById('devset-custom-area');
+  if(customArea)customArea.style.display=(mode==='custom')?'block':'none';
+  // 一般管理者は自社のみ選択肢を制限
+  if(currentAdmin&&currentAdmin.role!=='super'){
+    if(sel){
+      // 自社以外のオプションをhide
+      Array.from(sel.options).forEach(o=>{
+        if(o.value==='all'||o.value==='koyokai'||o.value==='fulllife'){
+          if(o.value!==currentAdmin.company)o.style.display='none';
+        }
+      });
+    }
+  }
+  renderDevsetStaffList(ids);
+}
+
+function onDevsetModeChange(){
+  const mode=document.getElementById('devset-mode').value;
+  document.getElementById('devset-custom-area').style.display=(mode==='custom')?'block':'none';
+}
+
+function renderDevsetStaffList(selectedIds){
+  const cont=document.getElementById('devset-staff-list');
+  if(!cont)return;
+  let staffList=DB.staff.slice().sort((a,b)=>a.id-b.id);
+  // 一般管理者は自社のみ
+  if(currentAdmin&&currentAdmin.role!=='super'){
+    staffList=staffList.filter(s=>s.company===currentAdmin.company);
+  }
+  cont.innerHTML=staffList.map(s=>{
+    const checked=(selectedIds||[]).includes(s.id)?'checked':'';
+    const coTag=s.company==='koyokai'?'香':'フ';
+    return `<label style="display:flex;align-items:center;gap:9px;padding:6px 4px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:11px;">
+      <input type="checkbox" class="devset-cb" data-sid="${s.id}" ${checked} style="width:18px;height:18px;">
+      <span style="min-width:38px;color:var(--t2);">${s.id}</span>
+      <span style="font-weight:600;">${s.name}</span>
+      <span style="margin-left:auto;font-size:9px;color:var(--t2);">${coTag}</span>
+    </label>`;
+  }).join('');
+}
+
+function saveDevset(){
+  const mode=document.getElementById('devset-mode').value;
+  let ids=[];
+  if(mode==='custom'){
+    document.querySelectorAll('.devset-cb:checked').forEach(cb=>{
+      ids.push(parseInt(cb.dataset.sid));
+    });
+    if(!ids.length){showToast('1人以上選択してください');return;}
+  }
+  localStorage.setItem('kintai_punch_filter',JSON.stringify({mode,ids}));
+  showToast('端末表示設定を保存しました ✓');
+}
+
+function clearDevset(){
+  localStorage.removeItem('kintai_punch_filter');
+  const sel=document.getElementById('devset-mode');
+  if(sel)sel.value='all';
+  document.getElementById('devset-custom-area').style.display='none';
+  showToast('表示設定をリセットしました');
+}
+
 function showAS(sub){
   // 警告も再描画
   if(typeof renderPunchWarnings==='function')renderPunchWarnings();
@@ -1513,8 +1692,9 @@ function showAS(sub){
     const coName={koyokai:'香庸会',fulllife:'フルラフ',both:'両社'}[admin.company]||'';
     el.textContent=admin.name+(coName?'（'+coName+'）':'');
   }
-  ['staff','shift','rec','paid','special','log','report','data','pw'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();}
-  if(sub==='pw')initPwmStaffSelect();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}}
+  ['staff','shift','rec','paid','special','log','report','data','pw','devset'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();}
+  if(sub==='pw')initPwmStaffSelect();
+  if(sub==='devset')initDevset();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}}
 
 // ═══ 打刻グリッド ═══
 function renderSG(){
@@ -3227,13 +3407,9 @@ function togglePunchMode(){
   }
 }
 
-// 打刻画面を開いた時に自動的に顔認証起動
+// 打刻画面（名前タップ式）
 function autoStartFacePunch(){
-  // 打刻画面（フルスクリーン顔認証）が表示中なら起動
-  const punchPg=document.getElementById('pg-punch');
-  if(punchPg&&punchPg.classList.contains('active')){
-    startFullscreenFaceAuth();
-  }
+  // 顔認証は廃止、何もしない
 }
 
 // フルスクリーン顔認証を起動
@@ -3557,8 +3733,7 @@ function loginPersonalInline(){
   ['pi-paid-date','pi-fare-date','pi-expense-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
   initPILogMonth();
   showPITab('log');
-  if(typeof updatePiPunchUI==="function")updatePiPunchUI();
-  if(typeof renderPersonalPunchWarnings==="function")renderPersonalPunchWarnings();
+    if(typeof renderPersonalPunchWarnings==="function")renderPersonalPunchWarnings();
 }
 
 function logoutPersonalInline(){
