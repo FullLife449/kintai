@@ -480,6 +480,7 @@ console.log('Firebase initialized (compat)');
       <div style="display:flex;gap:4px;margin-bottom:9px;overflow-x:auto;padding-bottom:2px;">
         <button class="ptab active" id="pi-tab-log" onclick="showPITab('log')">打刻ログ</button>
         <button class="ptab" id="pi-tab-paid" onclick="showPITab('paid')">有給</button>
+        <button class="ptab" id="pi-tab-sub" onclick="showPITab('sub')">代休</button>
         <button class="ptab" id="pi-tab-fare" onclick="showPITab('fare')">交通費</button>
         <button class="ptab" id="pi-tab-expense" onclick="showPITab('expense')">経費精算</button>
         <button class="ptab" id="pi-tab-pw" onclick="showPITab('pw')">PW変更</button>
@@ -547,6 +548,50 @@ console.log('Firebase initialized (compat)');
         </div>
         <button class="fb" id="pi-exp-submit-btn" style="width:100%;margin-top:7px;opacity:0.4;cursor:not-allowed;" onclick="submitPIRequest('expense')" disabled>申請する</button>
         <div id="pi-expense-list" style="margin-top:11px;max-height:200px;overflow-y:auto;"></div>
+      </div>
+      <!-- 代休 -->
+      <div id="pi-view-sub" class="card" style="display:none;">
+        <div class="cl">代休管理</div>
+        <!-- 残数表示 -->
+        <div style="background:linear-gradient(135deg,#FFF3E0,#FFE0B2);padding:11px;border-radius:9px;margin-bottom:10px;">
+          <div style="font-size:10px;color:#5D4037;">代休残数</div>
+          <div style="font-size:22px;font-weight:800;color:#E65100;" id="pi-sub-remain">0.0 日</div>
+        </div>
+        <!-- 申請モード切替 -->
+        <div style="display:flex;gap:4px;margin-bottom:9px;">
+          <button class="ptab active" id="pi-sub-mode-substitute" onclick="setPiSubMode('substitute')">代理出勤申請</button>
+          <button class="ptab" id="pi-sub-mode-suboff" onclick="setPiSubMode('suboff')">代休取得申請</button>
+        </div>
+        <!-- 代理出勤申請フォーム -->
+        <div id="pi-sub-form-substitute">
+          <div class="fs2">代わりに出勤した日を申請します</div>
+          <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="pi-sub-sub-date"></div>
+          <div class="frw"><label class="fl">単位</label>
+            <select class="fi" id="pi-sub-sub-unit">
+              <option value="full">全日（1.0日）</option>
+              <option value="half">半日（0.5日）</option>
+            </select>
+          </div>
+          <div class="frw"><label class="fl">交代者の名前</label><input class="fi" type="text" id="pi-sub-sub-replacer" placeholder="例: 壹岐 伸弥"></div>
+          <button class="fb" style="width:100%;margin-top:7px;" onclick="submitPIRequest('substitute')">代理出勤を申請</button>
+        </div>
+        <!-- 代休取得申請フォーム -->
+        <div id="pi-sub-form-suboff" style="display:none;">
+          <div class="fs2">代休を取得する日を申請します</div>
+          <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="pi-sub-off-date"></div>
+          <div class="frw"><label class="fl">単位</label>
+            <select class="fi" id="pi-sub-off-unit">
+              <option value="full">全日（1.0日）</option>
+              <option value="half">半日（0.5日）</option>
+            </select>
+          </div>
+          <button class="fb" style="width:100%;margin-top:7px;" onclick="submitPIRequest('suboff')">代休を申請</button>
+        </div>
+        <!-- 履歴 -->
+        <div style="margin-top:14px;border-top:1px solid var(--br);padding-top:10px;">
+          <div style="font-size:11px;font-weight:700;margin-bottom:6px;">履歴</div>
+          <div id="pi-sub-list" style="max-height:240px;overflow-y:auto;"></div>
+        </div>
       </div>
       <!-- PW変更 -->
       <div id="pi-view-pw" class="card" style="display:none;">
@@ -973,13 +1018,16 @@ function fbSaveSettings() {
     lunchEnabled: DB.lunchEnabled,
     expenses: DB.expenses||[],
     paidGrants: DB.paidGrants||[],
+    substitute: DB.substitute||[],
+    subOff: DB.subOff||[],
+    subGrants: DB.subGrants||[],
     adminPw: DB.adminPw
   }).catch(e => console.error('fbSaveSettings error:', e));
 }
 
 const TL={in:'出勤',out:'退勤',break:'休憩開始',resume:'勤務再開',early:'早出',fare:'交通費',paid:'有給',lunch:'ランチデリ'};
 
-let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]};
+let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[]};
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
@@ -987,7 +1035,7 @@ const STAFF_VER='v2001'; // 19:30変更バージョン
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
-    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[]},d);
+    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[]},d);
   }catch(e){}
   // スタッフデータのバージョンが古い（17:45が含まれる）場合はスタッフのみリセット
   const staffVer=localStorage.getItem('kintai_staff_ver');
@@ -2612,7 +2660,45 @@ function exportSingleCSV(type){
     });
     downloadCSV(coLabel+'_交通費_'+ym+'.csv',rows);
     showToast('交通費CSVをダウンロード ✓');
-  }else if(type==='expense'){
+  }else if(type==='substitute'||type==='suboff'){
+    const date=document.getElementById(type==='substitute'?'pi-sub-sub-date':'pi-sub-off-date').value;
+    const unit=document.getElementById(type==='substitute'?'pi-sub-sub-unit':'pi-sub-off-unit').value;
+    const replacer=type==='substitute'?document.getElementById('pi-sub-sub-replacer').value.trim():'';
+    if(!date){showToast('日付を入力してください');return;}
+    if(type==='substitute'&&!replacer){showToast('交代者の名前を入力してください');return;}
+    // 申請期限チェック
+    if(!isReqDateAllowed(date)){
+      showToast('申請可能期間外です: '+getReqRangeMessage());
+      return;
+    }
+    // 重複チェック
+    const targetArr=type==='substitute'?DB.substitute:DB.subOff;
+    if(!targetArr){if(type==='substitute')DB.substitute=[];else DB.subOff=[];}
+    const arr=type==='substitute'?DB.substitute:DB.subOff;
+    const dup=arr.find(x=>x.staffId===piStaff.id&&x.date===date);
+    if(dup){showToast('この日は既に申請済みです');return;}
+    // 代休取得の場合は残数チェック
+    if(type==='suboff'){
+      const rem=calcSubOffRemain(piStaff.id);
+      const needed=unit==='half'?0.5:1;
+      if(rem<needed){showToast('代休残数が不足しています（残: '+rem.toFixed(1)+'日）');return;}
+    }
+    // 登録
+    const entry={staffId:piStaff.id,date,unit,staffName:piStaff.name,company:piStaff.company};
+    if(type==='substitute')entry.replacer=replacer;
+    arr.push(entry);
+    sDB();
+    renderPiSubList();
+    renderPiSubRemain();
+    showToast((type==='substitute'?'代理出勤':'代休')+'を申請しました ✓');
+    // フォームクリア
+    if(type==='substitute'){
+      document.getElementById('pi-sub-sub-replacer').value='';
+    }
+    fbSaveSettings();
+    return;
+  }
+  if(type==='expense'){
     const rows=[['社員番号','名前','日付','金額','内容']];
     const expList=(DB.expenses||[]).filter(e=>termM.dates.includes(e.date)&&list.find(s=>s.id===e.staffId));
     expList.sort((a,b)=>a.staffId-b.staffId||(a.date<b.date?-1:1)).forEach(e=>{
@@ -3083,7 +3169,7 @@ function logoutPersonal(){
 }
 
 function showPTab(tab){
-  ['log','paid','fare','expense','pw'].forEach(t=>{
+  ['log','paid','sub','fare','expense','pw'].forEach(t=>{
     const v=document.getElementById('pview-'+t);
     const b=document.getElementById('ptab-'+t);
     if(v)v.style.display=t===tab?'block':'none';
@@ -3730,7 +3816,7 @@ function loginPersonalInline(){
   document.getElementById('pi-co').textContent=coName[staff.company]||staff.company;
   // 日付初期設定
   const t=todayStr();
-  ['pi-paid-date','pi-fare-date','pi-expense-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
+  ['pi-paid-date','pi-fare-date','pi-expense-date','pi-sub-sub-date','pi-sub-off-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
   initPILogMonth();
   showPITab('log');
     if(typeof renderPersonalPunchWarnings==="function")renderPersonalPunchWarnings();
@@ -3746,7 +3832,7 @@ function logoutPersonalInline(){
 }
 
 function showPITab(tab){
-  ['log','paid','fare','expense','pw'].forEach(t=>{
+  ['log','paid','sub','fare','expense','pw'].forEach(t=>{
     const v=document.getElementById('pi-view-'+t);
     const b=document.getElementById('pi-tab-'+t);
     if(v)v.style.display=t===tab?'block':'none';
@@ -3757,6 +3843,7 @@ function showPITab(tab){
   if(tab==='fare')renderPIList('fare');
   
   if(tab==='expense')renderPIList('expense');
+  if(tab==='sub'){renderPiSubRemain();renderPiSubList();setPiSubMode('substitute');}
 }
 
 function initPILogMonth(){
@@ -3864,6 +3951,44 @@ function renderPIList(type){
   if(type==='paid')items=DB.paid.filter(p=>p.staffId===piStaff.id).sort((a,b)=>a.date<b.date?-1:1).map(p=>({date:p.date,disp:typeL[p.type]||p.type}));
   if(type==='fare')items=DB.fare.filter(f=>f.staffId===piStaff.id).sort((a,b)=>a.date<b.date?-1:1).map(f=>({date:f.date,disp:(f.amount?f.amount+'円':'')+(f.memo?' '+f.memo:'')}));
   
+  if(type==='substitute'||type==='suboff'){
+    const date=document.getElementById(type==='substitute'?'pi-sub-sub-date':'pi-sub-off-date').value;
+    const unit=document.getElementById(type==='substitute'?'pi-sub-sub-unit':'pi-sub-off-unit').value;
+    const replacer=type==='substitute'?document.getElementById('pi-sub-sub-replacer').value.trim():'';
+    if(!date){showToast('日付を入力してください');return;}
+    if(type==='substitute'&&!replacer){showToast('交代者の名前を入力してください');return;}
+    // 申請期限チェック
+    if(!isReqDateAllowed(date)){
+      showToast('申請可能期間外です: '+getReqRangeMessage());
+      return;
+    }
+    // 重複チェック
+    const targetArr=type==='substitute'?DB.substitute:DB.subOff;
+    if(!targetArr){if(type==='substitute')DB.substitute=[];else DB.subOff=[];}
+    const arr=type==='substitute'?DB.substitute:DB.subOff;
+    const dup=arr.find(x=>x.staffId===piStaff.id&&x.date===date);
+    if(dup){showToast('この日は既に申請済みです');return;}
+    // 代休取得の場合は残数チェック
+    if(type==='suboff'){
+      const rem=calcSubOffRemain(piStaff.id);
+      const needed=unit==='half'?0.5:1;
+      if(rem<needed){showToast('代休残数が不足しています（残: '+rem.toFixed(1)+'日）');return;}
+    }
+    // 登録
+    const entry={staffId:piStaff.id,date,unit,staffName:piStaff.name,company:piStaff.company};
+    if(type==='substitute')entry.replacer=replacer;
+    arr.push(entry);
+    sDB();
+    renderPiSubList();
+    renderPiSubRemain();
+    showToast((type==='substitute'?'代理出勤':'代休')+'を申請しました ✓');
+    // フォームクリア
+    if(type==='substitute'){
+      document.getElementById('pi-sub-sub-replacer').value='';
+    }
+    fbSaveSettings();
+    return;
+  }
   if(type==='expense'){
     const exps=DB.expenses||[];
     items=exps.filter(e=>e.staffId===piStaff.id).sort((a,b)=>a.date<b.date?-1:1).map(e=>({date:e.date,disp:e.amount+'円 '+(e.memo||'')}));
@@ -3895,8 +4020,118 @@ function toggleExpReceipt(){
   }
 }
 
+
+// ═══ 代休機能 ═══
+// 申請ロックチェック: ○月15日まで → ○+1月以降3ヶ月先まで申請可
+// ○月16日から → ○+2月以降3ヶ月先まで申請可
+function isReqDateAllowed(reqDate){
+  const today=new Date();
+  const todayY=today.getFullYear();
+  const todayM=today.getMonth(); // 0-11
+  const todayD=today.getDate();
+  // 申請可能な最早の月（今月+1 or 今月+2）
+  const minMonthOffset=todayD<=15?1:2;
+  const minDate=new Date(todayY,todayM+minMonthOffset,1);
+  // 3ヶ月先まで
+  const maxDate=new Date(todayY,todayM+minMonthOffset+2,0); // 最大月の末日
+  const target=new Date(reqDate+'T00:00:00');
+  return target>=minDate&&target<=maxDate;
+}
+
+function getReqRangeMessage(){
+  const today=new Date();
+  const todayY=today.getFullYear();
+  const todayM=today.getMonth();
+  const todayD=today.getDate();
+  const minMonthOffset=todayD<=15?1:2;
+  const minDate=new Date(todayY,todayM+minMonthOffset,1);
+  const maxDate=new Date(todayY,todayM+minMonthOffset+2,0);
+  const fmt=d=>d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';
+  return fmt(minDate)+' ～ '+fmt(maxDate);
+}
+
+// 代休残数計算
+function calcSubOffRemain(sid){
+  // subGrants: 管理画面で付与された分（プラス）
+  const grants=(DB.subGrants||[]).filter(g=>g.staffId===sid).reduce((a,b)=>a+(b.days||0),0);
+  // substitute: 代理出勤分（プラス）
+  const subs=(DB.substitute||[]).filter(s=>s.staffId===sid).reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
+  // subOff: 代休取得分（マイナス）
+  const offs=(DB.subOff||[]).filter(o=>o.staffId===sid).reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
+  return grants+subs-offs;
+}
+
+function setPiSubMode(mode){
+  document.getElementById('pi-sub-mode-substitute').classList.toggle('active',mode==='substitute');
+  document.getElementById('pi-sub-mode-suboff').classList.toggle('active',mode==='suboff');
+  document.getElementById('pi-sub-form-substitute').style.display=mode==='substitute'?'block':'none';
+  document.getElementById('pi-sub-form-suboff').style.display=mode==='suboff'?'block':'none';
+}
+
+function renderPiSubRemain(){
+  if(!piStaff)return;
+  const remain=calcSubOffRemain(piStaff.id);
+  const el=document.getElementById('pi-sub-remain');
+  if(el)el.textContent=remain.toFixed(1)+' 日';
+}
+
+function renderPiSubList(){
+  if(!piStaff)return;
+  const el=document.getElementById('pi-sub-list');
+  if(!el)return;
+  // 代理出勤と代休を時系列で結合
+  const subs=(DB.substitute||[]).filter(s=>s.staffId===piStaff.id).map(s=>({...s,kind:'sub'}));
+  const offs=(DB.subOff||[]).filter(o=>o.staffId===piStaff.id).map(o=>({...o,kind:'off'}));
+  const all=[...subs,...offs].sort((a,b)=>a.date<b.date?1:-1);
+  if(!all.length){el.innerHTML='<div style="color:var(--t2);font-size:11px;text-align:center;padding:14px;">履歴なし</div>';return;}
+  el.innerHTML=all.map(item=>{
+    const unit=item.unit==='half'?'0.5日':'1日';
+    const kindLbl=item.kind==='sub'?'<span style="color:#558B2F;font-weight:700;">代理出勤 +'+unit+'</span>':'<span style="color:#C62828;font-weight:700;">代休 -'+unit+'</span>';
+    const replacer=item.replacer?' / 交代: '+item.replacer:'';
+    return `<div style="padding:6px 8px;border-bottom:1px solid #f0f0f0;font-size:11px;">${item.date} ${kindLbl}${replacer}</div>`;
+  }).join('');
+}
+
 function submitPIRequest(type){
   if(!piStaff)return;
+  if(type==='substitute'||type==='suboff'){
+    const date=document.getElementById(type==='substitute'?'pi-sub-sub-date':'pi-sub-off-date').value;
+    const unit=document.getElementById(type==='substitute'?'pi-sub-sub-unit':'pi-sub-off-unit').value;
+    const replacer=type==='substitute'?document.getElementById('pi-sub-sub-replacer').value.trim():'';
+    if(!date){showToast('日付を入力してください');return;}
+    if(type==='substitute'&&!replacer){showToast('交代者の名前を入力してください');return;}
+    // 申請期限チェック
+    if(!isReqDateAllowed(date)){
+      showToast('申請可能期間外です: '+getReqRangeMessage());
+      return;
+    }
+    // 重複チェック
+    const targetArr=type==='substitute'?DB.substitute:DB.subOff;
+    if(!targetArr){if(type==='substitute')DB.substitute=[];else DB.subOff=[];}
+    const arr=type==='substitute'?DB.substitute:DB.subOff;
+    const dup=arr.find(x=>x.staffId===piStaff.id&&x.date===date);
+    if(dup){showToast('この日は既に申請済みです');return;}
+    // 代休取得の場合は残数チェック
+    if(type==='suboff'){
+      const rem=calcSubOffRemain(piStaff.id);
+      const needed=unit==='half'?0.5:1;
+      if(rem<needed){showToast('代休残数が不足しています（残: '+rem.toFixed(1)+'日）');return;}
+    }
+    // 登録
+    const entry={staffId:piStaff.id,date,unit,staffName:piStaff.name,company:piStaff.company};
+    if(type==='substitute')entry.replacer=replacer;
+    arr.push(entry);
+    sDB();
+    renderPiSubList();
+    renderPiSubRemain();
+    showToast((type==='substitute'?'代理出勤':'代休')+'を申請しました ✓');
+    // フォームクリア
+    if(type==='substitute'){
+      document.getElementById('pi-sub-sub-replacer').value='';
+    }
+    fbSaveSettings();
+    return;
+  }
   if(type==='expense'){
     if(!expReceiptChecked){showToast('領収書の申請確認にチェックを入れてください');return;}
     const date=document.getElementById('pi-expense-date').value;
