@@ -270,28 +270,61 @@ console.log('Firebase initialized (compat)');
       </div>
     </div>
     <div class="asc" id="asc-paid">
-      <!-- 有給付与・残数管理 -->
-      <div class="card"><div class="cl">有給付与・残数管理</div>
-        <div class="fs2" id="paid-fy-label" style="margin-bottom:8px;">年度を選択して付与日数を管理できます</div>
-        <div class="fr" style="margin-bottom:10px;">
-          <select id="pg-fy" onchange="renderPaidGrants()"></select>
-          <select id="pg-co" onchange="renderPaidGrants()">
-            <option value="koyokai">香庸会</option>
-            <option value="fulllife">フルラフ</option>
-            <option value="all">両社</option>
-          </select>
-        </div>
-        <div style="overflow-x:auto;"><table class="rt2" style="font-size:11px;"><thead><tr><th>社員番号</th><th>氏名</th><th>付与</th><th>使用</th><th>残</th><th>編集</th></tr></thead><tbody id="pg-tb"></tbody></table></div>
+      <!-- 有給・代休 サブタブ -->
+      <div style="display:flex;gap:4px;margin-bottom:9px;">
+        <button class="ptab active" id="phc-tab-paid" onclick="setPhcTab('paid')">有給</button>
+        <button class="ptab" id="phc-tab-sub" onclick="setPhcTab('sub')">代休</button>
       </div>
-      <!-- 有給申請履歴 -->
-      <div class="card"><div class="cl">有給申請履歴</div>
-        <div class="fr" style="margin-bottom:10px;">
-          <select class="fsl" id="ph-s"><option value="">全スタッフ</option></select>
-          <select id="ph-m"></select>
-          <button class="bg" onclick="renderPH()">表示</button>
+      
+      <!-- 有給セクション -->
+      <div id="phc-view-paid">
+        <div class="card"><div class="cl">有給付与・残数管理</div>
+          <div class="fs2" id="paid-fy-label" style="margin-bottom:8px;">年度を選択して付与日数を管理できます</div>
+          <div class="fr" style="margin-bottom:10px;">
+            <select id="pg-fy" onchange="renderPaidGrants()"></select>
+            <select id="pg-co" onchange="renderPaidGrants()">
+              <option value="koyokai">香庸会</option>
+              <option value="fulllife">フルラフ</option>
+              <option value="all">両社</option>
+            </select>
+          </div>
+          <div style="overflow-x:auto;"><table class="rt2" style="font-size:11px;"><thead><tr><th>社員番号</th><th>氏名</th><th>付与</th><th>使用</th><th>残</th><th>編集</th></tr></thead><tbody id="pg-tb"></tbody></table></div>
         </div>
-        <div style="overflow-x:auto;"><table class="rt2"><thead><tr><th>日付</th><th>曜</th><th>名前</th><th>種別</th><th>メモ</th><th>操作</th></tr></thead><tbody id="ph-tb"><tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">上で絞り込んで表示</td></tr></tbody></table></div>
-        <div id="ph-sum" style="margin-top:9px;font-size:11px;color:var(--t2);"></div>
+        <div class="card"><div class="cl">有給申請履歴</div>
+          <div class="fr" style="margin-bottom:10px;">
+            <select class="fsl" id="ph-s"><option value="">全スタッフ</option></select>
+            <select id="ph-m"></select>
+            <button class="bg" onclick="renderPH()">表示</button>
+          </div>
+          <div style="overflow-x:auto;"><table class="rt2"><thead><tr><th>日付</th><th>曜</th><th>名前</th><th>種別</th><th>メモ</th><th>操作</th></tr></thead><tbody id="ph-tb"><tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">上で絞り込んで表示</td></tr></tbody></table></div>
+          <div id="ph-sum" style="margin-top:9px;font-size:11px;color:var(--t2);"></div>
+        </div>
+      </div>
+      
+      <!-- 代休セクション -->
+      <div id="phc-view-sub" style="display:none;">
+        <!-- 代休付与・残数 -->
+        <div class="card"><div class="cl">代休付与・残数管理</div>
+          <div class="fs2" style="margin-bottom:8px;">代理出勤・付与・代休消化を一覧で管理できます</div>
+          <div class="fr" style="margin-bottom:10px;">
+            <select id="sub-co" onchange="renderSubGrants()">
+              <option value="koyokai">香庸会</option>
+              <option value="fulllife">フルラフ</option>
+              <option value="all">両社</option>
+            </select>
+          </div>
+          <div style="overflow-x:auto;"><table class="rt2" style="font-size:11px;"><thead><tr><th>社員番号</th><th>氏名</th><th>付与</th><th>代理出勤</th><th>消化</th><th>残</th><th>付与</th></tr></thead><tbody id="sub-tb"></tbody></table></div>
+        </div>
+        <!-- 代休申請履歴 -->
+        <div class="card"><div class="cl">代休申請履歴</div>
+          <div class="fr" style="margin-bottom:10px;">
+            <select class="fsl" id="sh-s"><option value="">全スタッフ</option></select>
+            <select id="sh-m"></select>
+            <button class="bg" onclick="renderSH()">表示</button>
+          </div>
+          <div style="overflow-x:auto;"><table class="rt2"><thead><tr><th>日付</th><th>名前</th><th>種別</th><th>単位</th><th>交代者</th><th>操作</th></tr></thead><tbody id="sh-tb"><tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">上で絞り込んで表示</td></tr></tbody></table></div>
+          <div id="sh-sum" style="margin-top:9px;font-size:11px;color:var(--t2);"></div>
+        </div>
       </div>
     </div>
     
@@ -1141,6 +1174,129 @@ function initPaidGrantUI(){
     coSel.value=window.adminCompanyFilter;
   }
 }
+
+// ═══ 管理画面：有給・代休タブ切替 ═══
+function setPhcTab(tab){
+  document.getElementById('phc-tab-paid').classList.toggle('active',tab==='paid');
+  document.getElementById('phc-tab-sub').classList.toggle('active',tab==='sub');
+  document.getElementById('phc-view-paid').style.display=tab==='paid'?'block':'none';
+  document.getElementById('phc-view-sub').style.display=tab==='sub'?'block':'none';
+  if(tab==='sub'){initSubAdmin();}
+}
+
+// 代休管理 初期化
+function initSubAdmin(){
+  // 一般管理者は自社固定
+  const sel=document.getElementById('sub-co');
+  if(sel){
+    if(currentAdmin&&currentAdmin.role!=='super'){
+      sel.value=currentAdmin.company;
+      sel.disabled=true;
+    }else{
+      sel.disabled=false;
+    }
+  }
+  // スタッフ選択肢
+  const shS=document.getElementById('sh-s');
+  if(shS){
+    shS.innerHTML='<option value="">全スタッフ</option>';
+    let list=DB.staff.slice();
+    if(currentAdmin&&currentAdmin.role!=='super')list=list.filter(s=>s.company===currentAdmin.company);
+    list.sort((a,b)=>a.id-b.id).forEach(s=>{
+      const o=document.createElement('option');o.value=s.id;o.textContent=s.id+' '+s.name;
+      shS.appendChild(o);
+    });
+  }
+  // 月選択肢
+  const shM=document.getElementById('sh-m');
+  if(shM&&!shM.options.length){
+    const now=new Date();
+    for(let i=-12;i<=12;i++){
+      const dt=new Date(now.getFullYear(),now.getMonth()+i,1);
+      const v=dt.getFullYear()+'-'+pad(dt.getMonth()+1);
+      const o=document.createElement('option');o.value=v;o.textContent=v;
+      if(i===0)o.selected=true;
+      shM.appendChild(o);
+    }
+  }
+  renderSubGrants();
+}
+
+function renderSubGrants(){
+  const tb=document.getElementById('sub-tb');
+  if(!tb)return;
+  const co=document.getElementById('sub-co').value;
+  let list=DB.staff.slice();
+  if(co!=='all')list=list.filter(s=>s.company===co);
+  list.sort((a,b)=>a.id-b.id);
+  tb.innerHTML=list.map(s=>{
+    const grants=(DB.subGrants||[]).filter(g=>g.staffId===s.id).reduce((a,b)=>a+(b.days||0),0);
+    const subs=(DB.substitute||[]).filter(x=>x.staffId===s.id).reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
+    const offs=(DB.subOff||[]).filter(x=>x.staffId===s.id).reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
+    const remain=grants+subs-offs;
+    return `<tr><td>${s.id}</td><td>${s.name}</td><td>${grants.toFixed(1)}</td><td>${subs.toFixed(1)}</td><td>${offs.toFixed(1)}</td><td style="font-weight:700;color:${remain<0?'#C62828':'#2E7D32'};">${remain.toFixed(1)}</td><td><button class="bg" onclick="editSubGrant(${s.id})">付与</button></td></tr>`;
+  }).join('');
+}
+
+function editSubGrant(sid){
+  const s=DB.staff.find(x=>x.id===sid);
+  if(!s)return;
+  const cur=(DB.subGrants||[]).filter(g=>g.staffId===sid).reduce((a,b)=>a+(b.days||0),0);
+  const inp=prompt(s.name+' さんの代休付与（プラス追加・マイナス差し引きも可）\n現在の累計付与: '+cur.toFixed(1)+' 日\n\n追加する日数を入力（例: 2 または -1）:','');
+  if(inp===null)return;
+  const days=parseFloat(inp);
+  if(isNaN(days)){showToast('数値を入力してください');return;}
+  const memo=prompt('メモ（任意）','')||'';
+  if(!DB.subGrants)DB.subGrants=[];
+  DB.subGrants.push({staffId:sid,days,memo,date:todayStr(),company:s.company});
+  sDB();fbSaveSettings();
+  showToast(s.name+' に代休 '+(days>=0?'+':'')+days+' 日を付与しました');
+  renderSubGrants();
+}
+
+function renderSH(){
+  const tb=document.getElementById('sh-tb');
+  if(!tb)return;
+  const sid=parseInt(document.getElementById('sh-s').value);
+  const ym=document.getElementById('sh-m').value;
+  // 全件統合（代理出勤+代休）
+  const subs=(DB.substitute||[]).map(x=>({...x,kind:'substitute'}));
+  const offs=(DB.subOff||[]).map(x=>({...x,kind:'suboff'}));
+  let all=[...subs,...offs];
+  if(sid)all=all.filter(x=>x.staffId===sid);
+  if(ym)all=all.filter(x=>x.date.startsWith(ym));
+  // 自社フィルタ
+  if(currentAdmin&&currentAdmin.role!=='super'){
+    all=all.filter(x=>{const st=DB.staff.find(s=>s.id===x.staffId);return st&&st.company===currentAdmin.company;});
+  }
+  all.sort((a,b)=>a.date<b.date?1:-1);
+  if(!all.length){
+    tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">該当なし</td></tr>';
+    document.getElementById('sh-sum').textContent='';
+    return;
+  }
+  tb.innerHTML=all.map(x=>{
+    const s=DB.staff.find(t=>t.id===x.staffId);
+    const kindLbl=x.kind==='substitute'?'<span style="color:#558B2F;">代理出勤</span>':'<span style="color:#C62828;">代休</span>';
+    const unit=x.unit==='half'?'半日':'全日';
+    const replacer=x.replacer||'-';
+    return `<tr><td>${x.date}</td><td>${s?s.name:'?'}</td><td>${kindLbl}</td><td>${unit}</td><td>${replacer}</td><td><button class="fd" onclick="delSubEntry('${x.kind}',${x.staffId},'${x.date}')">削除</button></td></tr>`;
+  }).join('');
+  const subCount=all.filter(x=>x.kind==='substitute').reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
+  const offCount=all.filter(x=>x.kind==='suboff').reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
+  document.getElementById('sh-sum').textContent='代理出勤: '+subCount.toFixed(1)+'日 / 代休消化: '+offCount.toFixed(1)+'日';
+}
+
+function delSubEntry(kind,sid,date){
+  if(!confirm('この記録を削除しますか？'))return;
+  if(kind==='substitute')DB.substitute=DB.substitute.filter(x=>!(x.staffId===sid&&x.date===date));
+  else DB.subOff=DB.subOff.filter(x=>!(x.staffId===sid&&x.date===date));
+  sDB();fbSaveSettings();
+  renderSH();
+  renderSubGrants();
+  showToast('削除しました');
+}
+
 function renderPaidGrants(){
   const fy=parseInt(document.getElementById('pg-fy').value)||getCurrentPaidFY();
   const co=document.getElementById('pg-co').value;
@@ -1466,8 +1622,11 @@ function calcMonthSummary(sid,ym){
     fareCount+=DB.fare.filter(f=>f.staffId===sid&&f.date===date).length;
     lunchCount+=DB.lunch.filter(l=>l.staffId===sid&&l.date===date&&l.company===CO).length;
   }
+  // 代理出勤・代休 月内集計
+  const subDays=(DB.substitute||[]).filter(x=>x.staffId===sid&&termDates.includes(x.date)).reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
+  const subOffDays=(DB.subOff||[]).filter(x=>x.staffId===sid&&termDates.includes(x.date)).reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
   const otE=Math.max(0,(otB+otC)-60*3600000);
-  return{weekdays,holdays,totalMs,paidDays,fareCount,lunchCount,otA,otB,otC,otD,otE,totalLateMin,totalEarlyMin,p1Ms,p2Ms,p3Ms,p4Ms,bd_total};
+  return{ym,weekdays,holdays,totalMs,paidDays,fareCount,lunchCount,otA,otB,otC,otD,otE,totalLateMin,totalEarlyMin,p1Ms,p2Ms,p3Ms,p4Ms,bd_total,subDays,subOffDays};
 }
 
 // ═══ ステータス ═══
@@ -1740,7 +1899,7 @@ function showAS(sub){
     const coName={koyokai:'香庸会',fulllife:'フルラフ',both:'両社'}[admin.company]||'';
     el.textContent=admin.name+(coName?'（'+coName+'）':'');
   }
-  ['staff','shift','rec','paid','special','log','report','data','pw','devset'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();}
+  ['staff','shift','rec','paid','special','log','report','data','pw','devset'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
   if(sub==='pw')initPwmStaffSelect();
   if(sub==='devset')initDevset();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}}
 
@@ -2063,17 +2222,27 @@ function loadXLSX(cb){if(window.XLSX){cb();return;}const sc=document.createEleme
 function msToHHMM(ms){if(!ms||ms<=0)return'';const m=Math.floor(ms/60000);return Math.floor(m/60)+':'+pad(m%60);}
 function minToHHMM(min){if(!min||min<=0)return'';return Math.floor(min/60)+':'+pad(min%60);}
 
-const PAY_HDR=['社員番号','社員氏名','平日出勤','休日出勤','出勤時間','遅刻','早退','有休日数','その他休日','生理休暇','休職日数','欠勤日数','控除日数','控除時間','時間外手当時間A','時間外手当時間B','時間外手当時間C','時間外手当時間D','時間外手当時間E','回数手当1','回数手当2','回数手当3','支給項目1','支給項目2','支給項目3','支給項目4','非課税支給20','控除項目1'];
+const PAY_HDR=['社員番号','社員氏名','平日出勤','休日出勤','出勤時間','遅刻','早退','有休日数','その他休日','生理休暇','休職日数','欠勤日数','控除日数','控除時間','時間外手当時間A','時間外手当時間B','時間外手当時間C','時間外手当時間D','時間外手当時間E','回数手当1','回数手当2','回数手当3','支給項目1','支給項目2','支給項目3','支給項目4','非課税支給20','控除項目1','代理出勤日数','代休消化日数','代休残数'];
 
 function makePayRow(s,m,lunchCount){
   const otE=Math.max(0,(m.otB+m.otC)-60*3600000);
+  // 代理出勤・代休 月内集計
+  const ym=m.ym||'';
+  const subCount=m.subDays||0;
+  const offCount=m.subOffDays||0;
+  // 代休残数（その月末時点）
+  const grants=(DB.subGrants||[]).filter(g=>g.staffId===s.id).reduce((a,b)=>a+(b.days||0),0);
+  const allSubs=(DB.substitute||[]).filter(x=>x.staffId===s.id&&x.date<=ym+'-31').reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
+  const allOffs=(DB.subOff||[]).filter(x=>x.staffId===s.id&&x.date<=ym+'-31').reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
+  const remain=grants+allSubs-allOffs;
   return[s.employeeId||s.id,s.name,m.weekdays,m.holdays,msToHHMM(m.totalMs),
     minToHHMM(m.totalLateMin),minToHHMM(m.totalEarlyMin),
     m.paidDays||'','','','','','','',
     msToHHMM(m.otA),msToHHMM(m.otB),msToHHMM(m.otC),msToHHMM(m.otD),msToHHMM(otE),
     '','','',
     msToHHMM(m.p1Ms),msToHHMM(m.p2Ms),msToHHMM(m.p3Ms),msToHHMM(m.p4Ms),
-    m.fareCount||'',lunchCount||''];
+    m.fareCount||'',lunchCount||'',
+    subCount.toFixed(1),offCount.toFixed(1),remain.toFixed(1)];
 }
 
 function exportXLSX(){const ym=document.getElementById('rm').value;if(!ym){showToast('月を選択してください');return;}showToast('XLSXを生成中...');loadXLSX(()=>doExportMonthly(ym));}
