@@ -295,6 +295,7 @@ console.log('Firebase initialized (compat)');
             <select class="fsl" id="ph-s"><option value="">全スタッフ</option></select>
             <select id="ph-m"></select>
             <button class="bg" onclick="renderPH()">表示</button>
+            <button class="bn" onclick="openAddPaidModal()" style="background:#1B5E20;color:#fff;">＋ 追加</button>
           </div>
           <div style="overflow-x:auto;"><table class="rt2"><thead><tr><th>日付</th><th>曜</th><th>名前</th><th>種別</th><th>メモ</th><th>操作</th></tr></thead><tbody id="ph-tb"><tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">上で絞り込んで表示</td></tr></tbody></table></div>
           <div id="ph-sum" style="margin-top:9px;font-size:11px;color:var(--t2);"></div>
@@ -321,6 +322,7 @@ console.log('Firebase initialized (compat)');
             <select class="fsl" id="sh-s"><option value="">全スタッフ</option></select>
             <select id="sh-m"></select>
             <button class="bg" onclick="renderSH()">表示</button>
+            <button class="bn" onclick="openAddSubModal()" style="background:#E65100;color:#fff;">＋ 追加</button>
           </div>
           <div style="overflow-x:auto;"><table class="rt2"><thead><tr><th>日付</th><th>名前</th><th>種別</th><th>単位</th><th>交代者</th><th>操作</th></tr></thead><tbody id="sh-tb"><tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">上で絞り込んで表示</td></tr></tbody></table></div>
           <div id="sh-sum" style="margin-top:9px;font-size:11px;color:var(--t2);"></div>
@@ -2523,6 +2525,104 @@ function delR(id){if(!confirm('この打刻を削除しますか？'))return;DB.
 
 // ═══ 有給履歴 ═══
 function initPH(){const sel=document.getElementById('ph-s');sel.innerHTML='<option value="">全スタッフ</option>';DB.staff.filter(s=>s.company===CO).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}</option>`);const ms=document.getElementById('ph-m');if(ms.options.length>1)return;const n=new Date();for(let i=0;i<6;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);ms.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}renderPH();}
+
+// ═══ 管理画面：有給/代休 追加モーダル ═══
+function openAddPaidModal(){
+  const sel=document.getElementById('ap-staff');
+  sel.innerHTML='';
+  let list=DB.staff.slice();
+  if(currentAdmin&&currentAdmin.role!=='super')list=list.filter(s=>s.company===currentAdmin.company);
+  list.sort((a,b)=>a.id-b.id).forEach(s=>{
+    const o=document.createElement('option');o.value=s.id;o.textContent=s.id+' '+s.name;
+    sel.appendChild(o);
+  });
+  document.getElementById('ap-date').value=todayStr();
+  document.getElementById('ap-type').value='full';
+  document.getElementById('ap-memo').value='';
+  document.getElementById('add-paid-modal').style.display='flex';
+}
+function closeAddPaidModal(){
+  document.getElementById('add-paid-modal').style.display='none';
+}
+function submitAddPaid(){
+  const sid=parseInt(document.getElementById('ap-staff').value);
+  const date=document.getElementById('ap-date').value;
+  const type=document.getElementById('ap-type').value;
+  const memo=document.getElementById('ap-memo').value.trim();
+  if(!sid||!date){showToast('スタッフと日付を選択してください');return;}
+  const s=DB.staff.find(x=>x.id===sid);
+  if(!s)return;
+  // 重複チェック
+  const dup=DB.paid.find(p=>p.staffId===sid&&p.date===date);
+  if(dup){
+    if(!confirm('この日は既に有給が登録されています（'+dup.type+'）。\n上書きしますか？'))return;
+    DB.paid=DB.paid.filter(p=>!(p.staffId===sid&&p.date===date));
+  }
+  DB.paid.push({staffId:sid,date,type,memo,staffName:s.name});
+  sDB();
+  showToast(s.name+' に有給を追加しました ✓');
+  closeAddPaidModal();
+  renderPH();
+  renderPaidGrants();
+  fbSaveSettings();
+}
+
+function onAddSubKindChange(){
+  const k=document.getElementById('as-kind').value;
+  document.getElementById('as-replacer-wrap').style.display=(k==='substitute')?'':'none';
+}
+function openAddSubModal(){
+  const sel=document.getElementById('as-staff');
+  sel.innerHTML='';
+  let list=DB.staff.slice();
+  if(currentAdmin&&currentAdmin.role!=='super')list=list.filter(s=>s.company===currentAdmin.company);
+  list.sort((a,b)=>a.id-b.id).forEach(s=>{
+    const o=document.createElement('option');o.value=s.id;o.textContent=s.id+' '+s.name;
+    sel.appendChild(o);
+  });
+  document.getElementById('as-date').value=todayStr();
+  document.getElementById('as-kind').value='substitute';
+  document.getElementById('as-unit').value='full';
+  document.getElementById('as-replacer').value='';
+  onAddSubKindChange();
+  document.getElementById('add-sub-modal').style.display='flex';
+}
+function closeAddSubModal(){
+  document.getElementById('add-sub-modal').style.display='none';
+}
+function submitAddSub(){
+  const sid=parseInt(document.getElementById('as-staff').value);
+  const date=document.getElementById('as-date').value;
+  const kind=document.getElementById('as-kind').value;
+  const unit=document.getElementById('as-unit').value;
+  const replacer=document.getElementById('as-replacer').value.trim();
+  if(!sid||!date){showToast('スタッフと日付を選択してください');return;}
+  if(kind==='substitute'&&!replacer){showToast('交代者の名前を入力してください');return;}
+  const s=DB.staff.find(x=>x.id===sid);
+  if(!s)return;
+  // 重複チェック
+  const arr=kind==='substitute'?(DB.substitute||[]):(DB.subOff||[]);
+  const dup=arr.find(x=>x.staffId===sid&&x.date===date);
+  if(dup){
+    if(!confirm('この日は既に同種が登録されています。\n上書きしますか？'))return;
+    if(kind==='substitute')DB.substitute=DB.substitute.filter(x=>!(x.staffId===sid&&x.date===date));
+    else DB.subOff=DB.subOff.filter(x=>!(x.staffId===sid&&x.date===date));
+  }
+  if(!DB.substitute)DB.substitute=[];
+  if(!DB.subOff)DB.subOff=[];
+  const entry={staffId:sid,date,unit,staffName:s.name,company:s.company};
+  if(kind==='substitute')entry.replacer=replacer;
+  if(kind==='substitute')DB.substitute.push(entry);
+  else DB.subOff.push(entry);
+  sDB();
+  const kindLbl=kind==='substitute'?'代理出勤':'代休消化';
+  showToast(s.name+' に'+kindLbl+'を追加しました ✓');
+  closeAddSubModal();
+  renderSH();
+  renderSubGrants();
+  fbSaveSettings();
+}
+
 function renderPH(){const sid=parseInt(document.getElementById('ph-s').value)||null;const ym=document.getElementById('ph-m').value;const dw=['日','月','火','水','木','金','土'];const tl={full:'全日有給',am:'午前半日',pm:'午後半日'};let list=DB.paid.filter(p=>p.company===CO);if(sid)list=list.filter(p=>p.staffId===sid);if(ym)list=list.filter(p=>p.date.startsWith(ym));list.sort((a,b)=>a.date<b.date?-1:1);const tb=document.getElementById('ph-tb');if(!list.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">有給申請履歴がありません</td></tr>';document.getElementById('ph-sum').textContent='';return;}tb.innerHTML=list.map(p=>{const dt=new Date(p.date);const d=dw[dt.getDay()];const we=isLegalHoliday(p.date);return`<tr><td style="${we?'color:#E24B4A;font-weight:500;':''}">${p.date}</td><td style="${we?'color:#E24B4A;':''}">${d}</td><td>${p.staffName}</td><td><span class="badge b-paid">${tl[p.type]||p.type}</span></td><td style="color:var(--t2);font-size:10px;">${p.memo||''}</td><td><button class="fd" onclick="delPD(${p.id})">削除</button></td></tr>`;}).join('');let f=0,h=0;list.forEach(p=>{if(p.type==='full')f++;else h++;});document.getElementById('ph-sum').innerHTML=`全日: <b>${f}日</b>　半日: <b>${h}回</b>　合計: <b>${f+h*0.5}日</b>`;}
 function delPD(id){if(!confirm('この有給申請を削除しますか？'))return;DB.paid=DB.paid.filter(p=>p.id!==id);sDB();showToast('削除しました');renderPH();renderSG();}
 
@@ -4443,6 +4543,66 @@ lDB();autoStart();setInterval(tick,30000);tick();
     <div style="display:flex;gap:7px;margin-top:11px;">
       <button onclick="frClearFace()" class="bn" style="flex:1;padding:9px;font-size:11px;background:#fff;color:#C62828;border-color:#C62828;">登録を削除</button>
       <button onclick="closeFaceRegisterModal()" class="bg" style="flex:1;padding:9px;font-size:11px;">閉じる</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- 有給追加モーダル -->
+<div id="add-paid-modal" class="mod" style="display:none;">
+  <div class="mc">
+    <div class="cl">＋ 有給を追加</div>
+    <div class="frw"><label class="fl">スタッフ</label>
+      <select class="fsl" id="ap-staff"></select>
+    </div>
+    <div class="frw"><label class="fl">日付</label>
+      <input class="fi" type="date" id="ap-date">
+    </div>
+    <div class="frw"><label class="fl">種別</label>
+      <select class="fi" id="ap-type">
+        <option value="full">全日（1.0日）</option>
+        <option value="half">半日（0.5日）</option>
+        <option value="hour">時間</option>
+      </select>
+    </div>
+    <div class="frw"><label class="fl">メモ（任意）</label>
+      <input class="fi" type="text" id="ap-memo" placeholder="例: 申請忘れの追加">
+    </div>
+    <div style="display:flex;gap:9px;margin-top:11px;">
+      <button class="bn" onclick="closeAddPaidModal()" style="flex:1;">キャンセル</button>
+      <button class="fb" onclick="submitAddPaid()" style="flex:1;">追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- 代休追加モーダル -->
+<div id="add-sub-modal" class="mod" style="display:none;">
+  <div class="mc">
+    <div class="cl">＋ 代休・代理出勤を追加</div>
+    <div class="frw"><label class="fl">スタッフ</label>
+      <select class="fsl" id="as-staff"></select>
+    </div>
+    <div class="frw"><label class="fl">種別</label>
+      <select class="fi" id="as-kind" onchange="onAddSubKindChange()">
+        <option value="substitute">代理出勤（+）</option>
+        <option value="suboff">代休消化（-）</option>
+      </select>
+    </div>
+    <div class="frw"><label class="fl">日付</label>
+      <input class="fi" type="date" id="as-date">
+    </div>
+    <div class="frw"><label class="fl">単位</label>
+      <select class="fi" id="as-unit">
+        <option value="full">全日（1.0日）</option>
+        <option value="half">半日（0.5日）</option>
+      </select>
+    </div>
+    <div class="frw" id="as-replacer-wrap"><label class="fl">交代者の名前</label>
+      <input class="fi" type="text" id="as-replacer" placeholder="例: 川口 琢也">
+    </div>
+    <div style="display:flex;gap:9px;margin-top:11px;">
+      <button class="bn" onclick="closeAddSubModal()" style="flex:1;">キャンセル</button>
+      <button class="fb" onclick="submitAddSub()" style="flex:1;">追加</button>
     </div>
   </div>
 </div>
