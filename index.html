@@ -2655,7 +2655,7 @@ function submitAddPaid(){
     if(!confirm('この日は既に有給が登録されています（'+dup.type+'）。\n上書きしますか？'))return;
     DB.paid=DB.paid.filter(p=>!(p.staffId===sid&&p.date===date));
   }
-  DB.paid.push({staffId:sid,date,type,memo,staffName:s.name});
+  DB.paid.push({staffId:sid,date,type,memo,staffName:s.name,company:s.company,id:Date.now()});
   sDB();
   showToast(s.name+' に有給を追加しました ✓');
   closeAddPaidModal();
@@ -2720,7 +2720,11 @@ function submitAddSub(){
   fbSaveSettings();
 }
 
-function renderPH(){const sid=parseInt(document.getElementById('ph-s').value)||null;const ym=document.getElementById('ph-m').value;const dw=['日','月','火','水','木','金','土'];const tl={full:'全日有給',am:'午前半日',pm:'午後半日'};let list=DB.paid.filter(p=>p.company===CO);if(sid)list=list.filter(p=>p.staffId===sid);if(ym)list=list.filter(p=>p.date.startsWith(ym));list.sort((a,b)=>a.date<b.date?-1:1);const tb=document.getElementById('ph-tb');if(!list.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">有給申請履歴がありません</td></tr>';document.getElementById('ph-sum').textContent='';return;}tb.innerHTML=list.map(p=>{const dt=new Date(p.date);const d=dw[dt.getDay()];const we=isLegalHoliday(p.date);return`<tr><td style="${we?'color:#E24B4A;font-weight:500;':''}">${p.date}</td><td style="${we?'color:#E24B4A;':''}">${d}</td><td>${p.staffName}</td><td><span class="badge b-paid">${tl[p.type]||p.type}</span></td><td style="color:var(--t2);font-size:10px;">${p.memo||''}</td><td><button class="fd" onclick="delPD(${p.id})">削除</button></td></tr>`;}).join('');let f=0,h=0;list.forEach(p=>{if(p.type==='full')f++;else h++;});document.getElementById('ph-sum').innerHTML=`全日: <b>${f}日</b>　半日: <b>${h}回</b>　合計: <b>${f+h*0.5}日</b>`;}
+function renderPH(){const sid=parseInt(document.getElementById('ph-s').value)||null;const ym=document.getElementById('ph-m').value;const dw=['日','月','火','水','木','金','土'];const tl={full:'全日有給',am:'午前半日',pm:'午後半日'};let list=DB.paid.slice();
+  // 一般管理者は自社のみ、スーパー管理者は全社
+  if(currentAdmin&&currentAdmin.role!=='super'){
+    list=list.filter(p=>{const st=DB.staff.find(s=>s.id===p.staffId);return st&&st.company===currentAdmin.company;});
+  }if(sid)list=list.filter(p=>p.staffId===sid);if(ym)list=list.filter(p=>p.date.startsWith(ym));list.sort((a,b)=>a.date<b.date?-1:1);const tb=document.getElementById('ph-tb');if(!list.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">有給申請履歴がありません</td></tr>';document.getElementById('ph-sum').textContent='';return;}tb.innerHTML=list.map(p=>{const dt=new Date(p.date);const d=dw[dt.getDay()];const we=isLegalHoliday(p.date);return`<tr><td style="${we?'color:#E24B4A;font-weight:500;':''}">${p.date}</td><td style="${we?'color:#E24B4A;':''}">${d}</td><td>${p.staffName}</td><td><span class="badge b-paid">${tl[p.type]||p.type}</span></td><td style="color:var(--t2);font-size:10px;">${p.memo||''}</td><td><button class="fd" onclick="delPD(${p.id})">削除</button></td></tr>`;}).join('');let f=0,h=0;list.forEach(p=>{if(p.type==='full')f++;else h++;});document.getElementById('ph-sum').innerHTML=`全日: <b>${f}日</b>　半日: <b>${h}回</b>　合計: <b>${f+h*0.5}日</b>`;}
 function delPD(id){if(!confirm('この有給申請を削除しますか？'))return;DB.paid=DB.paid.filter(p=>p.id!==id);sDB();showToast('削除しました');renderPH();renderSG();}
 
 // ═══ ランチデリ管理 ═══
@@ -4531,7 +4535,7 @@ function submitPIRequest(type){
     const t=document.getElementById('pi-paid-type').value;
     if(!date)return;
     DB.paid=DB.paid.filter(p=>!(p.staffId===piStaff.id&&p.date===date));
-    DB.paid.push({staffId:piStaff.id,date,type:t,staffName:piStaff.name});
+    DB.paid.push({staffId:piStaff.id,date,type:t,staffName:piStaff.name,company:piStaff.company,id:Date.now()});
     sDB();
     renderPIList('paid');
     showToast('有給を申請しました ✓');
