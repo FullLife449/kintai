@@ -292,9 +292,8 @@ console.log('Firebase initialized (compat)');
         </div>
         <div class="card"><div class="cl">有給申請履歴</div>
           <div class="fr" style="margin-bottom:10px;">
-            <select class="fsl" id="ph-s"><option value="">全スタッフ</option></select>
-            <select id="ph-m"></select>
-            <button class="bg" onclick="renderPH()">表示</button>
+            <select class="fsl" id="ph-s" onchange="renderPH()"><option value="">全スタッフ</option></select>
+            <select id="ph-m" onchange="renderPH()"></select>
             <button class="bn" onclick="openAddPaidModal()" style="background:#1B5E20;color:#fff;">＋ 追加</button>
           </div>
           <div style="overflow-x:auto;"><table class="rt2"><thead><tr><th>日付</th><th>曜</th><th>名前</th><th>種別</th><th>メモ</th><th>操作</th></tr></thead><tbody id="ph-tb"><tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">上で絞り込んで表示</td></tr></tbody></table></div>
@@ -319,9 +318,8 @@ console.log('Firebase initialized (compat)');
         <!-- 代休申請履歴 -->
         <div class="card"><div class="cl">代休申請履歴</div>
           <div class="fr" style="margin-bottom:10px;">
-            <select class="fsl" id="sh-s"><option value="">全スタッフ</option></select>
-            <select id="sh-m"></select>
-            <button class="bg" onclick="renderSH()">表示</button>
+            <select class="fsl" id="sh-s" onchange="renderSH()"><option value="">全スタッフ</option></select>
+            <select id="sh-m" onchange="renderSH()"></select>
             <button class="bn" onclick="openAddSubModal()" style="background:#E65100;color:#fff;">＋ 追加</button>
           </div>
           <div style="overflow-x:auto;"><table class="rt2"><thead><tr><th>日付</th><th>名前</th><th>種別</th><th>単位</th><th>交代者</th><th>操作</th></tr></thead><tbody id="sh-tb"><tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">上で絞り込んで表示</td></tr></tbody></table></div>
@@ -1129,42 +1127,43 @@ window.runTests = function(){
   const els=['ph-tb','sh-tb','pg-tb','sub-tb','punch-grid','add-paid-modal','add-sub-modal','atab-paid','phc-tab-paid','phc-tab-sub'];
   els.forEach(e=>log('要素 #'+e,!!document.getElementById(e)));
   
-  // 6. 有給申請履歴 表示テスト
+  // 6. 有給申請履歴 表示テスト（保存せず、try/finallyで確実にクリーンアップ）
   try{
-    const beforeP=DB.paid.length;
-    // テストデータ追加
-    const testEntry={staffId:1,date:'2099-12-31',type:'full',memo:'_TEST_',staffName:'川口 琢也'};
+    const testEntry={staffId:1,date:'2099-12-31',type:'full',memo:'_TEST_',staffName:'川口 琢也',company:'koyokai',id:99999999};
     DB.paid.push(testEntry);
-    // 表示
-    if(document.getElementById('ph-s')){
-      document.getElementById('ph-s').value='1';
+    try{
+      if(document.getElementById('ph-s'))document.getElementById('ph-s').value='1';
+      if(document.getElementById('ph-m'))document.getElementById('ph-m').value='2099-12';
+      if(typeof renderPH==='function')renderPH();
+      const html=document.getElementById('ph-tb')?document.getElementById('ph-tb').innerHTML:'';
+      log('renderPH表示',html.includes('2099-12-31'),'ph-tb内容: '+html.substring(0,80));
+    }finally{
+      // 必ずクリーンアップ（保存しない）
+      DB.paid=DB.paid.filter(p=>p.memo!=='_TEST_'&&p.id!==99999999);
     }
-    if(document.getElementById('ph-m')){
-      document.getElementById('ph-m').value='2099-12';
-    }
-    if(typeof renderPH==='function')renderPH();
-    const html=document.getElementById('ph-tb')?document.getElementById('ph-tb').innerHTML:'';
-    log('renderPH表示',html.includes('2099-12-31'),'ph-tb内容: '+html.substring(0,80));
-    // クリーンアップ
-    DB.paid=DB.paid.filter(p=>p.memo!=='_TEST_');
-  }catch(e){log('renderPHテスト',false,'エラー: '+e.message);}
+  }catch(e){
+    DB.paid=DB.paid.filter(p=>p.memo!=='_TEST_'&&p.id!==99999999);
+    log('renderPHテスト',false,'エラー: '+e.message);
+  }
   
   // 7. 代休申請履歴 表示テスト
   try{
     if(!DB.substitute)DB.substitute=[];
     const testSub={staffId:1,date:'2099-12-30',unit:'full',replacer:'_TEST_',staffName:'川口 琢也',company:'koyokai'};
     DB.substitute.push(testSub);
-    if(document.getElementById('sh-s')){
-      document.getElementById('sh-s').value='1';
+    try{
+      if(document.getElementById('sh-s'))document.getElementById('sh-s').value='1';
+      if(document.getElementById('sh-m'))document.getElementById('sh-m').value='2099-12';
+      if(typeof renderSH==='function')renderSH();
+      const html=document.getElementById('sh-tb')?document.getElementById('sh-tb').innerHTML:'';
+      log('renderSH表示',html.includes('2099-12-30'),'sh-tb内容: '+html.substring(0,80));
+    }finally{
+      DB.substitute=DB.substitute.filter(x=>x.replacer!=='_TEST_');
     }
-    if(document.getElementById('sh-m')){
-      document.getElementById('sh-m').value='2099-12';
-    }
-    if(typeof renderSH==='function')renderSH();
-    const html=document.getElementById('sh-tb')?document.getElementById('sh-tb').innerHTML:'';
-    log('renderSH表示',html.includes('2099-12-30'),'sh-tb内容: '+html.substring(0,80));
-    DB.substitute=DB.substitute.filter(x=>x.replacer!=='_TEST_');
-  }catch(e){log('renderSHテスト',false,'エラー: '+e.message);}
+  }catch(e){
+    DB.substitute=(DB.substitute||[]).filter(x=>x.replacer!=='_TEST_');
+    log('renderSHテスト',false,'エラー: '+e.message);
+  }
   
   // 8. 申請ロック動作確認
   if(typeof isReqDateAllowed==='function'){
@@ -2621,7 +2620,9 @@ function saveRec(){const type=document.getElementById('rtp').value;const time=do
 function delR(id){if(!confirm('この打刻を削除しますか？'))return;DB.records=DB.records.filter(r=>r.id!=id);sDB();showToast('削除しました');loadRecs();}
 
 // ═══ 有給履歴 ═══
-function initPH(){const sel=document.getElementById('ph-s');sel.innerHTML='<option value="">全スタッフ</option>';DB.staff.filter(s=>s.company===CO).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}</option>`);const ms=document.getElementById('ph-m');if(ms.options.length>1)return;const n=new Date();for(let i=0;i<6;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);ms.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}renderPH();}
+function initPH(){const sel=document.getElementById('ph-s');sel.innerHTML='<option value="">全スタッフ</option>';let staffList=DB.staff.slice();
+  if(currentAdmin&&currentAdmin.role!=='super')staffList=staffList.filter(s=>s.company===currentAdmin.company);
+  staffList.sort((a,b)=>a.id-b.id).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.id} ${s.name}</option>`);const ms=document.getElementById('ph-m');if(ms.options.length>1)return;const n=new Date();for(let i=0;i<6;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);ms.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}renderPH();}
 
 // ═══ 管理画面：有給/代休 追加モーダル ═══
 function openAddPaidModal(){
@@ -2725,7 +2726,7 @@ function renderPH(){const sid=parseInt(document.getElementById('ph-s').value)||n
   if(currentAdmin&&currentAdmin.role!=='super'){
     list=list.filter(p=>{const st=DB.staff.find(s=>s.id===p.staffId);return st&&st.company===currentAdmin.company;});
   }if(sid)list=list.filter(p=>p.staffId===sid);if(ym)list=list.filter(p=>p.date.startsWith(ym));list.sort((a,b)=>a.date<b.date?-1:1);const tb=document.getElementById('ph-tb');if(!list.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">有給申請履歴がありません</td></tr>';document.getElementById('ph-sum').textContent='';return;}tb.innerHTML=list.map(p=>{const dt=new Date(p.date);const d=dw[dt.getDay()];const we=isLegalHoliday(p.date);return`<tr><td style="${we?'color:#E24B4A;font-weight:500;':''}">${p.date}</td><td style="${we?'color:#E24B4A;':''}">${d}</td><td>${p.staffName}</td><td><span class="badge b-paid">${tl[p.type]||p.type}</span></td><td style="color:var(--t2);font-size:10px;">${p.memo||''}</td><td><button class="fd" onclick="delPD(${p.id})">削除</button></td></tr>`;}).join('');let f=0,h=0;list.forEach(p=>{if(p.type==='full')f++;else h++;});document.getElementById('ph-sum').innerHTML=`全日: <b>${f}日</b>　半日: <b>${h}回</b>　合計: <b>${f+h*0.5}日</b>`;}
-function delPD(id){if(!confirm('この有給申請を削除しますか？'))return;DB.paid=DB.paid.filter(p=>p.id!==id);sDB();showToast('削除しました');renderPH();renderSG();}
+function delPD(id){if(!confirm('この有給申請を削除しますか？'))return;DB.paid=DB.paid.filter(p=>p.id!==id);sDB();renderPH();if(typeof renderPaidGrants==='function')renderPaidGrants();showToast('削除しました');fbSaveSettings();}
 
 // ═══ ランチデリ管理 ═══
 let ldYear=null,ldMonth=null;
