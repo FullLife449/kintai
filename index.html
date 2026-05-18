@@ -1092,6 +1092,103 @@ function fmtHM(ms){if(!ms||ms<=0)return'';const m=Math.floor(ms/60000);return Ma
 function fmtMin(min){if(!min||min<=0)return'';return Math.floor(min/60)>0?Math.floor(min/60)+'時間'+((min%60)>0?(min%60)+'分':''):(min%60)+'分';}
 function parseHM(s){if(!s||s==='-')return null;const[h,m]=s.split(':').map(Number);return h*60+m;}
 function ini(n){return(n||'?').charAt(0);}
+
+// ═══ システムテスト用関数 ═══
+// コンソールで runTests() を実行すると、主要機能のチェックを一括実行
+window.runTests = function(){
+  const results=[];
+  const log=(name,ok,detail)=>{
+    results.push({name,ok,detail});
+    console.log((ok?'✓':'✗')+' '+name+(detail?' - '+detail:''));
+  };
+  
+  console.log('═══ システムテスト開始 ═══');
+  
+  // 1. DB存在チェック
+  log('DB.staff存在',Array.isArray(DB.staff),'件数: '+DB.staff.length);
+  log('DB.records存在',Array.isArray(DB.records),'件数: '+DB.records.length);
+  log('DB.paid存在',Array.isArray(DB.paid),'件数: '+DB.paid.length);
+  log('DB.substitute存在',Array.isArray(DB.substitute),'件数: '+(DB.substitute||[]).length);
+  log('DB.subOff存在',Array.isArray(DB.subOff),'件数: '+(DB.subOff||[]).length);
+  
+  // 2. スタッフデータ整合性
+  const kawaguchi=DB.staff.find(s=>s.id===1);
+  log('川口(id:1)存在',!!kawaguchi,kawaguchi?kawaguchi.name:'なし');
+  const iki=DB.staff.find(s=>s.id===3);
+  log('壹岐(id:3)存在',!!iki,iki?iki.name:'なし');
+  
+  // 3. 管理権限
+  log('川口スーパー管理者',kawaguchi&&kawaguchi.adminRole==='super');
+  log('壹岐スーパー管理者',iki&&iki.adminRole==='super');
+  
+  // 4. 重要関数の存在
+  const fns=['renderPH','renderSH','renderPaidGrants','renderSubGrants','submitAddPaid','submitAddSub','calcMonthSummary','renderPunchGrid','isReqDateAllowed','calcSubOffRemain'];
+  fns.forEach(f=>log('関数 '+f,typeof window[f]==='function'));
+  
+  // 5. 重要要素の存在
+  const els=['ph-tb','sh-tb','pg-tb','sub-tb','punch-grid','add-paid-modal','add-sub-modal','atab-paid','phc-tab-paid','phc-tab-sub'];
+  els.forEach(e=>log('要素 #'+e,!!document.getElementById(e)));
+  
+  // 6. 有給申請履歴 表示テスト
+  try{
+    const beforeP=DB.paid.length;
+    // テストデータ追加
+    const testEntry={staffId:1,date:'2099-12-31',type:'full',memo:'_TEST_',staffName:'川口 琢也'};
+    DB.paid.push(testEntry);
+    // 表示
+    if(document.getElementById('ph-s')){
+      document.getElementById('ph-s').value='1';
+    }
+    if(document.getElementById('ph-m')){
+      document.getElementById('ph-m').value='2099-12';
+    }
+    if(typeof renderPH==='function')renderPH();
+    const html=document.getElementById('ph-tb')?document.getElementById('ph-tb').innerHTML:'';
+    log('renderPH表示',html.includes('2099-12-31'),'ph-tb内容: '+html.substring(0,80));
+    // クリーンアップ
+    DB.paid=DB.paid.filter(p=>p.memo!=='_TEST_');
+  }catch(e){log('renderPHテスト',false,'エラー: '+e.message);}
+  
+  // 7. 代休申請履歴 表示テスト
+  try{
+    if(!DB.substitute)DB.substitute=[];
+    const testSub={staffId:1,date:'2099-12-30',unit:'full',replacer:'_TEST_',staffName:'川口 琢也',company:'koyokai'};
+    DB.substitute.push(testSub);
+    if(document.getElementById('sh-s')){
+      document.getElementById('sh-s').value='1';
+    }
+    if(document.getElementById('sh-m')){
+      document.getElementById('sh-m').value='2099-12';
+    }
+    if(typeof renderSH==='function')renderSH();
+    const html=document.getElementById('sh-tb')?document.getElementById('sh-tb').innerHTML:'';
+    log('renderSH表示',html.includes('2099-12-30'),'sh-tb内容: '+html.substring(0,80));
+    DB.substitute=DB.substitute.filter(x=>x.replacer!=='_TEST_');
+  }catch(e){log('renderSHテスト',false,'エラー: '+e.message);}
+  
+  // 8. 申請ロック動作確認
+  if(typeof isReqDateAllowed==='function'){
+    const today=new Date();
+    const nextMonth=new Date(today.getFullYear(),today.getMonth()+(today.getDate()<=15?1:2),5);
+    const nextStr=nextMonth.getFullYear()+'-'+String(nextMonth.getMonth()+1).padStart(2,'0')+'-'+String(nextMonth.getDate()).padStart(2,'0');
+    const pastStr=today.getFullYear()+'-01-01';
+    log('申請ロック(過去日付不可)',!isReqDateAllowed(pastStr),'過去='+pastStr);
+    log('申請ロック(未来日付可)',isReqDateAllowed(nextStr),'未来='+nextStr);
+  }
+  
+  // 結果サマリー
+  const ok=results.filter(r=>r.ok).length;
+  const ng=results.filter(r=>!r.ok).length;
+  console.log('═══ テスト完了: '+ok+' OK / '+ng+' NG ═══');
+  if(ng>0){
+    console.log('--- 失敗項目 ---');
+    results.filter(r=>!r.ok).forEach(r=>console.log('  ✗ '+r.name+(r.detail?': '+r.detail:'')));
+  }
+  return{ok,ng,details:results};
+};
+console.log('💡 ヒント: コンソールで runTests() を実行すると主要機能の自動チェックができます');
+
+
 function showToast(m){
   const t=document.getElementById('toast');
   if(!t)return;
