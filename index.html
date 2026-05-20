@@ -2173,6 +2173,294 @@ function renderWPList(){
 }
 
 // フルラフ専用タブの表示制御
+
+// ═══ フルラフ専用：勤務登録カレンダー ═══
+let scState={
+  staffId:null,
+  ym:null,
+  zoomMin:30, // 30 or 5 分刻み
+  selectedPatternId:null,
+  selectedCells:new Set(), // "date|startMin" 形式
+  startHour:8, // 表示開始時刻（自動拡張）
+  endHour:20   // 表示終了時刻（自動拡張）
+};
+
+function initShiftCal(){
+  // スタッフ選択肢
+  const sel=document.getElementById('sc-staff');
+  if(sel){
+    sel.innerHTML='<option value="">スタッフを選択</option>';
+    const list=DB.staff.filter(s=>s.company==='fulllife').sort((a,b)=>a.id-b.id);
+    list.forEach(s=>{
+      const o=document.createElement('option');
+      o.value=s.id;
+      o.textContent=s.id+' '+s.name;
+      sel.appendChild(o);
+    });
+  }
+  // 月選択肢
+  const ms=document.getElementById('sc-month');
+  if(ms&&!ms.options.length){
+    const now=new Date();
+    for(let i=-6;i<=12;i++){
+      const dt=new Date(now.getFullYear(),now.getMonth()+i,1);
+      const v=dt.getFullYear()+'-'+pad(dt.getMonth()+1);
+      const o=document.createElement('option');o.value=v;
+      o.textContent=dt.getFullYear()+'年'+(dt.getMonth()+1)+'月';
+      if(i===0)o.selected=true;
+      ms.appendChild(o);
+    }
+    scState.ym=ms.value;
+  }
+  // パターン一覧描画
+  renderScPatternList();
+  renderShiftCal();
+}
+
+function onScStaffChange(){
+  scState.staffId=parseInt(document.getElementById('sc-staff').value)||null;
+  renderShiftCal();
+  renderScPatternList(); // 個人ごとに使用履歴の上位表示
+}
+
+function renderScPatternList(){
+  const el=document.getElementById('sc-pattern-list');
+  if(!el)return;
+  let patterns=(DB.workPatterns||[]).filter(p=>p.company==='fulllife');
+  // 個人ごとの使用履歴で並び替え（よく使ったパターンが上）
+  if(scState.staffId){
+    const usage=(DB.patternUsage||[]).filter(u=>u.staffId===scState.staffId);
+    // usage.lastUsed の新しい順
+    patterns.sort((a,b)=>{
+      const ua=usage.find(u=>u.patternId===a.id);
+      const ub=usage.find(u=>u.patternId===b.id);
+      if(ua&&ub)return (ub.lastUsed||0)-(ua.lastUsed||0);
+      if(ua)return -1;
+      if(ub)return 1;
+      // 使用履歴ない場合は時間昇順
+      return parseHM(a.startTime)-parseHM(b.startTime);
+    });
+  }else{
+    patterns=sortPatterns(patterns);
+  }
+  if(!patterns.length){
+    el.innerHTML='<div style="color:var(--t2);font-size:10px;text-align:center;padding:9px;">パターン未登録</div>';
+    return;
+  }
+  el.innerHTML=patterns.map(p=>{
+    const selected=scState.selectedPatternId===p.id;
+    return `<div onclick="selectScPattern(${p.id})" style="padding:6px 8px;margin:2px 0;border-radius:6px;cursor:pointer;font-size:11px;border:1.5px solid ${selected?'#E65100':'transparent'};background:${selected?'#FFF3E0':'#fff'};">
+      <div style="font-weight:700;color:#E65100;">${p.no}</div>
+      <div style="font-size:10px;color:var(--t2);">${p.startTime}〜${p.endTime}</div>
+    </div>`;
+  }).join('');
+}
+
+function selectScPattern(pid){
+  scState.selectedPatternId=(scState.selectedPatternId===pid)?null:pid;
+  renderScPatternList();
+}
+
+// 時間軸の範囲を自動計算（シフトが範囲外の場合に拡張）
+function calcTimeRange(){
+  let minH=8,maxH=20;
+  if(!scState.staffId)return{startHour:minH,endHour:maxH};
+  const shifts=(DB.shiftCalendar||[]).filter(s=>s.staffId===scState.staffId&&s.date.startsWith(scState.ym));
+  shifts.forEach(s=>{
+    const sH=parseInt(s.startTime.substring(0,2));
+    const eH=parseInt(s.endTime.substring(0,2));
+    const eM=parseInt(s.endTime.substring(3,5));
+    if(sH<minH)minH=sH;
+    if(eH+(eM>0?1:0)>maxH)maxH=eH+(eM>0?1:0);
+  });
+  return{startHour:minH,endHour:maxH};
+}
+
+function renderShiftCal(){
+  const el=document.getElementById('sc-calendar');
+  if(!el)return;
+  const ym=document.getElementById('sc-month')?document.getElementById('sc-month').value:null;
+  scState.ym=ym;
+  if(!scState.staffId){
+    el.innerHTML='<div style="padding:30px;text-align:center;color:var(--t2);">スタッフを選択してください</div>';
+    return;
+  }
+  if(!ym){
+    el.innerHTML='<div style="padding:30px;text-align:center;color:var(--t2);">月を選択してください</div>';
+    return;
+  }
+  // 時間範囲計算（自動拡張）
+  const tr=calcTimeRange();
+  scState.startHour=tr.startHour;
+  scState.endHour=tr.endHour;
+  
+  // 日付配列
+  const [y,m]=ym.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const days=['日','月','火','水','木','金','土'];
+  
+  // 時刻列数
+  const totalMin=(scState.endHour-scState.startHour)*60;
+  const cols=totalMin/scState.zoomMin;
+  
+  // テーブル作成
+  let html='<table style="border-collapse:collapse;font-size:9px;min-width:100%;">';
+  // ヘッダー：時刻
+  html+='<thead><tr style="background:#f5f5f5;position:sticky;top:0;z-index:2;">';
+  html+='<th style="border:1px solid #ddd;padding:4px;min-width:50px;position:sticky;left:0;background:#f5f5f5;z-index:3;">日付</th>';
+  for(let i=0;i<cols;i++){
+    const min=scState.startHour*60+i*scState.zoomMin;
+    const h=Math.floor(min/60);
+    const mm=min%60;
+    const label=(mm===0)?h+':00':(scState.zoomMin<=15?(h+':'+pad(mm)):'');
+    html+=`<th style="border:1px solid #ddd;padding:2px;min-width:${scState.zoomMin<=15?20:30}px;font-weight:${mm===0?700:400};">${label}</th>`;
+  }
+  html+='</tr></thead><tbody>';
+  
+  // 行：各日付
+  for(let d=1;d<=lastDay;d++){
+    const dt=new Date(y,m-1,d);
+    const dow=dt.getDay();
+    const dateStr=ym+'-'+pad(d);
+    const isSat=dow===6;
+    const isSun=dow===0;
+    const bg=isSun?'#FFEBEE':(isSat?'#E3F2FD':'#fff');
+    html+=`<tr>`;
+    html+=`<td style="border:1px solid #ddd;padding:4px;min-width:50px;position:sticky;left:0;background:${bg};z-index:1;font-weight:600;">${d}<br><span style="font-size:8px;color:${isSun?'#C62828':(isSat?'#1976D2':'var(--t2)')};">${days[dow]}</span></td>`;
+    // セル
+    for(let i=0;i<cols;i++){
+      const min=scState.startHour*60+i*scState.zoomMin;
+      const cellKey=dateStr+'|'+min;
+      const selected=scState.selectedCells.has(cellKey);
+      html+=`<td data-date="${dateStr}" data-min="${min}" onclick="onShiftCellClick('${dateStr}',${min},event)" style="border:1px solid #eee;padding:0;height:24px;background:${selected?'#FFE0B2':bg};cursor:pointer;position:relative;"></td>`;
+    }
+    html+='</tr>';
+  }
+  html+='</tbody></table>';
+  el.innerHTML=html;
+  
+  // シフトを描画（バー）
+  renderShiftBars();
+}
+
+function renderShiftBars(){
+  // 既存バーを削除
+  document.querySelectorAll('.sc-bar').forEach(b=>b.remove());
+  const shifts=(DB.shiftCalendar||[]).filter(s=>s.staffId===scState.staffId&&s.date.startsWith(scState.ym));
+  shifts.forEach(s=>{
+    const startMin=parseHM(s.startTime);
+    const endMin=parseHM(s.endTime);
+    // 該当行を見つける
+    const cells=document.querySelectorAll('#sc-calendar td[data-date="'+s.date+'"]');
+    if(!cells.length)return;
+    // 開始位置のセルから幅を計算
+    const firstCell=document.querySelector('#sc-calendar td[data-date="'+s.date+'"][data-min="'+startMin+'"]');
+    if(!firstCell)return;
+    const cellWidth=firstCell.offsetWidth;
+    const widthMin=endMin-startMin;
+    const widthPx=(widthMin/scState.zoomMin)*cellWidth;
+    const pattern=(DB.workPatterns||[]).find(p=>p.id===s.patternId);
+    const bar=document.createElement('div');
+    bar.className='sc-bar';
+    bar.dataset.shiftId=s.id;
+    bar.style.cssText=`position:absolute;left:0;top:2px;width:${widthPx}px;height:20px;background:linear-gradient(135deg,#FF9800,#E65100);border-radius:4px;color:#fff;font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;pointer-events:none;`;
+    bar.textContent=pattern?pattern.no:'?';
+    firstCell.style.position='relative';
+    firstCell.appendChild(bar);
+  });
+}
+
+function onShiftCellClick(date,min,event){
+  if(!scState.staffId){showToast('スタッフを選択してください');return;}
+  // パターン選択中ならそのパターンで登録
+  if(scState.selectedPatternId){
+    const p=(DB.workPatterns||[]).find(p=>p.id===scState.selectedPatternId);
+    if(!p)return;
+    addShift(date,p);
+    return;
+  }
+  // セル選択（複数選択用）
+  const key=date+'|'+min;
+  if(event.ctrlKey||event.metaKey){
+    if(scState.selectedCells.has(key))scState.selectedCells.delete(key);
+    else scState.selectedCells.add(key);
+  }else{
+    scState.selectedCells.clear();
+    scState.selectedCells.add(key);
+  }
+  renderShiftCal();
+}
+
+function addShift(date,pattern){
+  if(!DB.shiftCalendar)DB.shiftCalendar=[];
+  // 同日重複チェック（時間が重なる場合のみ拒否）
+  const sM=parseHM(pattern.startTime);
+  const eM=parseHM(pattern.endTime);
+  const overlap=DB.shiftCalendar.find(s=>{
+    if(s.staffId!==scState.staffId||s.date!==date)return false;
+    const ssM=parseHM(s.startTime),seM=parseHM(s.endTime);
+    return !(eM<=ssM||sM>=seM);
+  });
+  if(overlap){
+    showToast('同じ時間帯に既にシフトがあります');
+    return;
+  }
+  DB.shiftCalendar.push({
+    id:Date.now()+Math.random(),
+    staffId:scState.staffId,
+    date,
+    patternId:pattern.id,
+    startTime:pattern.startTime,
+    endTime:pattern.endTime
+  });
+  // 使用履歴更新
+  if(!DB.patternUsage)DB.patternUsage=[];
+  const usage=DB.patternUsage.find(u=>u.staffId===scState.staffId&&u.patternId===pattern.id);
+  if(usage)usage.lastUsed=Date.now();
+  else DB.patternUsage.push({staffId:scState.staffId,patternId:pattern.id,lastUsed:Date.now()});
+  sDB();
+  renderShiftCal();
+  // 自動範囲拡張時の再描画必要
+  fbSaveSettings();
+}
+
+// Deleteキーで選択セルのシフトを削除
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Delete'&&e.key!=='Backspace')return;
+  const shiftCalEl=document.getElementById('sc-calendar');
+  if(!shiftCalEl||!shiftCalEl.offsetParent)return; // 表示されていない
+  if(scState.selectedCells.size===0)return;
+  // 選択セルに含まれるシフトを削除
+  const targetDates=new Set();
+  scState.selectedCells.forEach(key=>{
+    const [date,min]=key.split('|');
+    targetDates.add(date+'|'+min);
+  });
+  let deleted=0;
+  DB.shiftCalendar=DB.shiftCalendar.filter(s=>{
+    if(s.staffId!==scState.staffId||!s.date.startsWith(scState.ym))return true;
+    const sM=parseHM(s.startTime),eM=parseHM(s.endTime);
+    // セルが範囲内か
+    for(const key of scState.selectedCells){
+      const [d,minS]=key.split('|');
+      if(d!==s.date)continue;
+      const min=parseInt(minS);
+      if(min>=sM&&min<eM){
+        deleted++;
+        return false;
+      }
+    }
+    return true;
+  });
+  if(deleted){
+    scState.selectedCells.clear();
+    sDB();fbSaveSettings();
+    renderShiftCal();
+    showToast(deleted+'件削除しました');
+  }
+});
+
+
 function applyFulllifeTabsVisibility(){
   const isFulllife=(CO==='fulllife');
   document.querySelectorAll('.fl-only').forEach(el=>{
@@ -2194,7 +2482,8 @@ function showAS(sub){
   ['staff','shift','rec','paid','special','log','report','data','pw','devset','pattern','shiftcal','allshift','group','ot'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
   if(sub==='pw')initPwmStaffSelect();
   if(sub==='devset')initDevset();
-  if(sub==='pattern')initWPAdmin();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}}
+  if(sub==='pattern')initWPAdmin();
+  if(sub==='shiftcal')initShiftCal();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}}
 
 // ═══ 打刻グリッド ═══
 function renderSG(){
