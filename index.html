@@ -1056,6 +1056,7 @@ function selectCompany(co) {
   if(typeof renderSG==='function')renderSG();
   if(typeof renderAL==='function')renderAL();
   if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
+  if(typeof renderPunchWarnings==='function')setTimeout(renderPunchWarnings,300);
   // 顔認証モードの場合、自動起動
   setTimeout(autoStartFacePunch,800);
 }
@@ -2272,13 +2273,14 @@ function doP(sid,action){
 function detectPunchWarnings(){
   const warnings=[];
   const today=new Date();
-  const filter=window.adminCompanyFilter; // 一般管理者は自社のみ
+  // 現在選択中の会社のみ
+  const targetCo=CO;
   // 過去30日（昨日以前のみ、今日は除外）
   for(let d=1;d<=30;d++){
     const dt=new Date(today.getFullYear(),today.getMonth(),today.getDate()-d);
     const dateStr=dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
     DB.staff.forEach(s=>{
-      if(filter&&s.company!==filter)return;
+      if(s.company!==targetCo)return;
       const recs=DB.records.filter(r=>r.staffId===s.id&&r.date===dateStr&&(r.type==='in'||r.type==='out'));
       if(!recs.length)return; // その日打刻なし → 警告対象外
       const ins=recs.filter(r=>r.type==='in').length;
@@ -3966,6 +3968,7 @@ function applyAdminPermissions(admin){
   const switchBtn=document.querySelector('button[onclick="switchCompany()"]');
   if(switchBtn)switchBtn.style.display=isSuperAdmin?'':'none';
   if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
+  if(typeof renderPunchWarnings==='function')setTimeout(renderPunchWarnings,300);
   // 一般管理者は打刻画面の会社タブを非表示（自社固定）
   const coTabs=document.getElementById('co-tabs');
   if(coTabs)coTabs.style.display=isSuperAdmin?'':'none';
@@ -4313,6 +4316,7 @@ async function saveFaceDescriptor(desc){
   showToast(staff.name+' さんの顔写真を登録しました ✓');
   if(typeof renderAL==='function')renderAL();
   if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
+  if(typeof renderPunchWarnings==='function')setTimeout(renderPunchWarnings,300);
 }
 
 async function frClearFace(){
@@ -4328,6 +4332,7 @@ async function frClearFace(){
   showToast('削除しました');
   if(typeof renderAL==='function')renderAL();
   if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
+  if(typeof renderPunchWarnings==='function')setTimeout(renderPunchWarnings,300);
 }
 
 
