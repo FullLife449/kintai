@@ -618,6 +618,7 @@ console.log('Firebase initialized (compat)');
         <button class="ptab active" id="pi-tab-log" onclick="showPITab('log')">打刻ログ</button>
         <button class="ptab" id="pi-tab-paid" onclick="showPITab('paid')">有給</button>
         <button class="ptab" id="pi-tab-sub" onclick="showPITab('sub')">代休</button>
+        <button class="ptab pi-fl-only" id="pi-tab-ot" onclick="showPITab('ot')">時間外</button>
         <button class="ptab" id="pi-tab-fare" onclick="showPITab('fare')">交通費</button>
         <button class="ptab" id="pi-tab-expense" onclick="showPITab('expense')">経費精算</button>
         <button class="ptab" id="pi-tab-pw" onclick="showPITab('pw')">PW変更</button>
@@ -728,6 +729,21 @@ console.log('Firebase initialized (compat)');
         <div style="margin-top:14px;border-top:1px solid var(--br);padding-top:10px;">
           <div style="font-size:11px;font-weight:700;margin-bottom:6px;">履歴</div>
           <div id="pi-sub-list" style="max-height:240px;overflow-y:auto;"></div>
+        </div>
+      </div>
+      <!-- 時間外申請（フルラフ専用） -->
+      <div id="pi-view-ot" class="card pi-fl-only" style="display:none;">
+        <div class="cl">時間外申請</div>
+        <div class="fs2">所定外労働時間を申請します</div>
+        <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="pi-ot-date"></div>
+        <div class="frw"><label class="fl">開始時刻</label><input class="fi" type="time" id="pi-ot-start" step="300"></div>
+        <div class="frw"><label class="fl">終了時刻</label><input class="fi" type="time" id="pi-ot-end" step="300"></div>
+        <div class="frw"><label class="fl">理由</label><input class="fi" type="text" id="pi-ot-reason" placeholder="例: 急患対応、会議延長など"></div>
+        <button class="fb" style="width:100%;margin-top:7px;" onclick="submitPIRequest('ot')">時間外を申請</button>
+        <!-- 履歴 -->
+        <div style="margin-top:14px;border-top:1px solid var(--br);padding-top:10px;">
+          <div style="font-size:11px;font-weight:700;margin-bottom:6px;">申請履歴</div>
+          <div id="pi-ot-list" style="max-height:280px;overflow-y:auto;"></div>
         </div>
       </div>
       <!-- PW変更 -->
@@ -2523,6 +2539,337 @@ document.addEventListener('keydown',function(e){
 });
 
 
+
+// ═══ フルラフ専用：グループ管理 ═══
+function initGroupAdmin(){
+  renderGRList();
+  renderGRStaffList();
+}
+
+function addGroup(){
+  const name=document.getElementById('gr-name').value.trim();
+  if(!name){showToast('グループ名を入力してください');return;}
+  if(!DB.groups)DB.groups=[];
+  // 重複チェック
+  if(DB.groups.find(g=>g.name===name&&g.company==='fulllife')){
+    showToast('同名のグループが既にあります');return;
+  }
+  DB.groups.push({id:Date.now(),name,company:'fulllife'});
+  sDB();fbSaveSettings();
+  document.getElementById('gr-name').value='';
+  showToast('グループを追加しました ✓');
+  renderGRList();
+  renderGRStaffList();
+}
+
+function delGroup(id){
+  if(!confirm('このグループを削除しますか？\n所属スタッフは「未割当」になります'))return;
+  DB.groups=DB.groups.filter(g=>g.id!==id);
+  DB.staffGroup=(DB.staffGroup||[]).filter(sg=>sg.groupId!==id);
+  sDB();fbSaveSettings();
+  showToast('削除しました');
+  renderGRList();
+  renderGRStaffList();
+}
+
+function renderGRList(){
+  const el=document.getElementById('gr-list');
+  if(!el)return;
+  const list=(DB.groups||[]).filter(g=>g.company==='fulllife');
+  if(!list.length){
+    el.innerHTML='<div style="color:var(--t2);font-size:11px;text-align:center;padding:14px;">グループ未登録</div>';
+    return;
+  }
+  el.innerHTML=list.map(g=>{
+    const memberCount=(DB.staffGroup||[]).filter(sg=>sg.groupId===g.id).length;
+    return `<div style="display:flex;align-items:center;gap:9px;padding:7px 9px;border-bottom:1px solid #f0f0f0;font-size:11px;">
+      <div style="flex:1;"><b>${g.name}</b> <span style="color:var(--t2);font-size:10px;">（${memberCount}名）</span></div>
+      <button class="fd" onclick="delGroup(${g.id})">削除</button>
+    </div>`;
+  }).join('');
+}
+
+function renderGRStaffList(){
+  const el=document.getElementById('gr-staff-list');
+  if(!el)return;
+  const staff=DB.staff.filter(s=>s.company==='fulllife').sort((a,b)=>a.id-b.id);
+  const groups=(DB.groups||[]).filter(g=>g.company==='fulllife');
+  if(!staff.length){
+    el.innerHTML='<div style="color:var(--t2);font-size:11px;text-align:center;padding:14px;">スタッフなし</div>';
+    return;
+  }
+  el.innerHTML=staff.map(s=>{
+    const sg=(DB.staffGroup||[]).find(x=>x.staffId===s.id);
+    const currentGId=sg?sg.groupId:'';
+    return `<div style="display:flex;align-items:center;gap:9px;padding:6px 4px;border-bottom:1px solid #f0f0f0;font-size:11px;">
+      <span style="min-width:50px;color:var(--t2);">${s.id}</span>
+      <span style="flex:1;font-weight:600;">${s.name}</span>
+      <select onchange="updateStaffGroup(${s.id},this.value)" style="padding:4px 7px;border:1px solid var(--br);border-radius:6px;font-size:11px;font-family:inherit;">
+        <option value="">未割当</option>
+        ${groups.map(g=>`<option value="${g.id}"${currentGId==g.id?' selected':''}>${g.name}</option>`).join('')}
+      </select>
+    </div>`;
+  }).join('');
+}
+
+function updateStaffGroup(sid,gid){
+  if(!DB.staffGroup)DB.staffGroup=[];
+  DB.staffGroup=DB.staffGroup.filter(sg=>sg.staffId!==sid);
+  if(gid){
+    DB.staffGroup.push({staffId:sid,groupId:parseInt(gid)});
+  }
+  sDB();fbSaveSettings();
+  renderGRList(); // メンバー数更新
+}
+
+
+
+// ═══ フルラフ専用：全員シフト一覧 ═══
+let asState={ym:null,groupId:null};
+
+function initAllShift(){
+  // 月選択肢
+  const ms=document.getElementById('as-month');
+  if(ms&&!ms.options.length){
+    const now=new Date();
+    for(let i=-6;i<=12;i++){
+      const dt=new Date(now.getFullYear(),now.getMonth()+i,1);
+      const v=dt.getFullYear()+'-'+pad(dt.getMonth()+1);
+      const o=document.createElement('option');o.value=v;
+      o.textContent=dt.getFullYear()+'年'+(dt.getMonth()+1)+'月';
+      if(i===0)o.selected=true;
+      ms.appendChild(o);
+    }
+    asState.ym=ms.value;
+  }else if(ms){
+    asState.ym=ms.value;
+  }
+  asState.groupId=null;
+  renderAllShiftGroupTabs();
+  renderAllShift();
+}
+
+function renderAllShiftGroupTabs(){
+  const el=document.getElementById('as-group-tabs');
+  if(!el)return;
+  const groups=(DB.groups||[]).filter(g=>g.company==='fulllife');
+  let html=`<button onclick="filterAllShift(null)" style="padding:5px 11px;border:1px solid ${asState.groupId===null?'#E65100':'var(--br)'};border-radius:6px;background:${asState.groupId===null?'#FFF3E0':'#fff'};color:${asState.groupId===null?'#E65100':'var(--t2)'};font-size:11px;font-weight:${asState.groupId===null?700:400};cursor:pointer;font-family:inherit;">全員</button>`;
+  groups.forEach(g=>{
+    const sel=asState.groupId===g.id;
+    html+=`<button onclick="filterAllShift(${g.id})" style="padding:5px 11px;border:1px solid ${sel?'#E65100':'var(--br)'};border-radius:6px;background:${sel?'#FFF3E0':'#fff'};color:${sel?'#E65100':'var(--t2)'};font-size:11px;font-weight:${sel?700:400};cursor:pointer;font-family:inherit;">${g.name}</button>`;
+  });
+  // 未割当タブ
+  const unassignedCount=DB.staff.filter(s=>s.company==='fulllife'&&!(DB.staffGroup||[]).find(sg=>sg.staffId===s.id)).length;
+  if(unassignedCount){
+    const sel=asState.groupId==='unassigned';
+    html+=`<button onclick="filterAllShift('unassigned')" style="padding:5px 11px;border:1px solid ${sel?'#E65100':'var(--br)'};border-radius:6px;background:${sel?'#FFF3E0':'#fff'};color:${sel?'#E65100':'var(--t2)'};font-size:11px;font-weight:${sel?700:400};cursor:pointer;font-family:inherit;">未割当（${unassignedCount}）</button>`;
+  }
+  el.innerHTML=html;
+}
+
+function filterAllShift(gid){
+  asState.groupId=gid;
+  renderAllShiftGroupTabs();
+  renderAllShift();
+}
+
+function renderAllShift(){
+  const t=document.getElementById('as-table');
+  if(!t)return;
+  const ym=document.getElementById('as-month')?document.getElementById('as-month').value:asState.ym;
+  asState.ym=ym;
+  if(!ym){t.innerHTML='<tr><td>月を選択</td></tr>';return;}
+  
+  // スタッフ抽出
+  let staff=DB.staff.filter(s=>s.company==='fulllife');
+  if(asState.groupId==='unassigned'){
+    staff=staff.filter(s=>!(DB.staffGroup||[]).find(sg=>sg.staffId===s.id));
+  }else if(asState.groupId){
+    const ids=(DB.staffGroup||[]).filter(sg=>sg.groupId===asState.groupId).map(sg=>sg.staffId);
+    staff=staff.filter(s=>ids.includes(s.id));
+  }
+  
+  // 端末別の並び順を取得
+  const orderKey='kintai_as_staff_order_'+(asState.groupId||'all');
+  const savedOrder=JSON.parse(localStorage.getItem(orderKey)||'[]');
+  if(savedOrder.length){
+    staff.sort((a,b)=>{
+      const ia=savedOrder.indexOf(a.id);
+      const ib=savedOrder.indexOf(b.id);
+      if(ia<0&&ib<0)return a.id-b.id;
+      if(ia<0)return 1;
+      if(ib<0)return -1;
+      return ia-ib;
+    });
+  }else{
+    staff.sort((a,b)=>a.id-b.id);
+  }
+  
+  // 日付配列
+  const [y,m]=ym.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const days=['日','月','火','水','木','金','土'];
+  
+  // ヘッダー
+  let html='<thead><tr style="background:#f5f5f5;position:sticky;top:0;z-index:2;"><th style="border:1px solid #ddd;padding:6px;min-width:110px;position:sticky;left:0;background:#f5f5f5;z-index:3;">スタッフ</th>';
+  for(let d=1;d<=lastDay;d++){
+    const dt=new Date(y,m-1,d);
+    const dow=dt.getDay();
+    const isSat=dow===6,isSun=dow===0;
+    const color=isSun?'#C62828':(isSat?'#1976D2':'var(--t2)');
+    html+=`<th style="border:1px solid #ddd;padding:3px;min-width:75px;font-size:10px;color:${color};">${d}<br>${days[dow]}</th>`;
+  }
+  html+='</tr></thead><tbody>';
+  
+  // 各スタッフ行
+  staff.forEach(s=>{
+    html+=`<tr><td draggable="true" ondragstart="asDragStart(event,${s.id})" ondragover="asDragOver(event)" ondrop="asDrop(event,${s.id})" style="border:1px solid #ddd;padding:6px;min-width:110px;position:sticky;left:0;background:#fff;z-index:1;cursor:move;font-size:11px;">${s.id} ${s.name}</td>`;
+    for(let d=1;d<=lastDay;d++){
+      const dateStr=ym+'-'+pad(d);
+      const dt=new Date(y,m-1,d);
+      const dow=dt.getDay();
+      const bg=dow===0?'#FFEBEE':(dow===6?'#E3F2FD':'#fff');
+      const shifts=(DB.shiftCalendar||[]).filter(sh=>sh.staffId===s.id&&sh.date===dateStr);
+      const txt=shifts.map(sh=>sh.startTime+'-'+sh.endTime).join('<br>');
+      html+=`<td style="border:1px solid #ddd;padding:3px;font-size:9px;background:${bg};text-align:center;color:${dow===0?'#C62828':(dow===6?'#1976D2':'inherit')};">${txt}</td>`;
+    }
+    html+='</tr>';
+  });
+  html+='</tbody>';
+  t.innerHTML=html;
+}
+
+// ドラッグ&ドロップで並び替え
+let asDragId=null;
+function asDragStart(e,sid){asDragId=sid;e.dataTransfer.effectAllowed='move';}
+function asDragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move';}
+function asDrop(e,targetId){
+  e.preventDefault();
+  if(asDragId===targetId)return;
+  // 現在の表示順を取得
+  const orderKey='kintai_as_staff_order_'+(asState.groupId||'all');
+  let order=JSON.parse(localStorage.getItem(orderKey)||'[]');
+  // 現在表示中スタッフから取得
+  if(!order.length){
+    let staff=DB.staff.filter(s=>s.company==='fulllife');
+    if(asState.groupId==='unassigned')staff=staff.filter(s=>!(DB.staffGroup||[]).find(sg=>sg.staffId===s.id));
+    else if(asState.groupId){const ids=(DB.staffGroup||[]).filter(sg=>sg.groupId===asState.groupId).map(sg=>sg.staffId);staff=staff.filter(s=>ids.includes(s.id));}
+    order=staff.sort((a,b)=>a.id-b.id).map(s=>s.id);
+  }
+  // 並び替え
+  order=order.filter(id=>id!==asDragId);
+  const tIdx=order.indexOf(targetId);
+  if(tIdx<0)order.push(asDragId);
+  else order.splice(tIdx,0,asDragId);
+  localStorage.setItem(orderKey,JSON.stringify(order));
+  asDragId=null;
+  renderAllShift();
+}
+
+
+
+// ═══ フルラフ専用：時間外申請（個人画面）・承認（管理画面） ═══
+
+// 個人画面：時間外タブの表示制御（フルラフのみ）
+function applyPiFlOnlyVisibility(){
+  const isFulllife=(piStaff&&piStaff.company==='fulllife');
+  document.querySelectorAll('.pi-fl-only').forEach(el=>{
+    el.style.display=isFulllife?'':'none';
+  });
+}
+
+function renderPiOTList(){
+  if(!piStaff)return;
+  const el=document.getElementById('pi-ot-list');
+  if(!el)return;
+  const list=(DB.otRequests||[]).filter(r=>r.staffId===piStaff.id).sort((a,b)=>a.date<b.date?1:-1);
+  if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:11px;text-align:center;padding:14px;">履歴なし</div>';return;}
+  el.innerHTML=list.map(r=>{
+    let statusLbl='';
+    if(r.status==='pending')statusLbl='<span style="color:#F57C00;font-weight:700;">承認待ち</span>';
+    else if(r.status==='approved')statusLbl='<span style="color:#2E7D32;font-weight:700;">承認済</span>';
+    else statusLbl='<span style="color:#C62828;font-weight:700;">却下</span>';
+    return `<div style="padding:6px 8px;border-bottom:1px solid #f0f0f0;font-size:11px;">
+      ${r.date} ${r.startTime}〜${r.endTime} ${statusLbl}<br>
+      <span style="color:var(--t2);font-size:10px;">${r.reason||''}</span>
+    </div>`;
+  }).join('');
+}
+
+// 管理画面：時間外承認
+function initOTAdmin(){
+  const ms=document.getElementById('ot-month');
+  if(ms&&!ms.options.length){
+    const now=new Date();
+    for(let i=-6;i<=6;i++){
+      const dt=new Date(now.getFullYear(),now.getMonth()+i,1);
+      const v=dt.getFullYear()+'-'+pad(dt.getMonth()+1);
+      const o=document.createElement('option');o.value=v;
+      o.textContent=dt.getFullYear()+'年'+(dt.getMonth()+1)+'月';
+      if(i===0)o.selected=true;
+      ms.appendChild(o);
+    }
+  }
+  renderOTReqs();
+}
+
+function renderOTReqs(){
+  const tb=document.getElementById('ot-tb');
+  if(!tb)return;
+  const ym=document.getElementById('ot-month')?document.getElementById('ot-month').value:null;
+  const st=document.getElementById('ot-status')?document.getElementById('ot-status').value:'all';
+  let list=(DB.otRequests||[]).filter(r=>r.company==='fulllife');
+  if(ym)list=list.filter(r=>r.date.startsWith(ym));
+  if(st!=='all')list=list.filter(r=>r.status===st);
+  list.sort((a,b)=>a.date<b.date?1:-1);
+  if(!list.length){
+    tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">該当なし</td></tr>';
+    return;
+  }
+  tb.innerHTML=list.map(r=>{
+    const s=DB.staff.find(x=>x.id===r.staffId);
+    let statusLbl='',ops='';
+    if(r.status==='pending'){
+      statusLbl='<span style="color:#F57C00;font-weight:700;">承認待ち</span>';
+      ops=`<button class="bg" onclick="approveOT('${r.id}')">承認</button> <button class="fd" onclick="rejectOT('${r.id}')">却下</button>`;
+    }else if(r.status==='approved'){
+      statusLbl='<span style="color:#2E7D32;font-weight:700;">承認済</span>';
+      ops=`<button class="bn" onclick="revertOT('${r.id}')">取消</button>`;
+    }else{
+      statusLbl='<span style="color:#C62828;font-weight:700;">却下</span>';
+      ops=`<button class="bn" onclick="revertOT('${r.id}')">取消</button>`;
+    }
+    return `<tr><td>${r.date}</td><td>${s?s.name:'?'}</td><td>${r.startTime}〜${r.endTime}</td><td style="font-size:10px;">${r.reason||''}</td><td>${statusLbl}</td><td>${ops}</td></tr>`;
+  }).join('');
+}
+
+function approveOT(id){
+  const r=DB.otRequests.find(x=>String(x.id)===String(id));
+  if(!r)return;
+  r.status='approved';
+  r.approvedBy=currentAdmin?currentAdmin.name:'admin';
+  sDB();fbSaveSettings();
+  renderOTReqs();
+  showToast('承認しました ✓');
+}
+function rejectOT(id){
+  const r=DB.otRequests.find(x=>String(x.id)===String(id));
+  if(!r)return;
+  r.status='rejected';
+  sDB();fbSaveSettings();
+  renderOTReqs();
+  showToast('却下しました');
+}
+function revertOT(id){
+  const r=DB.otRequests.find(x=>String(x.id)===String(id));
+  if(!r)return;
+  r.status='pending';
+  sDB();fbSaveSettings();
+  renderOTReqs();
+  showToast('承認待ちに戻しました');
+}
+
+
 function applyFulllifeTabsVisibility(){
   const isFulllife=(CO==='fulllife');
   document.querySelectorAll('.fl-only').forEach(el=>{
@@ -2545,7 +2892,10 @@ function showAS(sub){
   if(sub==='pw')initPwmStaffSelect();
   if(sub==='devset')initDevset();
   if(sub==='pattern')initWPAdmin();
-  if(sub==='shiftcal')initShiftCal();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}}
+  if(sub==='shiftcal')initShiftCal();
+  if(sub==='group')initGroupAdmin();
+  if(sub==='allshift')initAllShift();
+  if(sub==='ot')initOTAdmin();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}}
 
 // ═══ 打刻グリッド ═══
 function renderSG(){
@@ -3578,7 +3928,24 @@ function exportSingleCSV(type){
     });
     downloadCSV(coLabel+'_交通費_'+ym+'.csv',rows);
     showToast('交通費CSVをダウンロード ✓');
-  }else if(type==='substitute'||type==='suboff'){
+  }else if(type==='ot'){
+    const date=document.getElementById('pi-ot-date').value;
+    const start=document.getElementById('pi-ot-start').value;
+    const end=document.getElementById('pi-ot-end').value;
+    const reason=document.getElementById('pi-ot-reason').value.trim();
+    if(!date||!start||!end){showToast('日付・時刻を入力してください');return;}
+    if(!reason){showToast('理由を入力してください');return;}
+    if(parseHM(end)<=parseHM(start)){showToast('終了は開始より後にしてください');return;}
+    if(!DB.otRequests)DB.otRequests=[];
+    DB.otRequests.push({id:Date.now()+Math.random(),staffId:piStaff.id,date,startTime:start,endTime:end,reason,status:'pending',company:piStaff.company});
+    sDB();
+    renderPiOTList();
+    showToast('時間外を申請しました ✓');
+    document.getElementById('pi-ot-reason').value='';
+    fbSaveSettings();
+    return;
+  }
+  if(type==='substitute'||type==='suboff'){
     const date=document.getElementById(type==='substitute'?'pi-sub-sub-date':'pi-sub-off-date').value;
     const unit=document.getElementById(type==='substitute'?'pi-sub-sub-unit':'pi-sub-off-unit').value;
     const replacer=type==='substitute'?document.getElementById('pi-sub-sub-replacer').value.trim():'';
@@ -4087,7 +4454,7 @@ function logoutPersonal(){
 }
 
 function showPTab(tab){
-  ['log','paid','sub','fare','expense','pw'].forEach(t=>{
+  ['log','paid','sub','ot','fare','expense','pw'].forEach(t=>{
     const v=document.getElementById('pview-'+t);
     const b=document.getElementById('ptab-'+t);
     if(v)v.style.display=t===tab?'block':'none';
@@ -4733,6 +5100,7 @@ function loginPersonalInline(){
   if(!staff){document.getElementById('pi-err').textContent='スタッフが見つかりません';return;}
   if((staff.pw||'0000')!==pw){document.getElementById('pi-err').textContent='PWが違います';return;}
   piStaff=staff;
+  if(typeof applyPiFlOnlyVisibility==='function')applyPiFlOnlyVisibility();
   document.getElementById('personal-inline-login').style.display='none';
   document.getElementById('personal-inline-main').style.display='block';
   const coName={koyokai:'医療法人 香庸会',fulllife:'株式会社 フルラフ'};
@@ -4756,7 +5124,7 @@ function logoutPersonalInline(){
 }
 
 function showPITab(tab){
-  ['log','paid','sub','fare','expense','pw'].forEach(t=>{
+  ['log','paid','sub','ot','fare','expense','pw'].forEach(t=>{
     const v=document.getElementById('pi-view-'+t);
     const b=document.getElementById('pi-tab-'+t);
     if(v)v.style.display=t===tab?'block':'none';
@@ -4768,6 +5136,7 @@ function showPITab(tab){
   
   if(tab==='expense')renderPIList('expense');
   if(tab==='sub'){renderPiSubRemain();renderPiSubList();setPiSubMode('substitute');}
+  if(tab==='ot'){renderPiOTList();const dEl=document.getElementById('pi-ot-date');if(dEl&&!dEl.value)dEl.value=todayStr();}
 }
 
 function initPILogMonth(){
@@ -4875,6 +5244,23 @@ function renderPIList(type){
   if(type==='paid')items=DB.paid.filter(p=>p.staffId===piStaff.id).sort((a,b)=>a.date<b.date?-1:1).map(p=>({date:p.date,disp:typeL[p.type]||p.type}));
   if(type==='fare')items=DB.fare.filter(f=>f.staffId===piStaff.id).sort((a,b)=>a.date<b.date?-1:1).map(f=>({date:f.date,disp:(f.amount?f.amount+'円':'')+(f.memo?' '+f.memo:'')}));
   
+  if(type==='ot'){
+    const date=document.getElementById('pi-ot-date').value;
+    const start=document.getElementById('pi-ot-start').value;
+    const end=document.getElementById('pi-ot-end').value;
+    const reason=document.getElementById('pi-ot-reason').value.trim();
+    if(!date||!start||!end){showToast('日付・時刻を入力してください');return;}
+    if(!reason){showToast('理由を入力してください');return;}
+    if(parseHM(end)<=parseHM(start)){showToast('終了は開始より後にしてください');return;}
+    if(!DB.otRequests)DB.otRequests=[];
+    DB.otRequests.push({id:Date.now()+Math.random(),staffId:piStaff.id,date,startTime:start,endTime:end,reason,status:'pending',company:piStaff.company});
+    sDB();
+    renderPiOTList();
+    showToast('時間外を申請しました ✓');
+    document.getElementById('pi-ot-reason').value='';
+    fbSaveSettings();
+    return;
+  }
   if(type==='substitute'||type==='suboff'){
     const date=document.getElementById(type==='substitute'?'pi-sub-sub-date':'pi-sub-off-date').value;
     const unit=document.getElementById(type==='substitute'?'pi-sub-sub-unit':'pi-sub-off-unit').value;
@@ -5018,6 +5404,23 @@ function renderPiSubList(){
 
 function submitPIRequest(type){
   if(!piStaff)return;
+  if(type==='ot'){
+    const date=document.getElementById('pi-ot-date').value;
+    const start=document.getElementById('pi-ot-start').value;
+    const end=document.getElementById('pi-ot-end').value;
+    const reason=document.getElementById('pi-ot-reason').value.trim();
+    if(!date||!start||!end){showToast('日付・時刻を入力してください');return;}
+    if(!reason){showToast('理由を入力してください');return;}
+    if(parseHM(end)<=parseHM(start)){showToast('終了は開始より後にしてください');return;}
+    if(!DB.otRequests)DB.otRequests=[];
+    DB.otRequests.push({id:Date.now()+Math.random(),staffId:piStaff.id,date,startTime:start,endTime:end,reason,status:'pending',company:piStaff.company});
+    sDB();
+    renderPiOTList();
+    showToast('時間外を申請しました ✓');
+    document.getElementById('pi-ot-reason').value='';
+    fbSaveSettings();
+    return;
+  }
   if(type==='substitute'||type==='suboff'){
     const date=document.getElementById(type==='substitute'?'pi-sub-sub-date':'pi-sub-off-date').value;
     const unit=document.getElementById(type==='substitute'?'pi-sub-sub-unit':'pi-sub-off-unit').value;
