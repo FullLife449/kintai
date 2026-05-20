@@ -2120,6 +2120,18 @@ function sortPatterns(patterns){
   });
 }
 
+// パターン番号を並び順に従って再採番（IDは不変）
+function renumberPatterns(){
+  if(!DB.workPatterns)return;
+  const fl=DB.workPatterns.filter(p=>p.company==='fulllife');
+  const others=DB.workPatterns.filter(p=>p.company!=='fulllife');
+  const sorted=sortPatterns(fl);
+  sorted.forEach((p,i)=>{p.no=i+1;});
+  DB.workPatterns=[...others,...sorted];
+}
+
+
+
 // 法定休憩控除（分）
 function legalBreakMin(workMin){
   if(workMin>8*60)return 60;
@@ -2140,19 +2152,25 @@ function addWorkPattern(){
   if(!DB.workPatterns)DB.workPatterns=[];
   const maxNo=DB.workPatterns.filter(p=>p.company==='fulllife').reduce((a,b)=>Math.max(a,b.no||0),0);
   DB.workPatterns.push({id:Date.now(),no:maxNo+1,startTime:start,endTime:end,company:'fulllife'});
+  renumberPatterns();
   sDB();fbSaveSettings();
   document.getElementById('wp-start').value='';
   document.getElementById('wp-end').value='';
   showToast('パターンを追加しました ✓');
   renderWPList();
+  if(typeof renderScPatternList==='function')renderScPatternList();
+  if(typeof renderShiftCal==='function')renderShiftCal();
 }
 
 function delWorkPattern(id){
   if(!confirm('このパターンを削除しますか？\n※既に使用中のシフトはそのまま残ります'))return;
   DB.workPatterns=DB.workPatterns.filter(p=>p.id!==id);
+  renumberPatterns();
   sDB();fbSaveSettings();
   showToast('削除しました');
   renderWPList();
+  if(typeof renderScPatternList==='function')renderScPatternList();
+  if(typeof renderShiftCal==='function')renderShiftCal();
 }
 
 function renderWPList(){
@@ -2433,8 +2451,8 @@ function addShift(date,pattern){
   if(usage)usage.lastUsed=Date.now();
   else DB.patternUsage.push({staffId:scState.staffId,patternId:pattern.id,lastUsed:Date.now()});
   sDB();
+  renderScPatternList(); // パターン一覧をリアルタイム更新
   renderShiftCal();
-  // 自動範囲拡張時の再描画必要
   fbSaveSettings();
 }
 
