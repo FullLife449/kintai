@@ -2107,9 +2107,15 @@ function clearDevset(){
 // パターンを昇順ソート（時間少ない順、同じならID順）
 function sortPatterns(patterns){
   return patterns.slice().sort((a,b)=>{
-    const aMs=parseHM(a.startTime);
-    const bMs=parseHM(b.startTime);
-    if(aMs!==bMs)return aMs-bMs;
+    // 第1キー：開始時刻が早い順
+    const aS=parseHM(a.startTime);
+    const bS=parseHM(b.startTime);
+    if(aS!==bS)return aS-bS;
+    // 第2キー：勤務時間が長い順（降順）
+    const aLen=parseHM(a.endTime)-aS;
+    const bLen=parseHM(b.endTime)-bS;
+    if(aLen!==bLen)return bLen-aLen;
+    // 第3キー：番号順（同点時の安定）
     return a.no-b.no;
   });
 }
@@ -2226,22 +2232,20 @@ function onScStaffChange(){
 function renderScPatternList(){
   const el=document.getElementById('sc-pattern-list');
   if(!el)return;
-  let patterns=(DB.workPatterns||[]).filter(p=>p.company==='fulllife');
-  // 個人ごとの使用履歴で並び替え（よく使ったパターンが上）
+  const allPatterns=(DB.workPatterns||[]).filter(p=>p.company==='fulllife');
+  let patterns;
   if(scState.staffId){
     const usage=(DB.patternUsage||[]).filter(u=>u.staffId===scState.staffId);
-    // usage.lastUsed の新しい順
-    patterns.sort((a,b)=>{
-      const ua=usage.find(u=>u.patternId===a.id);
-      const ub=usage.find(u=>u.patternId===b.id);
-      if(ua&&ub)return (ub.lastUsed||0)-(ua.lastUsed||0);
-      if(ua)return -1;
-      if(ub)return 1;
-      // 使用履歴ない場合は時間昇順
-      return parseHM(a.startTime)-parseHM(b.startTime);
-    });
+    // 使用したパターン（新しい順）
+    const usedPatterns=usage
+      .sort((a,b)=>(b.lastUsed||0)-(a.lastUsed||0))
+      .map(u=>allPatterns.find(p=>p.id===u.patternId))
+      .filter(Boolean);
+    // 未使用パターン（並び順：開始時刻早い → 勤務時間長い順）
+    const unusedPatterns=sortPatterns(allPatterns.filter(p=>!usage.find(u=>u.patternId===p.id)));
+    patterns=[...usedPatterns,...unusedPatterns];
   }else{
-    patterns=sortPatterns(patterns);
+    patterns=sortPatterns(allPatterns);
   }
   if(!patterns.length){
     el.innerHTML='<div style="color:var(--t2);font-size:10px;text-align:center;padding:9px;">パターン未登録</div>';
@@ -2350,20 +2354,30 @@ function renderShiftBars(){
   shifts.forEach(s=>{
     const startMin=parseHM(s.startTime);
     const endMin=parseHM(s.endTime);
-    // 該当行を見つける
-    const cells=document.querySelectorAll('#sc-calendar td[data-date="'+s.date+'"]');
+    // 該当行のセルを取得
+    const cells=Array.from(document.querySelectorAll('#sc-calendar td[data-date="'+s.date+'"]'));
     if(!cells.length)return;
-    // 開始位置のセルから幅を計算
-    const firstCell=document.querySelector('#sc-calendar td[data-date="'+s.date+'"][data-min="'+startMin+'"]');
+    // 開始時刻を含むセル（startMinがセル範囲に入るセル）を探す
+    let firstCell=null;
+    let offsetInCell=0;
+    for(const cell of cells){
+      const cellMin=parseInt(cell.dataset.min);
+      if(cellMin<=startMin&&startMin<cellMin+scState.zoomMin){
+        firstCell=cell;
+        offsetInCell=(startMin-cellMin)/scState.zoomMin; // 0〜1
+        break;
+      }
+    }
     if(!firstCell)return;
     const cellWidth=firstCell.offsetWidth;
     const widthMin=endMin-startMin;
     const widthPx=(widthMin/scState.zoomMin)*cellWidth;
+    const leftPx=offsetInCell*cellWidth;
     const pattern=(DB.workPatterns||[]).find(p=>p.id===s.patternId);
     const bar=document.createElement('div');
     bar.className='sc-bar';
     bar.dataset.shiftId=s.id;
-    bar.style.cssText=`position:absolute;left:0;top:2px;width:${widthPx}px;height:20px;background:linear-gradient(135deg,#FF9800,#E65100);border-radius:4px;color:#fff;font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;pointer-events:none;`;
+    bar.style.cssText=`position:absolute;left:${leftPx}px;top:2px;width:${widthPx}px;height:20px;background:linear-gradient(135deg,#FF9800,#E65100);border-radius:4px;color:#fff;font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;pointer-events:none;overflow:hidden;white-space:nowrap;`;
     bar.textContent=pattern?pattern.no:'?';
     firstCell.style.position='relative';
     firstCell.appendChild(bar);
