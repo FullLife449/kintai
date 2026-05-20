@@ -526,6 +526,7 @@ console.log('Firebase initialized (compat)');
             <option value="approved">承認済</option>
             <option value="rejected">却下</option>
           </select>
+          <button class="bn" onclick="openAddOTModal()" style="background:#E65100;color:#fff;">＋ 追加</button>
         </div>
         <div style="overflow-x:auto;">
           <table class="rt2"><thead><tr><th>日付</th><th>名前</th><th>時間</th><th>理由</th><th>状態</th><th>操作</th></tr></thead><tbody id="ot-tb"></tbody></table>
@@ -2797,6 +2798,43 @@ function renderPiOTList(){
 }
 
 // 管理画面：時間外承認
+
+function openAddOTModal(){
+  const sel=document.getElementById('ao-staff');
+  sel.innerHTML='';
+  DB.staff.filter(s=>s.company==='fulllife').sort((a,b)=>a.id-b.id).forEach(s=>{
+    const o=document.createElement('option');o.value=s.id;o.textContent=s.id+' '+s.name;
+    sel.appendChild(o);
+  });
+  document.getElementById('ao-date').value=todayStr();
+  document.getElementById('ao-start').value='';
+  document.getElementById('ao-end').value='';
+  document.getElementById('ao-reason').value='';
+  document.getElementById('ao-status').value='approved';
+  document.getElementById('add-ot-modal').style.display='flex';
+}
+function closeAddOTModal(){
+  document.getElementById('add-ot-modal').style.display='none';
+}
+function submitAddOT(){
+  const sid=parseInt(document.getElementById('ao-staff').value);
+  const date=document.getElementById('ao-date').value;
+  const start=document.getElementById('ao-start').value;
+  const end=document.getElementById('ao-end').value;
+  const reason=document.getElementById('ao-reason').value.trim();
+  const status=document.getElementById('ao-status').value;
+  if(!sid||!date||!start||!end){showToast('スタッフ・日付・時刻を入力してください');return;}
+  if(parseHM(end)<=parseHM(start)){showToast('終了は開始より後にしてください');return;}
+  const s=DB.staff.find(x=>x.id===sid);
+  if(!s)return;
+  if(!DB.otRequests)DB.otRequests=[];
+  DB.otRequests.push({id:Date.now()+Math.random(),staffId:sid,date,startTime:start,endTime:end,reason,status,approvedBy:status==='approved'?(currentAdmin?currentAdmin.name:'admin'):null,company:'fulllife'});
+  sDB();fbSaveSettings();
+  closeAddOTModal();
+  renderOTReqs();
+  showToast('時間外を追加しました ✓');
+}
+
 function initOTAdmin(){
   const ms=document.getElementById('ot-month');
   if(ms&&!ms.options.length){
@@ -5665,5 +5703,37 @@ lDB();autoStart();setInterval(tick,30000);tick();
   </div>
 </div>
 
+
+<!-- 時間外追加モーダル -->
+<div id="add-ot-modal" class="mod" style="display:none;">
+  <div class="mc">
+    <div class="cl">＋ 時間外を追加</div>
+    <div class="frw"><label class="fl">スタッフ</label>
+      <select class="fsl" id="ao-staff"></select>
+    </div>
+    <div class="frw"><label class="fl">日付</label>
+      <input class="fi" type="date" id="ao-date">
+    </div>
+    <div class="frw"><label class="fl">開始時刻</label>
+      <input class="fi" type="time" id="ao-start" step="300">
+    </div>
+    <div class="frw"><label class="fl">終了時刻</label>
+      <input class="fi" type="time" id="ao-end" step="300">
+    </div>
+    <div class="frw"><label class="fl">理由</label>
+      <input class="fi" type="text" id="ao-reason" placeholder="例: 急患対応">
+    </div>
+    <div class="frw"><label class="fl">状態</label>
+      <select class="fi" id="ao-status">
+        <option value="approved">承認済（即時反映）</option>
+        <option value="pending">承認待ち</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:9px;margin-top:11px;">
+      <button class="bn" onclick="closeAddOTModal()" style="flex:1;">キャンセル</button>
+      <button class="fb" onclick="submitAddOT()" style="flex:1;">追加</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
