@@ -221,6 +221,12 @@ console.log('Firebase initialized (compat)');
       <button class="at" id="atab-log" onclick="showAS('log')">ログ</button>
       <button class="at" id="atab-report" onclick="showAS('report')">レポート</button>
       <button class="at" id="atab-data" onclick="showAS('data')">データ移行</button><button class="at" id="atab-pw" onclick="showAS('pw')">PW管理</button><button class="at" id="atab-devset" onclick="showAS('devset')">端末表示設定</button>
+      <!-- フルラフ専用 -->
+      <button class="at fl-only" id="atab-pattern" onclick="showAS('pattern')" style="background:#FFF3E0;">勤務パターン</button>
+      <button class="at fl-only" id="atab-shiftcal" onclick="showAS('shiftcal')" style="background:#FFF3E0;">勤務登録</button>
+      <button class="at fl-only" id="atab-allshift" onclick="showAS('allshift')" style="background:#FFF3E0;">全員シフト</button>
+      <button class="at fl-only" id="atab-group" onclick="showAS('group')" style="background:#FFF3E0;">グループ管理</button>
+      <button class="at fl-only" id="atab-ot" onclick="showAS('ot')" style="background:#FFF3E0;">時間外承認</button>
     </div>
     <div class="pad">
     <div class="card" style="margin-bottom:8px;background:var(--bll);border:1px solid var(--bl);">
@@ -426,6 +432,104 @@ console.log('Firebase initialized (compat)');
         <button class="fb" style="width:100%;margin-top:10px;" onclick="saveDevset()">💾 この端末に保存</button>
         <button class="bn" style="width:100%;margin-top:6px;" onclick="clearDevset()">リセット（全員表示に戻す）</button>
         <div style="font-size:10px;color:var(--t2);margin-top:8px;padding:8px;background:#FFFDE7;border-radius:7px;">※この設定はこの端末のみ有効です。他の端末には影響しません。</div>
+      </div>
+    </div>
+    
+    <!-- フルラフ専用：勤務パターン管理 -->
+    <div class="asc" id="asc-pattern">
+      <div class="card" style="border:2px solid #FFB74D;background:#FFF3E0;">
+        <div class="cl" style="color:#E65100;">📋 勤務パターン管理（フルラフ専用）</div>
+        <div class="fs2" style="color:#5D4037;">勤務時間のパターンを登録します（自動採番、時間昇順で並び替え）</div>
+        <div class="frw">
+          <label class="fl">開始時刻</label>
+          <input class="fi" type="time" id="wp-start" step="300">
+        </div>
+        <div class="frw">
+          <label class="fl">終了時刻</label>
+          <input class="fi" type="time" id="wp-end" step="300">
+        </div>
+        <button class="fb" style="width:100%;margin-top:7px;" onclick="addWorkPattern()">+ パターンを追加</button>
+        <div style="margin-top:14px;border-top:1px solid var(--br);padding-top:10px;">
+          <div style="font-size:11px;font-weight:700;margin-bottom:6px;">登録済みパターン</div>
+          <div id="wp-list" style="max-height:400px;overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- フルラフ専用：勤務登録（カレンダー） -->
+    <div class="asc" id="asc-shiftcal">
+      <div class="card" style="border:2px solid #FFB74D;background:#FFF3E0;">
+        <div class="cl" style="color:#E65100;">📅 勤務登録（フルラフ専用）</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;">
+          <select class="fsl" id="sc-staff" onchange="onScStaffChange()" style="flex:1;min-width:180px;"></select>
+          <select id="sc-month" onchange="renderShiftCal()"></select>
+          <button class="bg" onclick="openInitDefaultsModal()">曜日デフォルト</button>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <div style="flex:1;overflow:auto;max-height:600px;border:1px solid var(--br);border-radius:7px;background:#fff;">
+            <div id="sc-calendar"></div>
+          </div>
+          <div style="width:130px;flex-shrink:0;">
+            <div style="font-size:11px;font-weight:700;margin-bottom:5px;">パターン</div>
+            <div style="font-size:9px;color:var(--t2);margin-bottom:5px;">タップしてから日付クリックで設定</div>
+            <div id="sc-pattern-list" style="max-height:520px;overflow-y:auto;border:1px solid var(--br);border-radius:7px;padding:5px;background:#fff;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- フルラフ専用：全員シフト -->
+    <div class="asc" id="asc-allshift">
+      <div class="card" style="border:2px solid #FFB74D;background:#FFF3E0;">
+        <div class="cl" style="color:#E65100;">👥 全員シフト（フルラフ専用・閲覧専用）</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;">
+          <select id="as-month" onchange="renderAllShift()"></select>
+          <div id="as-group-tabs" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+        </div>
+        <div style="overflow:auto;max-height:600px;border:1px solid var(--br);border-radius:7px;background:#fff;">
+          <table id="as-table" style="border-collapse:collapse;font-size:10px;"></table>
+        </div>
+        <div style="font-size:10px;color:var(--t2);margin-top:6px;">※スタッフ名をドラッグして並び順を変更できます</div>
+      </div>
+    </div>
+    
+    <!-- フルラフ専用：グループ管理 -->
+    <div class="asc" id="asc-group">
+      <div class="card" style="border:2px solid #FFB74D;background:#FFF3E0;">
+        <div class="cl" style="color:#E65100;">🏷️ グループ管理（フルラフ専用）</div>
+        <div class="fs2" style="color:#5D4037;">スタッフをグループに分類します</div>
+        <div class="frw">
+          <label class="fl">グループ名</label>
+          <input class="fi" type="text" id="gr-name" placeholder="例: デイサービスA">
+        </div>
+        <button class="fb" style="width:100%;margin-top:7px;" onclick="addGroup()">+ グループを追加</button>
+        <div style="margin-top:14px;border-top:1px solid var(--br);padding-top:10px;">
+          <div style="font-size:11px;font-weight:700;margin-bottom:6px;">登録済みグループ</div>
+          <div id="gr-list"></div>
+        </div>
+        <div style="margin-top:14px;border-top:1px solid var(--br);padding-top:10px;">
+          <div style="font-size:11px;font-weight:700;margin-bottom:6px;">スタッフのグループ割当</div>
+          <div id="gr-staff-list" style="max-height:340px;overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- フルラフ専用：時間外承認 -->
+    <div class="asc" id="asc-ot">
+      <div class="card" style="border:2px solid #FFB74D;background:#FFF3E0;">
+        <div class="cl" style="color:#E65100;">⏰ 時間外承認（フルラフ専用）</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;">
+          <select id="ot-month" onchange="renderOTReqs()"></select>
+          <select id="ot-status" onchange="renderOTReqs()">
+            <option value="all">全状態</option>
+            <option value="pending">承認待ち</option>
+            <option value="approved">承認済</option>
+            <option value="rejected">却下</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="rt2"><thead><tr><th>日付</th><th>名前</th><th>時間</th><th>理由</th><th>状態</th><th>操作</th></tr></thead><tbody id="ot-tb"></tbody></table>
+        </div>
       </div>
     </div>
     
@@ -951,6 +1055,7 @@ function selectCompany(co) {
   // 各画面を再描画
   if(typeof renderSG==='function')renderSG();
   if(typeof renderAL==='function')renderAL();
+  if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
   // 顔認証モードの場合、自動起動
   setTimeout(autoStartFacePunch,800);
 }
@@ -1054,13 +1159,21 @@ function fbSaveSettings() {
     substitute: DB.substitute||[],
     subOff: DB.subOff||[],
     subGrants: DB.subGrants||[],
-    adminPw: DB.adminPw
+    workPatterns: DB.workPatterns||[],
+    shiftCalendar: DB.shiftCalendar||[],
+    groups: DB.groups||[],
+    staffGroup: DB.staffGroup||[],
+    otRequests: DB.otRequests||[],
+    dayDefaults: DB.dayDefaults||[],
+    patternUsage: DB.patternUsage||[],
+    staffOrder: DB.staffOrder||[],
+    adminPw: DB.adminPw||null
   }).catch(e => console.error('fbSaveSettings error:', e));
 }
 
 const TL={in:'出勤',out:'退勤',break:'休憩開始',resume:'勤務再開',early:'早出',fare:'交通費',paid:'有給',lunch:'ランチデリ'};
 
-let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[]};
+let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[]};
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
@@ -1068,7 +1181,7 @@ const STAFF_VER='v2001'; // 19:30変更バージョン
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
-    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[]},d);
+    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[]},d);
   }catch(e){}
   // スタッフデータのバージョンが古い（17:45が含まれる）場合はスタッフのみリセット
   const staffVer=localStorage.getItem('kintai_staff_ver');
@@ -1987,6 +2100,86 @@ function clearDevset(){
   showToast('表示設定をリセットしました');
 }
 
+
+// ═══ フルラフ専用：勤務パターン・シフト管理 ═══
+
+// パターンを昇順ソート（時間少ない順、同じならID順）
+function sortPatterns(patterns){
+  return patterns.slice().sort((a,b)=>{
+    const aMs=parseHM(a.startTime);
+    const bMs=parseHM(b.startTime);
+    if(aMs!==bMs)return aMs-bMs;
+    return a.no-b.no;
+  });
+}
+
+// 法定休憩控除（分）
+function legalBreakMin(workMin){
+  if(workMin>8*60)return 60;
+  if(workMin>6*60)return 45;
+  return 0;
+}
+
+// 勤務パターン管理画面 初期化
+function initWPAdmin(){
+  renderWPList();
+}
+
+function addWorkPattern(){
+  const start=document.getElementById('wp-start').value;
+  const end=document.getElementById('wp-end').value;
+  if(!start||!end){showToast('開始・終了時刻を入力してください');return;}
+  if(parseHM(end)<=parseHM(start)){showToast('終了時刻は開始時刻より後にしてください');return;}
+  if(!DB.workPatterns)DB.workPatterns=[];
+  const maxNo=DB.workPatterns.filter(p=>p.company==='fulllife').reduce((a,b)=>Math.max(a,b.no||0),0);
+  DB.workPatterns.push({id:Date.now(),no:maxNo+1,startTime:start,endTime:end,company:'fulllife'});
+  sDB();fbSaveSettings();
+  document.getElementById('wp-start').value='';
+  document.getElementById('wp-end').value='';
+  showToast('パターンを追加しました ✓');
+  renderWPList();
+}
+
+function delWorkPattern(id){
+  if(!confirm('このパターンを削除しますか？\n※既に使用中のシフトはそのまま残ります'))return;
+  DB.workPatterns=DB.workPatterns.filter(p=>p.id!==id);
+  sDB();fbSaveSettings();
+  showToast('削除しました');
+  renderWPList();
+}
+
+function renderWPList(){
+  const el=document.getElementById('wp-list');
+  if(!el)return;
+  let list=(DB.workPatterns||[]).filter(p=>p.company==='fulllife');
+  list=sortPatterns(list);
+  if(!list.length){
+    el.innerHTML='<div style="color:var(--t2);font-size:11px;text-align:center;padding:14px;">パターン未登録</div>';
+    return;
+  }
+  el.innerHTML=list.map(p=>{
+    const workMin=(parseHM(p.endTime)-parseHM(p.startTime));
+    const brkMin=legalBreakMin(workMin);
+    const netMin=workMin-brkMin;
+    const netH=Math.floor(netMin/60);
+    const netM=netMin%60;
+    return `<div style="display:flex;align-items:center;gap:9px;padding:7px 9px;border-bottom:1px solid #f0f0f0;font-size:11px;">
+      <div style="font-weight:800;color:#E65100;width:30px;text-align:center;">${p.no}</div>
+      <div style="flex:1;"><b>${p.startTime} 〜 ${p.endTime}</b> <span style="color:var(--t2);font-size:10px;">実働${netH}h${netM>0?netM+'m':''}（休憩${brkMin}分控除）</span></div>
+      <button class="fd" onclick="delWorkPattern(${p.id})">削除</button>
+    </div>`;
+  }).join('');
+}
+
+// フルラフ専用タブの表示制御
+function applyFulllifeTabsVisibility(){
+  const isFulllife=(CO==='fulllife');
+  document.querySelectorAll('.fl-only').forEach(el=>{
+    el.style.display=isFulllife?'':'none';
+  });
+}
+
+
 function showAS(sub){
   // 警告も再描画
   if(typeof renderPunchWarnings==='function')renderPunchWarnings();
@@ -1997,9 +2190,10 @@ function showAS(sub){
     const coName={koyokai:'香庸会',fulllife:'フルラフ',both:'両社'}[admin.company]||'';
     el.textContent=admin.name+(coName?'（'+coName+'）':'');
   }
-  ['staff','shift','rec','paid','special','log','report','data','pw','devset'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
+  ['staff','shift','rec','paid','special','log','report','data','pw','devset','pattern','shiftcal','allshift','group','ot'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
   if(sub==='pw')initPwmStaffSelect();
-  if(sub==='devset')initDevset();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}}
+  if(sub==='devset')initDevset();
+  if(sub==='pattern')initWPAdmin();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}}
 
 // ═══ 打刻グリッド ═══
 function renderSG(){
@@ -3771,6 +3965,7 @@ function applyAdminPermissions(admin){
   // 一般管理者は会社切替ボタンを非表示
   const switchBtn=document.querySelector('button[onclick="switchCompany()"]');
   if(switchBtn)switchBtn.style.display=isSuperAdmin?'':'none';
+  if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
   // 一般管理者は打刻画面の会社タブを非表示（自社固定）
   const coTabs=document.getElementById('co-tabs');
   if(coTabs)coTabs.style.display=isSuperAdmin?'':'none';
@@ -4117,6 +4312,7 @@ async function saveFaceDescriptor(desc){
   buildFaceDescriptors();
   showToast(staff.name+' さんの顔写真を登録しました ✓');
   if(typeof renderAL==='function')renderAL();
+  if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
 }
 
 async function frClearFace(){
@@ -4131,6 +4327,7 @@ async function frClearFace(){
   buildFaceDescriptors();
   showToast('削除しました');
   if(typeof renderAL==='function')renderAL();
+  if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
 }
 
 
