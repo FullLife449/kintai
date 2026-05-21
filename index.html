@@ -1056,11 +1056,23 @@ function selectCompany(co) {
   if(!document.querySelector('.pg.active')){showPg('punch');}
   // Firebaseから最新データを読み込む
   fbLoadAndSync(co);
-  // 各画面を再描画
+  // 各画面を再描画（会社別データを確実に更新）
   if(typeof renderSG==='function')renderSG();
   if(typeof renderAL==='function')renderAL();
+  if(typeof loadAS==='function')loadAS();
+  if(typeof renderDSL==='function')renderDSL();
+  if(typeof renderSPL==='function')renderSPL();
+  if(typeof renderPunchGrid==='function')renderPunchGrid();
   if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
   if(typeof renderPunchWarnings==='function')setTimeout(renderPunchWarnings,300);
+  // 管理画面を開いている場合、現在のタブを再初期化
+  setTimeout(()=>{
+    const activeTab=document.querySelector('.asc.active');
+    if(activeTab){
+      const sub=activeTab.id.replace('asc-','');
+      if(typeof showAS==='function')showAS(sub);
+    }
+  },400);
   // 顔認証モードの場合、自動起動
   setTimeout(autoStartFacePunch,800);
 }
@@ -1293,6 +1305,22 @@ window.runTests = function(){
     log('申請ロック(未来日付可)',isReqDateAllowed(nextStr),'未来='+nextStr);
   }
   
+  // 9. 会社別フィルタの検証
+  try{
+    const savedCO=CO;
+    // 香庸会スタッフ数とフルラフスタッフ数
+    const koyoCount=DB.staff.filter(s=>s.company==='koyokai').length;
+    const flCount=DB.staff.filter(s=>s.company==='fulllife').length;
+    log('香庸会スタッフ存在',koyoCount>0,koyoCount+'名');
+    log('フルラフスタッフ存在',flCount>0,flCount+'名');
+    // getFilteredStaff が CO に従うか
+    if(typeof getFilteredStaff==='function'){
+      const filtered=getFilteredStaff();
+      const allSameCo=filtered.every(s=>s.company===CO);
+      log('getFilteredStaff会社一致',allSameCo,'現在CO='+CO+', 取得'+filtered.length+'名');
+    }
+  }catch(e){log('会社フィルタテスト',false,'エラー: '+e.message);}
+  
   // 結果サマリー
   const ok=results.filter(r=>r.ok).length;
   const ng=results.filter(r=>!r.ok).length;
@@ -1506,7 +1534,7 @@ function renderPaidGrants(){
   const co=CO;
   const list=(co==='all')?DB.staff:DB.staff.filter(s=>s.company===co);
   // 会社管理者の場合は強制フィルタ
-  const finalList=window.adminCompanyFilter?list.filter(s=>s.company===window.adminCompanyFilter):list;
+  const finalList=list.filter(s=>s.company===CO);
   const tb=document.getElementById('pg-tb');
   if(!finalList.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">スタッフがいません</td></tr>';return;}
   // 社員番号でソート
@@ -1957,10 +1985,9 @@ function initPwmStaffSelect(){
   const sel=document.getElementById('pwm-staff');
   if(!sel)return;
   sel.innerHTML='<option value="">スタッフを選択</option>';
-  // 自社フィルタ
-  const filter=window.adminCompanyFilter; // null なら両社、'koyokai'/'fulllife' なら自社
-  const koyo=(filter&&filter!=='koyokai')?[]:DB.staff.filter(s=>s.company==='koyokai').sort((a,b)=>a.id-b.id);
-  const full=(filter&&filter!=='fulllife')?[]:DB.staff.filter(s=>s.company==='fulllife').sort((a,b)=>a.id-b.id);
+  // 現在選択中の会社のみ
+  const koyo=(CO!=='koyokai')?[]:DB.staff.filter(s=>s.company==='koyokai').sort((a,b)=>a.id-b.id);
+  const full=(CO!=='fulllife')?[]:DB.staff.filter(s=>s.company==='fulllife').sort((a,b)=>a.id-b.id);
   if(koyo.length){
     const og1=document.createElement('optgroup');og1.label='香庸会';
     koyo.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.id+' '+s.name;og1.appendChild(o);});
@@ -2908,7 +2935,13 @@ function showAS(sub){
   if(sub==='shiftcal')initShiftCal();
   if(sub==='group')initGroupAdmin();
   if(sub==='allshift')initAllShift();
-  if(sub==='ot')initOTAdmin();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}}
+  if(sub==='ot')initOTAdmin();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}
+  // 打刻修正・日次シフト・特別枠のスタッフ選択肢を会社別に更新
+  if(sub==='rec'||sub==='shift'||sub==='special'){if(typeof loadAS==='function')loadAS();}
+  if(sub==='shift'&&typeof renderDSL==='function')renderDSL();
+  if(sub==='special'&&typeof renderSPL==='function')renderSPL();
+  if(sub==='staff'&&typeof renderAL==='function')renderAL();
+}
 
 // ═══ 打刻グリッド ═══
 function renderSG(){
@@ -2921,7 +2954,7 @@ function renderSG(){
   let lbl=dw.getFullYear()+'年'+(dw.getMonth()+1)+'月'+dw.getDate()+'日（'+days[dw.getDay()]+'）';
   if(isLeg)lbl+=' 🔴法定休日';
   dlblEl.textContent=lbl;
-  const list=DB.staff.filter(s=>s.company===(currentCoTab||'koyokai'));
+  const list=DB.staff.filter(s=>s.company===CO);
   // 動作選択時のタイトル更新
   const dlbl=document.getElementById('dlbl');
   if(dlbl&&!selectedAction){
@@ -4709,9 +4742,7 @@ function applyAdminPermissions(admin){
 
 // レポート出力時に会社フィルタ適用
 function getFilteredStaff(){
-  const filter=window.adminCompanyFilter;
-  if(!filter)return DB.staff;
-  return DB.staff.filter(s=>s.company===filter);
+  return DB.staff.filter(s=>s.company===CO);
 }
 
 
