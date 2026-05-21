@@ -1884,12 +1884,23 @@ function renderPunchGrid(){
   if(filterStr){
     try{
       const f=JSON.parse(filterStr);
-      if(f.mode==='koyokai')displayStaff=displayStaff.filter(s=>s.company==='koyokai');
-      else if(f.mode==='fulllife')displayStaff=displayStaff.filter(s=>s.company==='fulllife');
-      else if(f.mode==='custom'&&f.ids&&f.ids.length){
+      if(f.mode==='all'){
+        // 全員表示（明示設定時のみ）
+      }else if(f.mode==='koyokai'){
+        displayStaff=displayStaff.filter(s=>s.company==='koyokai');
+      }else if(f.mode==='fulllife'){
+        displayStaff=displayStaff.filter(s=>s.company==='fulllife');
+      }else if(f.mode==='custom'&&f.ids&&f.ids.length){
         displayStaff=displayStaff.filter(s=>f.ids.includes(s.id));
+      }else{
+        displayStaff=displayStaff.filter(s=>s.company===CO);
       }
-    }catch(e){}
+    }catch(e){
+      displayStaff=displayStaff.filter(s=>s.company===CO);
+    }
+  }else{
+    // 未設定 → 現在選択中の会社のスタッフのみ
+    displayStaff=displayStaff.filter(s=>s.company===CO);
   }
   // 社員番号順
   displayStaff.sort((a,b)=>a.id-b.id);
