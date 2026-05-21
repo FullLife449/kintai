@@ -291,11 +291,7 @@ console.log('Firebase initialized (compat)');
           <div class="fs2" id="paid-fy-label" style="margin-bottom:8px;">年度を選択して付与日数を管理できます</div>
           <div class="fr" style="margin-bottom:10px;">
             <select id="pg-fy" onchange="renderPaidGrants()"></select>
-            <select id="pg-co" onchange="renderPaidGrants()">
-              <option value="koyokai">香庸会</option>
-              <option value="fulllife">フルラフ</option>
-              <option value="all">両社</option>
-            </select>
+            
           </div>
           <div style="overflow-x:auto;"><table class="rt2" style="font-size:11px;"><thead><tr><th>社員番号</th><th>氏名</th><th>付与</th><th>使用</th><th>残</th><th>編集</th></tr></thead><tbody id="pg-tb"></tbody></table></div>
         </div>
@@ -316,11 +312,7 @@ console.log('Firebase initialized (compat)');
         <div class="card"><div class="cl">代休付与・残数管理</div>
           <div class="fs2" style="margin-bottom:8px;">代理出勤・付与・代休消化を一覧で管理できます</div>
           <div class="fr" style="margin-bottom:10px;">
-            <select id="sub-co" onchange="renderSubGrants()">
-              <option value="koyokai">香庸会</option>
-              <option value="fulllife">フルラフ</option>
-              <option value="all">両社</option>
-            </select>
+            
           </div>
           <div style="overflow-x:auto;"><table class="rt2" style="font-size:11px;"><thead><tr><th>社員番号</th><th>氏名</th><th>付与</th><th>代理出勤</th><th>消化</th><th>残</th><th>付与</th></tr></thead><tbody id="sub-tb"></tbody></table></div>
         </div>
@@ -543,11 +535,7 @@ console.log('Firebase initialized (compat)');
     <div style="margin-bottom:9px;">
       <div class="cl" style="margin-bottom:6px;">出力月を選択</div>
       <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
-        <select id="log-co" style="padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;">
-          <option value="koyokai">香庸会</option>
-          <option value="fulllife">フルラフ</option>
-          <option value="all">両社</option>
-        </select>
+        
         <select id="log-ym" onchange="updateLogTermLabel()" style="flex:1;padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"></select>
         <button class="bg" style="font-size:10px;padding:7px 10px;white-space:nowrap;" onclick="exportLogCSV()">📄 ログCSV</button>
         
@@ -562,7 +550,7 @@ console.log('Firebase initialized (compat)');
     <div class="asc" id="asc-report">
       <div class="pad">
     <div class="card">
-      <div class="fr" style="flex-wrap:wrap;gap:5px;"><select id="rep-co" onchange="updIS()" style="padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"><option value="koyokai">香庸会</option><option value="fulllife">フルラフ</option><option value="all">両社</option></select><select id="rm" style="flex:1;"></select><button class="bg" onclick="renderRep()">表示</button></div>
+      <div class="fr" style="flex-wrap:wrap;gap:5px;"><select id="rm" style="flex:1;"></select><button class="bg" onclick="renderRep()">表示</button></div>
       <!-- CSV出力エリア -->
       <div style="margin-top:9px;padding:11px;background:linear-gradient(135deg,#E8EAF6,#C5CAE9);border-radius:9px;border:1px solid #9FA8DA;">
         <button onclick="exportAllCSV()" style="width:100%;padding:13px;border:none;border-radius:8px;background:#1a1a2e;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">📊 一括CSV出力（全データ）</button>
@@ -765,11 +753,7 @@ console.log('Firebase initialized (compat)');
     <div style="margin-bottom:9px;">
       <div class="cl" style="margin-bottom:6px;">出力月を選択</div>
       <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
-        <select id="log-co" style="padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;">
-          <option value="koyokai">香庸会</option>
-          <option value="fulllife">フルラフ</option>
-          <option value="all">両社</option>
-        </select>
+        
         <select id="log-ym" onchange="updateLogTermLabel()" style="flex:1;padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"></select>
         <button class="bg" style="font-size:10px;padding:7px 10px;white-space:nowrap;" onclick="exportLogCSV()">📄 ログCSV</button>
         
@@ -781,7 +765,7 @@ console.log('Firebase initialized (compat)');
   </div></div></div>
   <div id="pg-report" class="pg"><div class="pad">
     <div class="card">
-      <div class="fr" style="flex-wrap:wrap;gap:5px;"><select id="rep-co" onchange="updIS()" style="padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;background:#fff;font-family:inherit;"><option value="koyokai">香庸会</option><option value="fulllife">フルラフ</option><option value="all">両社</option></select><select id="rm" style="flex:1;"></select><button class="bg" onclick="renderRep()">表示</button></div>
+      <div class="fr" style="flex-wrap:wrap;gap:5px;"><select id="rm" style="flex:1;"></select><button class="bg" onclick="renderRep()">表示</button></div>
       <!-- CSV出力エリア -->
       <div style="margin-top:9px;padding:11px;background:linear-gradient(135deg,#E8EAF6,#C5CAE9);border-radius:9px;border:1px solid #9FA8DA;">
         <button onclick="exportAllCSV()" style="width:100%;padding:13px;border:none;border-radius:8px;background:#1a1a2e;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">📊 一括CSV出力（全データ）</button>
@@ -1400,11 +1384,7 @@ function initPaidGrantUI(){
   for(let i=cur+1;i>=cur-3;i--){
     sel.innerHTML+=`<option value="${i}"${i===cur?' selected':''}>${i}年度（${i}/4〜${i+1}/3）</option>`;
   }
-  // 会社フィルタの初期値
-  const coSel=document.getElementById('pg-co');
-  if(coSel&&window.adminCompanyFilter){
-    coSel.value=window.adminCompanyFilter;
-  }
+
 }
 
 // ═══ 管理画面：有給・代休タブ切替 ═══
@@ -1419,15 +1399,7 @@ function setPhcTab(tab){
 // 代休管理 初期化
 function initSubAdmin(){
   // 一般管理者は自社固定
-  const sel=document.getElementById('sub-co');
-  if(sel){
-    if(currentAdmin&&currentAdmin.role!=='super'){
-      sel.value=currentAdmin.company;
-      sel.disabled=true;
-    }else{
-      sel.disabled=false;
-    }
-  }
+  // 会社は現在選択中のCOに固定
   // スタッフ選択肢
   const shS=document.getElementById('sh-s');
   if(shS){
@@ -1457,7 +1429,7 @@ function initSubAdmin(){
 function renderSubGrants(){
   const tb=document.getElementById('sub-tb');
   if(!tb)return;
-  const co=document.getElementById('sub-co').value;
+  const co=CO;
   let list=DB.staff.slice();
   if(co!=='all')list=list.filter(s=>s.company===co);
   list.sort((a,b)=>a.id-b.id);
@@ -1531,7 +1503,7 @@ function delSubEntry(kind,sid,date){
 
 function renderPaidGrants(){
   const fy=parseInt(document.getElementById('pg-fy').value)||getCurrentPaidFY();
-  const co=document.getElementById('pg-co').value;
+  const co=CO;
   const list=(co==='all')?DB.staff:DB.staff.filter(s=>s.company===co);
   // 会社管理者の場合は強制フィルタ
   const finalList=window.adminCompanyFilter?list.filter(s=>s.company===window.adminCompanyFilter):list;
@@ -3131,7 +3103,7 @@ function renderLog(){
 function initMS(){['rm','im'].forEach(id=>{const sel=document.getElementById(id);if(sel.options.length>1)return;const n=new Date();for(let i=0;i<12;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);sel.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}});}
 function renderRep(){
   const ym=document.getElementById('rm').value;if(!ym)return;
-  const repCo=document.getElementById('rep-co')?document.getElementById('rep-co').value:'koyokai';
+  const repCo=CO;
   const list=repCo==='all'?DB.staff:DB.staff.filter(s=>s.company===repCo);
   // XLSXの列順に合わせたUI表示（主要項目のみ）
   const labels=[
@@ -3196,7 +3168,7 @@ function updIS(){
   if(!sel)return;
   sel.innerHTML='<option value="">スタッフを選択</option>';
   // レポートの会社選択に応じてスタッフ表示
-  const repCo=document.getElementById('rep-co')?document.getElementById('rep-co').value:'koyokai';
+  const repCo=CO;
   const list=repCo==='all'?DB.staff:DB.staff.filter(s=>s.company===repCo);
   list.forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}（${s.company==='koyokai'?'香':'フ'}）</option>`);
 }
@@ -3283,7 +3255,7 @@ function makePayRow(s,m,lunchCount){
 
 function exportXLSX(){const ym=document.getElementById('rm').value;if(!ym){showToast('月を選択してください');return;}showToast('XLSXを生成中...');loadXLSX(()=>doExportMonthly(ym));}
 function doExportMonthly(ym){
-  const repCo=document.getElementById('rep-co')?document.getElementById('rep-co').value:'koyokai';
+  const repCo=CO;
   const list=repCo==='all'?DB.staff:DB.staff.filter(s=>s.company===repCo);
   const payAoa=[PAY_HDR];
   const termM=getTermDates(ym);
@@ -3892,7 +3864,7 @@ function exportLogCSV(){
   const termDates=term.dates;
   const dows=['日','月','火','水','木','金','土'];
   // 社員番号順でソート
-  const logCo=document.getElementById('log-co')?document.getElementById('log-co').value:'koyokai';
+  const logCo=CO;
   const list=[...(logCo==='all'?DB.staff:DB.staff.filter(s=>s.company===logCo))].sort((a,b)=>(a.employeeId||0)-(b.employeeId||0));
   let csv='社員番号,名前,日付,曜日,種別,時刻,実働時間,遅刻(分),早退(分),有給,交通費,ランチデリ\n';
   list.forEach(s=>{
@@ -3946,7 +3918,7 @@ function exportAllCSV(){
 function exportSingleCSV(type){
   const ym=document.getElementById('rm')?document.getElementById('rm').value:'';
   if(!ym){showToast('月を選択してください');return;}
-  const repCo=document.getElementById('rep-co')?document.getElementById('rep-co').value:'koyokai';
+  const repCo=CO;
   const list=repCo==='all'?DB.staff:DB.staff.filter(s=>s.company===repCo);
   const termM=getTermDates(ym);
   const coLabel=repCo==='all'?'両社':(repCo==='koyokai'?'香庸会':'フルラフ');
@@ -4088,7 +4060,7 @@ function downloadCSV(filename,rows){
 
 // 月次CSV出力（順次ダウンロード）
 function doExportMonthlyCSV(ym){
-  const repCo=document.getElementById('rep-co')?document.getElementById('rep-co').value:'koyokai';
+  const repCo=CO;
   const list=repCo==='all'?DB.staff:DB.staff.filter(s=>s.company===repCo);
   const termM=getTermDates(ym);
   const coLabel=repCo==='all'?'両社':(repCo==='koyokai'?'香庸会':'フルラフ');
@@ -4731,16 +4703,6 @@ function applyAdminPermissions(admin){
   // 一般管理者は打刻画面の会社タブを非表示（自社固定）
   const coTabs=document.getElementById('co-tabs');
   if(coTabs)coTabs.style.display=isSuperAdmin?'':'none';
-  // 一般管理者はレポート/ログの会社プルダウンを自社固定
-  if(!isSuperAdmin){
-    ['log-co','rep-co','pg-co'].forEach(id=>{
-      const sel=document.getElementById(id);
-      if(sel){
-        sel.value=admin.company;
-        sel.disabled=true;
-      }
-    });
-  }
   // 警告チェック
   if(typeof renderPunchWarnings==='function')setTimeout(renderPunchWarnings,200);
 }
