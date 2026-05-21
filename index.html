@@ -3055,6 +3055,25 @@ function detectPunchWarnings(){
 }
 
 // 警告カードを描画
+
+// 打刻不完全警告 → 打刻修正タブへジャンプ
+function gotoRecFix(sid,date){
+  // 打刻修正タブを開く
+  if(typeof showAS==='function')showAS('rec');
+  // スタッフ選択肢を確実に読み込む
+  if(typeof loadAS==='function')loadAS();
+  setTimeout(()=>{
+    const sSel=document.getElementById('rs-s');
+    const dInp=document.getElementById('rs-d');
+    if(sSel)sSel.value=String(sid);
+    if(dInp)dInp.value=date;
+    if(typeof loadRecs==='function')loadRecs();
+    // 打刻修正タブまでスクロール
+    const recCard=document.getElementById('asc-rec');
+    if(recCard)recCard.scrollIntoView({behavior:'smooth',block:'start'});
+  },150);
+}
+
 function renderPunchWarnings(){
   const card=document.getElementById('punch-warnings-card');
   if(!card)return;
@@ -3066,7 +3085,7 @@ function renderPunchWarnings(){
   card.style.display='block';
   const items=warnings.map(w=>{
     const coTag=w.company==='koyokai'?'香':'フ';
-    return `<div style="padding:6px 9px;border-bottom:1px solid #FFE0B2;font-size:11px;display:flex;justify-content:space-between;align-items:center;"><span><b>${w.sid}</b> ${w.name}（${coTag}） ${w.date}</span><span style="color:#C62828;font-weight:600;">${w.msg}</span></div>`;
+    return `<div style="padding:6px 9px;border-bottom:1px solid #FFE0B2;font-size:11px;display:flex;justify-content:space-between;align-items:center;gap:8px;"><span style="flex:1;"><b>${w.sid}</b> ${w.name}（${coTag}） ${w.date}</span><span style="color:#C62828;font-weight:600;">${w.msg}</span><button onclick="gotoRecFix(${w.sid},'${w.date}')" style="padding:4px 11px;border:1px solid #E65100;border-radius:6px;background:#fff;color:#E65100;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">修正</button></div>`;
   }).join('');
   card.innerHTML=`<div style="background:#FFF3E0;border:2px solid #FFB74D;border-radius:9px;padding:11px;"><div style="color:#E65100;font-weight:700;font-size:12px;margin-bottom:8px;">⚠️ 打刻不完全（要確認）<span style="font-size:10px;font-weight:normal;color:#5D4037;margin-left:6px;">${warnings.length}件</span></div>${items}</div>`;
 }
