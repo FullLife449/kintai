@@ -355,7 +355,6 @@ console.log('Firebase initialized (compat)');
           <label class="fl">勤務終了</label>
           <input class="fi" type="time" id="sp-et" step="900">
         </div>
-        <div class="frw"><label class="fl">休憩（分）</label><input class="fi" type="number" id="sp-bm" placeholder="0" min="0"></div>
         <div class="frw"><label class="fl">メモ（任意）</label><input class="fi" id="sp-m" placeholder="例: 土曜バイト"></div>
         <button class="fb" style="width:100%;" onclick="saveSP()">登録する</button>
       </div>
@@ -3884,7 +3883,12 @@ function saveSP(){
   const rule=document.getElementById('sp-rule').value; // 'free' or 'free1'
   const startTime=document.getElementById('sp-st').value;
   const endTime=document.getElementById('sp-et').value;
-  const breakMin=parseInt(document.getElementById('sp-bm').value)||0;
+  // 休憩は法定通り自動計算（開始・終了から算出、フリー終了時は0）
+  let breakMin=0;
+  if(startTime&&endTime){
+    const workMin=parseHM(endTime)-parseHM(startTime);
+    breakMin=(typeof legalBreakMin==='function')?legalBreakMin(workMin):(workMin>8*60?60:(workMin>6*60?45:0));
+  }
   const memo=document.getElementById('sp-m').value;
   const freeEnd=spFreeEnd;
   // バリデーション
@@ -3896,7 +3900,6 @@ function saveSP(){
   // 入力欄をクリア
   document.getElementById('sp-st').value='';
   document.getElementById('sp-et').value='';
-  document.getElementById('sp-bm').value='';
   document.getElementById('sp-m').value='';
   spFreeEnd=false;
   document.getElementById('sp-fe-box').innerHTML='';
