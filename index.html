@@ -611,14 +611,22 @@ console.log('Firebase initialized (compat)');
       <!-- 打刻ログ -->
       <div id="pi-view-log" class="card">
         <!-- 有給残日数（最上部） -->
-        <div style="background:linear-gradient(135deg,#E1F5EE,#C8F5E2);border-radius:10px;padding:11px 14px;margin-bottom:10px;border:1px solid var(--gn);">
-          <div style="display:flex;align-items:center;justify-content:space-between;">
-            <div>
-              <div style="font-size:11px;color:var(--gd);font-weight:600;">有給残日数</div>
-              <div style="font-size:8px;color:#5d6d65;margin-top:2px;" id="pi-paid-validity">有効期限: -</div>
-            </div>
-            <div style="font-size:24px;font-weight:700;color:var(--gd);" id="pi-paid-remain-val">-</div>
+        <div style="background:linear-gradient(135deg,#E1F5EE,#C8F5E2);border-radius:10px;padding:13px 14px;margin-bottom:10px;border:1px solid var(--gn);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;">
+            <div style="font-size:12px;color:var(--gd);font-weight:600;">有給残日数</div>
+            <div style="font-size:28px;font-weight:800;color:var(--gd);" id="pi-paid-remain-val">-</div>
           </div>
+          <div style="display:flex;justify-content:space-between;gap:8px;padding-top:8px;border-top:1px solid rgba(0,100,40,0.18);">
+            <div style="flex:1;text-align:center;background:#fff;border-radius:7px;padding:6px;">
+              <div style="font-size:9px;color:#5d6d65;">当期残</div>
+              <div style="font-size:14px;font-weight:700;color:#E65100;" id="pi-paid-cur">-</div>
+            </div>
+            <div style="flex:1;text-align:center;background:#fff;border-radius:7px;padding:6px;">
+              <div style="font-size:9px;color:#5d6d65;">前期残</div>
+              <div style="font-size:14px;font-weight:700;color:#757575;" id="pi-paid-prev">-</div>
+            </div>
+          </div>
+          <div style="font-size:9px;color:#5d6d65;margin-top:6px;text-align:center;" id="pi-paid-validity">基準日: -</div>
         </div>
         <!-- 月選択＋時間外 -->
         <div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;">
@@ -5256,17 +5264,20 @@ function renderPILog(){
   const ym=sel?sel.value:todayStr().substring(0,7);
   const term=getTermDates(ym);
   const dows=['日','月','火','水','木','金','土'];
-  // 有給残（4月始まり年度）
-  const fy=getCurrentPaidFY();
-  const grant=getPaidGrant(piStaff.id,fy);
-  const used=getPaidUsed(piStaff.id,fy);
-  const remain=Math.max(0,grant-used);
+  // 有給残（新仕様：前期・当期）
+  // 自動付与チェック
+  if(typeof runAutoPaidGrants==='function')runAutoPaidGrants();
+  const bal=(typeof calcPaidBalance==='function')?calcPaidBalance(piStaff.id):{currentGrant:0,currentRemain:0,prevGrant:0,prevRemain:0,total:0,currentBase:null};
   const remEl=document.getElementById('pi-paid-remain-val');
-  if(remEl)remEl.textContent=remain+'日';
-  // 有給有効期限（年度末）
+  if(remEl)remEl.textContent=bal.total.toFixed(1)+'日';
+  const curEl=document.getElementById('pi-paid-cur');
+  if(curEl)curEl.textContent=bal.currentRemain.toFixed(1)+' / '+bal.currentGrant+'日';
+  const prevEl=document.getElementById('pi-paid-prev');
+  if(prevEl)prevEl.textContent=bal.prevRemain.toFixed(1)+' / '+bal.prevGrant+'日';
   const validityEl=document.getElementById('pi-paid-validity');
   if(validityEl){
-    validityEl.textContent=fy+'年度（'+(fy+1)+'年3月31日まで）/ 付与'+grant+'日 使用'+used+'日';
+    if(bal.currentBase)validityEl.textContent='当期基準日: '+bal.currentBase+'（消化は当期から優先）';
+    else validityEl.textContent='入職日が未設定の場合、自動付与は動作しません';
   }
   // 該当月の時間外労働
   const summary=calcMonthSummary(piStaff.id,ym);
@@ -5569,6 +5580,7 @@ function submitPIRequest(type){
     DB.paid.push({staffId:piStaff.id,date,type:t,staffName:piStaff.name,company:piStaff.company,id:Date.now()});
     sDB();
     renderPIList('paid');
+    if(typeof renderPILog==='function')renderPILog(); // 残数即時更新
     showToast('有給を申請しました ✓');
     fbSaveSettings();
   } else if(type==='fare'){
