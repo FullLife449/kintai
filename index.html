@@ -286,12 +286,8 @@ console.log('Firebase initialized (compat)');
       <!-- 有給セクション -->
       <div id="phc-view-paid">
         <div class="card"><div class="cl">有給付与・残数管理</div>
-          <div class="fs2" id="paid-fy-label" style="margin-bottom:8px;">年度を選択して付与日数を管理できます</div>
-          <div class="fr" style="margin-bottom:10px;">
-            <select id="pg-fy" onchange="renderPaidGrants()"></select>
-            
-          </div>
-          <div style="overflow-x:auto;"><table class="rt2" style="font-size:11px;"><thead><tr><th>社員番号</th><th>氏名</th><th>付与</th><th>使用</th><th>残</th><th>編集</th></tr></thead><tbody id="pg-tb"></tbody></table></div>
+          <div class="fs2" style="margin-bottom:8px;">入職日からの付与日基準で前期・当期を表示します（自動付与は毎回チェック）</div>
+          <div style="overflow-x:auto;"><table class="rt2" style="font-size:10.5px;"><thead><tr><th>社員番号</th><th>氏名</th><th>方式</th><th>前期残</th><th>当期付与</th><th>当期残</th><th>合計</th><th>操作</th></tr></thead><tbody id="pg-tb"></tbody></table></div>
         </div>
         <div class="card"><div class="cl">有給申請履歴</div>
           <div class="fr" style="margin-bottom:10px;">
@@ -1188,6 +1184,8 @@ function fbSaveSettings() {
     lunchEnabled: DB.lunchEnabled,
     expenses: DB.expenses||[],
     paidGrants: DB.paidGrants||[],
+    paidGrantsV2: DB.paidGrantsV2||[],
+    paidHistory: DB.paidHistory||[],
     substitute: DB.substitute||[],
     subOff: DB.subOff||[],
     subGrants: DB.subGrants||[],
@@ -1205,7 +1203,7 @@ function fbSaveSettings() {
 
 const TL={in:'出勤',out:'退勤',break:'休憩開始',resume:'勤務再開',early:'早出',fare:'交通費',paid:'有給',lunch:'ランチデリ'};
 
-let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[]};
+let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[]};
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
@@ -1213,7 +1211,7 @@ const STAFF_VER='v2001'; // 19:30変更バージョン
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
-    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[]},d);
+    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[]},d);
   }catch(e){}
   // スタッフデータのバージョンが古い（17:45が含まれる）場合はスタッフのみリセット
   const staffVer=localStorage.getItem('kintai_staff_ver');
@@ -1402,6 +1400,175 @@ function getPaidFYRange(fy){
   return{start:fy+'-04-01',end:(fy+1)+'-03-31'};
 }
 function getCurrentPaidFY(){return getPaidFY(new Date());}
+
+// ═══ 有給：新仕様（前期・当期、自動付与、自動失効、変更履歴）═══
+
+// スタッフの基準日（直近の付与日）を取得
+function getLatestBaseDate(staff,targetDate){
+  if(!staff||!staff.hireDate)return null;
+  const target=targetDate?new Date(targetDate):new Date();
+  const bases=calcBaseDates(staff.hireDate);
+  // 現在日付以前で最新のもの
+  let latest=null;
+  for(const b of bases){
+    const bd=new Date(b);
+    if(bd<=target)latest=b;
+    else break;
+  }
+  return latest;
+}
+
+// 前期・当期の付与日を取得
+function getPaidPeriods(staff,targetDate){
+  if(!staff||!staff.hireDate)return{current:null,previous:null};
+  const target=targetDate?new Date(targetDate):new Date();
+  const bases=calcBaseDates(staff.hireDate);
+  let curIdx=-1;
+  for(let i=0;i<bases.length;i++){
+    const bd=new Date(bases[i]);
+    if(bd<=target)curIdx=i;
+    else break;
+  }
+  return{
+    current:curIdx>=0?bases[curIdx]:null,
+    previous:curIdx>=1?bases[curIdx-1]:null
+  };
+}
+
+// 指定スタッフ・指定付与日の付与日数取得（手動値があれば優先）
+function getPaidGrantForBase(sid,baseDate){
+  if(!baseDate)return 0;
+  // 手動付与（DB.paidGrantsV2に保存）優先
+  const manual=(DB.paidGrantsV2||[]).find(g=>g.staffId===sid&&g.baseDate===baseDate&&g.manual);
+  if(manual)return manual.days;
+  // 自動付与（DB.paidGrantsV2に自動付与レコードがある場合）
+  const auto=(DB.paidGrantsV2||[]).find(g=>g.staffId===sid&&g.baseDate===baseDate);
+  if(auto)return auto.days;
+  // 自動付与方式なら計算
+  const staff=DB.staff.find(s=>s.id===sid);
+  if(staff&&staff.paidMode&&staff.paidMode!=='manual'){
+    const days=calcLegalPaid(staff.hireDate,staff.paidMode,staff.weeklyDays||4,baseDate);
+    return days||0;
+  }
+  return 0;
+}
+
+// 期間内の有給使用日数を計算
+function getPaidUsedInPeriod(sid,startDate,endDate){
+  return DB.paid.filter(p=>{
+    if(p.staffId!==sid)return false;
+    if(p.date<startDate||p.date>=endDate)return false;
+    return true;
+  }).reduce((sum,p)=>{
+    const v=p.type==='half'?0.5:(p.type==='hour'?0.125:1);
+    return sum+v;
+  },0);
+}
+
+// 当期・前期の残数を計算
+function calcPaidBalance(sid,targetDate){
+  const staff=DB.staff.find(s=>s.id===sid);
+  if(!staff||!staff.hireDate)return{currentGrant:0,currentUsed:0,currentRemain:0,prevGrant:0,prevUsed:0,prevRemain:0,total:0};
+  const periods=getPaidPeriods(staff,targetDate);
+  if(!periods.current)return{currentGrant:0,currentUsed:0,currentRemain:0,prevGrant:0,prevUsed:0,prevRemain:0,total:0};
+  // 当期付与日数
+  const curGrant=getPaidGrantForBase(sid,periods.current);
+  // 当期の次の基準日（=当期終了日）
+  const bases=calcBaseDates(staff.hireDate);
+  const curIdx=bases.indexOf(periods.current);
+  const curEnd=bases[curIdx+1]||'9999-12-31';
+  // 当期使用：当期付与日以降の有給
+  // ただし当期から優先消化なので、消費の振り分けは下記で計算
+  // 前期付与
+  let prevGrant=0,prevEnd=null;
+  if(periods.previous){
+    prevGrant=getPaidGrantForBase(sid,periods.previous);
+    prevEnd=periods.current; // 前期の終了 = 当期の開始
+  }
+  // 前期・当期の総使用
+  // シンプルに：前期付与日以降の使用を取得し、まず当期から、当期を超えたら前期から消化
+  const periodStart=periods.previous||periods.current;
+  const usedRecs=DB.paid.filter(p=>p.staffId===sid&&p.date>=periodStart);
+  let totalUsedDays=usedRecs.reduce((s,p)=>s+(p.type==='half'?0.5:(p.type==='hour'?0.125:1)),0);
+  // 消化順序：当期優先 → 前期
+  let curUsed=Math.min(curGrant,totalUsedDays);
+  let prevUsed=Math.min(prevGrant,totalUsedDays-curUsed);
+  const curRemain=Math.max(0,curGrant-curUsed);
+  const prevRemain=Math.max(0,prevGrant-prevUsed);
+  return{
+    currentBase:periods.current,
+    previousBase:periods.previous,
+    currentGrant:curGrant,
+    currentUsed:curUsed,
+    currentRemain:curRemain,
+    prevGrant:prevGrant,
+    prevUsed:prevUsed,
+    prevRemain:prevRemain,
+    total:curRemain+prevRemain
+  };
+}
+
+// 自動付与の実行（スタッフごとに、不足分の付与レコードを作成）
+function runAutoPaidGrants(){
+  if(!DB.paidGrantsV2)DB.paidGrantsV2=[];
+  if(!DB.paidHistory)DB.paidHistory=[];
+  let granted=0;
+  DB.staff.forEach(s=>{
+    if(!s.hireDate||!s.paidMode||s.paidMode==='manual')return;
+    const bases=calcBaseDates(s.hireDate);
+    const today=new Date();
+    bases.forEach(b=>{
+      const bd=new Date(b);
+      if(bd>today)return; // 未来は対象外
+      // 既にレコードがあるか
+      if(DB.paidGrantsV2.find(g=>g.staffId===s.id&&g.baseDate===b))return;
+      // 自動計算
+      const days=calcLegalPaid(s.hireDate,s.paidMode,s.weeklyDays||4,b);
+      if(days===null||days===0)return;
+      DB.paidGrantsV2.push({staffId:s.id,baseDate:b,days,manual:false,grantedAt:new Date().toISOString()});
+      DB.paidHistory.push({staffId:s.id,baseDate:b,action:'auto_grant',days,by:'system',at:new Date().toISOString()});
+      granted++;
+    });
+  });
+  if(granted){sDB();fbSaveSettings();}
+  return granted;
+}
+
+// 変更履歴に記録
+function logPaidChange(sid,baseDate,action,days,reason){
+  if(!DB.paidHistory)DB.paidHistory=[];
+  DB.paidHistory.push({
+    staffId:sid,
+    baseDate,
+    action,
+    days,
+    reason:reason||'',
+    by:currentAdmin?currentAdmin.name:'admin',
+    at:new Date().toISOString()
+  });
+  sDB();fbSaveSettings();
+}
+
+// 手動付与の設定（変更履歴に記録）
+function setManualPaidGrant(sid,baseDate,days,reason){
+  if(!DB.paidGrantsV2)DB.paidGrantsV2=[];
+  const idx=DB.paidGrantsV2.findIndex(g=>g.staffId===sid&&g.baseDate===baseDate);
+  const oldDays=idx>=0?DB.paidGrantsV2[idx].days:null;
+  if(idx>=0){
+    DB.paidGrantsV2[idx].days=days;
+    DB.paidGrantsV2[idx].manual=true;
+  }else{
+    DB.paidGrantsV2.push({staffId:sid,baseDate,days,manual:true,grantedAt:new Date().toISOString()});
+  }
+  logPaidChange(sid,baseDate,'manual_set',days,reason||('変更前: '+(oldDays===null?'未設定':oldDays+'日')));
+}
+
+// 変更履歴を取得（スタッフ別）
+function getPaidHistory(sid){
+  return (DB.paidHistory||[]).filter(h=>h.staffId===sid).sort((a,b)=>(b.at||'')<(a.at||'')?-1:1);
+}
+
+
 // 指定スタッフの指定年度の付与日数取得
 function getPaidGrant(sid,fy){
   if(!DB.paidGrants)return 20;
@@ -1545,32 +1712,70 @@ function delSubEntry(kind,sid,date){
 }
 
 function renderPaidGrants(){
-  const fy=parseInt(document.getElementById('pg-fy').value)||getCurrentPaidFY();
+  // 自動付与を実行（毎回確認）
+  if(typeof runAutoPaidGrants==='function')runAutoPaidGrants();
+  
   const co=CO;
-  const list=(co==='all')?DB.staff:DB.staff.filter(s=>s.company===co);
-  // 会社管理者の場合は強制フィルタ
-  const finalList=list.filter(s=>s.company===CO);
+  const list=DB.staff.filter(s=>s.company===co);
   const tb=document.getElementById('pg-tb');
-  if(!finalList.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">スタッフがいません</td></tr>';return;}
-  // 社員番号でソート
-  const sorted=[...finalList].sort((a,b)=>{
-    const ea=parseInt(String(a.employeeId).replace(/^f/,''))||0;
-    const eb=parseInt(String(b.employeeId).replace(/^f/,''))||0;
-    return ea-eb;
-  });
+  if(!list.length){tb.innerHTML='<tr><td colspan="8" style="color:var(--t2);text-align:center;padding:14px;">スタッフがいません</td></tr>';return;}
+  // ヘッダー更新
+  const thead=tb.closest('table').querySelector('thead');
+  if(thead){
+    thead.innerHTML='<tr><th>社員番号</th><th>氏名</th><th>方式</th><th>前期残</th><th>当期付与</th><th>当期残</th><th>合計</th><th>操作</th></tr>';
+  }
+  const sorted=[...list].sort((a,b)=>(a.id-b.id));
   tb.innerHTML=sorted.map(s=>{
-    const grant=getPaidGrant(s.id,fy);
-    const used=getPaidUsed(s.id,fy);
-    const remain=Math.max(0,grant-used);
+    const bal=calcPaidBalance(s.id);
+    const modeLbl={manual:'手動',auto_full:'常勤',auto_part:'比例'}[s.paidMode||'manual'];
+    const modeColor={manual:'#757575',auto_full:'#2E7D32',auto_part:'#1565C0'}[s.paidMode||'manual'];
     return`<tr>
       <td style="font-size:9px;color:var(--t2);">${s.employeeId||s.id}</td>
       <td>${s.name}</td>
-      <td style="text-align:center;font-weight:600;">${grant}日</td>
-      <td style="text-align:center;color:#E65100;">${used}日</td>
-      <td style="text-align:center;font-weight:700;color:${remain>0?'#558B2F':'#C62828'};">${remain}日</td>
-      <td><button class="fe" onclick="editPaidGrant(${s.id},${fy})">編集</button></td>
+      <td style="font-size:10px;color:${modeColor};">${modeLbl}</td>
+      <td style="text-align:center;color:#757575;">${bal.prevRemain.toFixed(1)}/${bal.prevGrant}日</td>
+      <td style="text-align:center;font-weight:600;">${bal.currentGrant}日</td>
+      <td style="text-align:center;color:#E65100;font-weight:700;">${bal.currentRemain.toFixed(1)}日</td>
+      <td style="text-align:center;font-weight:700;color:${bal.total>0?'#558B2F':'#C62828'};">${bal.total.toFixed(1)}日</td>
+      <td><button class="fe" onclick="editPaidGrantV2(${s.id})">編集</button> <button class="bn" onclick="showPaidHistory(${s.id})" style="font-size:10px;">履歴</button></td>
     </tr>`;
   }).join('');
+}
+
+// 新：手動付与編集
+function editPaidGrantV2(sid){
+  const s=DB.staff.find(x=>x.id===sid);
+  if(!s)return;
+  if(!s.hireDate){
+    if(!confirm(s.name+' さんの入職日が未設定です。\n手動で当期付与日数を設定しますか？\n（基準日は今日の日付になります）'))return;
+    s.hireDate=todayStr();
+    sDB();
+  }
+  const bal=calcPaidBalance(sid);
+  const curBase=bal.currentBase||todayStr();
+  const cur=bal.currentGrant;
+  const inp=prompt(s.name+' さんの当期付与日数（基準日: '+curBase+'）\n現在: '+cur+'日\n\n新しい日数を入力（半角数字）:',cur);
+  if(inp===null)return;
+  const days=parseFloat(inp);
+  if(isNaN(days)||days<0){showToast('正しい数値を入力してください');return;}
+  const reason=prompt('変更理由（任意）','')||'';
+  setManualPaidGrant(sid,curBase,days,reason);
+  sDB();fbSaveSettings();
+  showToast(s.name+' に '+days+'日 を設定しました ✓');
+  renderPaidGrants();
+}
+
+// 変更履歴表示
+function showPaidHistory(sid){
+  const s=DB.staff.find(x=>x.id===sid);
+  if(!s)return;
+  const hist=getPaidHistory(sid);
+  if(!hist.length){alert(s.name+' さんの履歴はありません');return;}
+  const lines=hist.map(h=>{
+    const actLbl={auto_grant:'自動付与',manual_set:'手動設定',expire:'失効'}[h.action]||h.action;
+    return h.at.substring(0,16).replace('T',' ')+' [' +actLbl+'] '+h.days+'日 (基準'+h.baseDate+') by '+h.by+(h.reason?' - '+h.reason:'');
+  }).join('\n');
+  alert(s.name+' さんの有給変更履歴:\n\n'+lines);
 }
 function editPaidGrant(sid,fy){
   const staff=DB.staff.find(s=>s.id===sid);
