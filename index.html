@@ -139,6 +139,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 
 .mod{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;background:rgba(0,0,0,0.5)!important;z-index:9999!important;align-items:center!important;justify-content:center!important;padding:20px!important;}
 .mod .mc{width:100%!important;max-width:400px!important;background:#fff!important;border-radius:14px!important;padding:18px!important;box-shadow:0 8px 30px rgba(0,0,0,0.3)!important;max-height:90vh!important;overflow-y:auto!important;}
+
+.mtb{padding:5px 9px;border:1px solid var(--br);border-radius:7px;background:#fff;color:var(--t2);font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.mtb.active{background:var(--nv);color:#fff;border-color:var(--nv);}
+.mtab-section{display:none;}
+.mtab-section.active{display:block;}
 </style>
 
 
@@ -213,7 +218,7 @@ console.log('Firebase initialized (compat)');
   <div id="punch-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;"></div>
 </div></div>
 <div id="pg-admin" class="pg"><div class="ats">
-      <button class="at active" id="atab-staff" onclick="showAS('staff')">スタッフ</button>
+      <button class="at active" id="atab-staff" onclick="showAS('staff')">マスタ管理</button>
       <button class="at" id="atab-shift" onclick="showAS('shift')">日次シフト</button>
       <button class="at" id="atab-rec" onclick="showAS('rec')">打刻修正</button>
       <button class="at" id="atab-paid" onclick="showAS('paid')">有給・代休</button>
@@ -228,6 +233,7 @@ console.log('Firebase initialized (compat)');
       <button class="at fl-only" id="atab-allshift" onclick="showAS('allshift')" style="background:#FFF3E0;">全員シフト</button>
       <button class="at fl-only" id="atab-group" onclick="showAS('group')" style="background:#FFF3E0;">グループ管理</button>
       <button class="at fl-only" id="atab-ot" onclick="showAS('ot')" style="background:#FFF3E0;">時間外承認</button>
+      <button class="at" id="atab-rehab" onclick="showAS('rehab')">リハビリ</button>
     </div>
     <div class="pad">
     <div class="card" style="margin-bottom:8px;background:var(--bll);border:1px solid var(--bl);">
@@ -242,8 +248,8 @@ console.log('Firebase initialized (compat)');
     <!-- 打刻警告カード -->
     <div id="punch-warnings-card" style="display:none;margin-bottom:8px;"></div>
     <div class="asc active" id="asc-staff">
-      <div class="card"><div class="cl">スタッフ一覧</div><div class="sl2" id="asl"></div>
-        <button class="ab" style="margin-top:10px;" onclick="openAdd()">＋ スタッフを追加</button>
+      <div class="card"><div class="cl">マスタ管理（スタッフ情報）</div><div class="sl2" id="asl"></div>
+        <button class="ab" style="margin-top:10px;" onclick="openAdd()">＋ 新規スタッフ追加</button>
       </div>
     </div>
     <div class="asc" id="asc-shift">
@@ -382,7 +388,7 @@ console.log('Firebase initialized (compat)');
     </div>
     <div class="asc" id="asc-pw">
       <div class="card" style="border:2px solid #FFB74D;background:#FFF3E0;">
-        <div class="cl" style="color:#E65100;">🔑 PW管理（スーパー管理者専用）</div>
+        <div class="cl" style="color:#E65100;">🔑 PW管理（総合上級管理者専用）</div>
         <div class="fs2" style="color:#5D4037;">スタッフの個人画面PWと管理画面PWを初期化できます</div>
         <div class="frw">
           <label class="fl">スタッフ</label>
@@ -521,6 +527,18 @@ console.log('Firebase initialized (compat)');
         </div>
       </div>
     </div>
+    <div class="asc" id="asc-rehab">
+      <div class="card">
+        <div class="cl">リハビリ臨時勤務（管理）</div>
+        <div class="fs2" style="margin-bottom:8px;">対象職種スタッフのリハビリ記録一覧・サマリー</div>
+        <div class="fr" style="margin-bottom:10px;display:flex;gap:7px;align-items:center;flex-wrap:wrap;">
+          <select id="rha-month" onchange="renderRehabAdmin()" style="padding:6px 8px;border:1px solid var(--br);border-radius:7px;font-size:11px;font-family:inherit;"></select>
+          <button class="bn" onclick="exportRehabCSV()" style="background:#1565C0;color:#fff;font-size:11px;">CSV出力</button>
+        </div>
+        <div id="rha-summary" style="padding:8px;background:#E3F2FD;border-radius:7px;font-size:11px;margin-bottom:10px;">読み込み中...</div>
+        <div style="overflow-x:auto;"><table class="rt2" style="font-size:11px;"><thead><tr><th>日付</th><th>スタッフ</th><th>人数</th><th>記録日</th><th>操作</th></tr></thead><tbody id="rha-tb"></tbody></table></div>
+      </div>
+    </div>
     
     
     <div class="asc" id="asc-log">
@@ -604,6 +622,7 @@ console.log('Firebase initialized (compat)');
         <button class="ptab" id="pi-tab-paid" onclick="showPITab('paid')">有給</button>
         <button class="ptab" id="pi-tab-sub" onclick="showPITab('sub')">代休</button>
         <button class="ptab pi-fl-only" id="pi-tab-ot" onclick="showPITab('ot')">時間外</button>
+        <button class="ptab pi-rehab-only" id="pi-tab-rehab" onclick="showPITab('rehab')">リハビリ</button>
         <button class="ptab" id="pi-tab-fare" onclick="showPITab('fare')">交通費</button>
         <button class="ptab" id="pi-tab-expense" onclick="showPITab('expense')">経費精算</button>
         <button class="ptab" id="pi-tab-pw" onclick="showPITab('pw')">PW変更</button>
@@ -659,12 +678,15 @@ console.log('Firebase initialized (compat)');
       </div>
       <!-- 交通費 -->
       <div id="pi-view-fare" class="card" style="display:none;">
-        <div class="cl">交通費申請</div>
+        <div class="cl">交通費請求</div>
+        <div class="fs2">交通費を請求する日にチェックします（1日1回）</div>
         <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="pi-fare-date"></div>
-        <div class="frw"><label class="fl">金額（円）</label><input class="fi" type="number" id="pi-fare-amount" inputmode="numeric" placeholder="例: 500"></div>
-        <div class="frw"><label class="fl">内容（任意）</label><input class="fi" type="text" id="pi-fare-memo" placeholder="例: 往復電車代"></div>
-        <button class="fb" style="width:100%;margin-top:7px;" onclick="submitPIRequest('fare')">申請する</button>
-        <div id="pi-fare-list" style="margin-top:11px;max-height:200px;overflow-y:auto;"></div>
+        <button class="fb" style="width:100%;margin-top:7px;" onclick="submitPIFareCheck()">この日に交通費請求</button>
+        <!-- 履歴 -->
+        <div style="margin-top:14px;border-top:1px solid var(--br);padding-top:10px;">
+          <div style="font-size:11px;font-weight:700;margin-bottom:6px;">請求履歴</div>
+          <div id="pi-fare-list" style="max-height:280px;overflow-y:auto;"></div>
+        </div>
       </div>
       
       <!-- 経費精算 -->
@@ -739,6 +761,19 @@ console.log('Firebase initialized (compat)');
           <div id="pi-ot-list" style="max-height:280px;overflow-y:auto;"></div>
         </div>
       </div>
+      <!-- リハビリ臨時勤務（対象職種のみ） -->
+      <div id="pi-view-rehab" class="card pi-rehab-only" style="display:none;">
+        <div class="cl">リハビリ臨時勤務</div>
+        <div class="fs2">日付と実施人数を記録します（1日1回）</div>
+        <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="pi-rh-date"></div>
+        <div class="frw"><label class="fl">人数</label><input class="fi" type="number" id="pi-rh-count" min="1" placeholder="例: 9"></div>
+        <button class="fb" style="width:100%;margin-top:7px;" onclick="submitPIRehab()">記録する</button>
+        <!-- 履歴 -->
+        <div style="margin-top:14px;border-top:1px solid var(--br);padding-top:10px;">
+          <div style="font-size:11px;font-weight:700;margin-bottom:6px;">記録履歴</div>
+          <div id="pi-rh-list" style="max-height:280px;overflow-y:auto;"></div>
+        </div>
+      </div>
       <!-- PW変更 -->
       <div id="pi-view-pw" class="card" style="display:none;">
         <div class="cl">パスワード変更</div>
@@ -802,8 +837,36 @@ console.log('Firebase initialized (compat)');
 <!-- スタッフモーダル -->
 <div class="ov hidden" id="stm" onclick="closeSTM(event)"><div class="mo" onclick="event.stopPropagation()">
   <div class="mt" id="stm-t">スタッフを追加</div>
+  <!-- マスタ管理タブナビ -->
+  <div style="display:flex;gap:3px;margin-bottom:10px;overflow-x:auto;flex-wrap:wrap;">
+    <button class="mtb active" data-tab="basic" onclick="setMTab('basic')">基本情報</button>
+    <button class="mtb" data-tab="employ" onclick="setMTab('employ')">雇用</button>
+    <button class="mtb" data-tab="work" onclick="setMTab('work')">勤務</button>
+    <button class="mtb" data-tab="wage" onclick="setMTab('wage')">賃金</button>
+    <button class="mtb" data-tab="bonus" onclick="setMTab('bonus')">賞与</button>
+    <button class="mtb" data-tab="retire" onclick="setMTab('retire')">退職</button>
+    <button class="mtb" data-tab="other" onclick="setMTab('other')">その他</button>
+  </div>
   <div class="frw"><label class="fl">名前</label><input class="fi" id="fn" placeholder="例: 山田 太郎"></div>
   <div class="frw"><label class="fl">社員番号</label><input class="fi" id="feid" type="number" placeholder="例: 2"></div>
+  <div style="margin:10px 0;padding:11px;background:#E8F5E9;border-radius:8px;border:1px solid #A5D6A7;">
+    <div style="font-size:11px;font-weight:700;color:#1B5E20;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+      <span>🏷️ 職種・資格</span>
+      <button onclick="openMasterEditModal()" style="padding:4px 9px;border:1px solid #1B5E20;border-radius:6px;background:#fff;color:#1B5E20;font-size:10px;cursor:pointer;font-family:inherit;">マスタ編集</button>
+    </div>
+    <div class="frw"><label class="fl">職種（複数選択可）</label>
+      <div id="f-jobs-chips" style="display:flex;flex-wrap:wrap;gap:4px;flex:1;min-height:28px;border:1px solid var(--br);border-radius:7px;padding:4px;background:#fff;cursor:pointer;" onclick="openJobsPicker()"></div>
+    </div>
+    <div class="frw"><label class="fl">資格（複数選択可）</label>
+      <div id="f-lics-chips" style="display:flex;flex-wrap:wrap;gap:4px;flex:1;min-height:28px;border:1px solid var(--br);border-radius:7px;padding:4px;background:#fff;cursor:pointer;" onclick="openLicsPicker()"></div>
+    </div>
+  </div>
+  <div style="margin:10px 0;padding:11px;background:#E3F2FD;border-radius:8px;border:1px solid #90CAF9;">
+    <div style="font-size:11px;font-weight:700;color:#0D47A1;margin-bottom:8px;">🚃 通勤情報（参考・集計には使いません）</div>
+    <div class="frw"><label class="fl">通勤区間</label><input class="fi" id="f-commute-route" type="text" placeholder="例: 枚方市駅→香里園駅"></div>
+    <div class="frw"><label class="fl">単回（円）</label><input class="fi" id="f-commute-once" type="number" min="0" placeholder="例: 300"></div>
+    <div class="frw"><label class="fl">6ヶ月定期（円）</label><input class="fi" id="f-commute-pass" type="number" min="0" placeholder="例: 30000"></div>
+  </div>
   <div style="margin:10px 0;padding:11px;background:#FFF8E1;border-radius:8px;border:1px solid #FFE082;">
     <div style="font-size:11px;font-weight:700;color:#F57F17;margin-bottom:8px;">📋 有給設定</div>
     <div class="frw"><label class="fl">入職日</label><input class="fi" id="f-hire" type="date"></div>
@@ -890,6 +953,154 @@ console.log('Firebase initialized (compat)');
     </div>
     <div style="font-size:10px;color:#795548;margin-top:4px;">例：基準45分→11:00〜11:44打刻→11:45から計算</div>
   </div>
+  <!-- ▼ 雇用タブ -->
+  <div class="mtab-section" data-section="employ" style="display:none;">
+    <div style="margin:10px 0;padding:11px;background:#F3E5F5;border-radius:8px;border:1px solid #CE93D8;">
+      <div style="font-size:11px;font-weight:700;color:#4A148C;margin-bottom:8px;">📑 雇用情報</div>
+      <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-furigana" type="text" placeholder="例: ヤマダ タロウ"></div>
+      <div class="frw"><label class="fl">性別</label>
+        <select class="fsl" id="f-gender"><option value="">未設定</option><option value="男">男性</option><option value="女">女性</option><option value="他">その他</option></select>
+      </div>
+      <div class="frw"><label class="fl">生年月日</label><input class="fi" id="f-birth" type="date"></div>
+      <div class="frw"><label class="fl">住所</label><input class="fi" id="f-address" type="text" placeholder="例: 大阪府枚方市..."></div>
+      <div class="frw"><label class="fl">電話</label><input class="fi" id="f-phone" type="tel"></div>
+      <div class="frw"><label class="fl">メール</label><input class="fi" id="f-email" type="email"></div>
+      <div class="frw"><label class="fl">退職日</label><input class="fi" id="f-retire-date" type="date"></div>
+      <hr style="margin:10px 0;border:none;border-top:1px solid #CE93D8;">
+      <div class="frw"><label class="fl">雇用形態</label>
+        <select class="fsl" id="f-emp-type"><option value="">未設定</option><option value="正社員">正社員</option><option value="契約社員">契約社員</option><option value="パート">パート</option><option value="アルバイト">アルバイト</option><option value="嘱託">嘱託</option></select>
+      </div>
+      <div class="frw"><label class="fl">雇用期間</label>
+        <select class="fsl" id="f-emp-period"><option value="indefinite">無期</option><option value="fixed">有期</option></select>
+      </div>
+      <div class="frw"><label class="fl">期間開始日</label><input class="fi" id="f-emp-start" type="date"></div>
+      <div class="frw"><label class="fl">期間終了日</label><input class="fi" id="f-emp-end" type="date"></div>
+      <div class="frw"><label class="fl">試用期間</label>
+        <select class="fsl" id="f-probation"><option value="none">なし</option><option value="exists">あり</option></select>
+      </div>
+      <div class="frw"><label class="fl">試用期間（月数）</label><input class="fi" id="f-probation-months" type="number" min="0"></div>
+      <div class="frw"><label class="fl">更新条件</label><input class="fi" id="f-renewal" type="text"></div>
+      <div class="frw"><label class="fl">就業場所</label><input class="fi" id="f-workplace" type="text"></div>
+      <div class="frw"><label class="fl">業務内容</label><input class="fi" id="f-duty" type="text"></div>
+      <hr style="margin:10px 0;border:none;border-top:1px solid #CE93D8;">
+      <div class="frw"><label class="fl">緊急連絡先 氏名</label><input class="fi" id="f-emerg-name" type="text"></div>
+      <div class="frw"><label class="fl">緊急連絡先 続柄</label><input class="fi" id="f-emerg-rel" type="text" placeholder="配偶者など"></div>
+      <div class="frw"><label class="fl">緊急連絡先 電話</label><input class="fi" id="f-emerg-phone" type="tel"></div>
+    </div>
+  </div>
+  <!-- ▼ 勤務タブ -->
+  <div class="mtab-section" data-section="work" style="display:none;">
+    <div style="margin:10px 0;padding:11px;background:#E0F7FA;border-radius:8px;border:1px solid #80DEEA;">
+      <div style="font-size:11px;font-weight:700;color:#00838F;margin-bottom:8px;">🕐 勤務情報（追加）</div>
+      <div class="fs2" style="margin-bottom:8px;">基本の勤務設定は「基本情報」タブの既存項目を参照</div>
+      <div class="frw"><label class="fl">時間外労働</label>
+        <select class="fsl" id="f-overtime"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
+      </div>
+      <div class="frw"><label class="fl">変形労働時間制</label>
+        <select class="fsl" id="f-irregular"><option value="">未設定</option><option value="no">採用なし</option><option value="1month">1ヶ月単位</option><option value="1year">1年単位</option></select>
+      </div>
+    </div>
+  </div>
+  <!-- ▼ 賃金タブ -->
+  <div class="mtab-section" data-section="wage" style="display:none;">
+    <div id="wage-locked" style="margin:10px 0;padding:14px;background:#FFEBEE;border-radius:8px;border:1px solid #EF9A9A;text-align:center;color:#C62828;font-size:11px;">🔒 給与情報は<b>上級管理者以上</b>のみ閲覧可能です</div>
+    <div id="wage-content" style="display:none;">
+      <div style="margin:10px 0;padding:11px;background:#FFF3E0;border-radius:8px;border:1px solid #FFB74D;">
+        <div style="font-size:11px;font-weight:700;color:#E65100;margin-bottom:8px;">💰 賃金</div>
+        <div class="frw"><label class="fl">給与形態</label>
+          <select class="fsl" id="f-wage-type"><option value="">未設定</option><option value="annual">年俸</option><option value="monthly">月給</option><option value="daily">日給</option><option value="hourly">時給</option></select>
+        </div>
+        <div class="frw"><label class="fl">基本給（円）</label><input class="fi" id="f-base-wage" type="number" min="0"></div>
+        <div class="frw"><label class="fl">締切日</label><input class="fi" id="f-cutoff-day" type="text" placeholder="例: 毎月末日"></div>
+        <div class="frw"><label class="fl">支払日</label><input class="fi" id="f-pay-day" type="text" placeholder="例: 翌月25日"></div>
+        <div class="frw"><label class="fl">残業代計算</label>
+          <select class="fsl" id="f-overtime-calc"><option value="legal">法定通り</option><option value="fixed">固定残業代制</option><option value="custom">その他</option></select>
+        </div>
+        <div class="frw"><label class="fl">昇給</label>
+          <select class="fsl" id="f-raise"><option value="">未設定</option><option value="yes">あり</option><option value="discretion">業績による</option><option value="no">なし</option></select>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ▼ 賞与タブ -->
+  <div class="mtab-section" data-section="bonus" style="display:none;">
+    <div id="bonus-locked" style="margin:10px 0;padding:14px;background:#FFEBEE;border-radius:8px;border:1px solid #EF9A9A;text-align:center;color:#C62828;font-size:11px;">🔒 賞与情報は<b>上級管理者以上</b>のみ閲覧可能です</div>
+    <div id="bonus-content" style="display:none;">
+      <div style="margin:10px 0;padding:11px;background:#FCE4EC;border-radius:8px;border:1px solid #F48FB1;">
+        <div style="font-size:11px;font-weight:700;color:#880E4F;margin-bottom:8px;">🎁 通常賞与</div>
+        <div class="frw"><label class="fl">通常賞与</label>
+          <select class="fsl" id="f-bonus-regular"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
+        </div>
+        <div class="frw"><label class="fl">支給時期</label><input class="fi" id="f-bonus-timing" type="text" placeholder="例: 年2回"></div>
+        <div class="frw"><label class="fl">計算方法</label><input class="fi" id="f-bonus-calc" type="text"></div>
+      </div>
+      <div style="margin:10px 0;padding:11px;background:#FCE4EC;border-radius:8px;border:1px solid #F48FB1;">
+        <div style="font-size:11px;font-weight:700;color:#880E4F;margin-bottom:8px;">💎 臨時賞与</div>
+        <div class="frw"><label class="fl">臨時賞与</label>
+          <select class="fsl" id="f-bonus-extra"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
+        </div>
+        <div class="frw"><label class="fl">支給条件</label><input class="fi" id="f-bonus-extra-cond" type="text"></div>
+      </div>
+    </div>
+  </div>
+  <!-- ▼ 退職タブ -->
+  <div class="mtab-section" data-section="retire" style="display:none;">
+    <div style="margin:10px 0;padding:11px;background:#EFEBE9;border-radius:8px;border:1px solid #BCAAA4;">
+      <div style="font-size:11px;font-weight:700;color:#3E2723;margin-bottom:8px;">🚪 退職に関する事項</div>
+      <div class="frw"><label class="fl">定年年齢</label><input class="fi" id="f-retire-age" type="number" min="0"></div>
+      <div class="frw"><label class="fl">退職金</label>
+        <select class="fsl" id="f-severance"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
+      </div>
+      <div class="frw"><label class="fl">退職金規定</label><input class="fi" id="f-severance-rule" type="text"></div>
+      <div class="frw"><label class="fl">解雇事由</label>
+        <textarea id="f-dismissal" rows="3" style="flex:1;padding:7px;border:1px solid var(--br);border-radius:7px;font-size:11px;font-family:inherit;resize:vertical;"></textarea>
+      </div>
+    </div>
+  </div>
+  <!-- ▼ その他タブ -->
+  <div class="mtab-section" data-section="other" style="display:none;">
+    <div style="margin:10px 0;padding:11px;background:#F1F8E9;border-radius:8px;border:1px solid #C5E1A5;">
+      <div style="font-size:11px;font-weight:700;color:#33691E;margin-bottom:8px;">🏦 銀行口座（給与振込）</div>
+      <div class="frw"><label class="fl">銀行名</label><input class="fi" id="f-bank" type="text"></div>
+      <div class="frw"><label class="fl">支店名</label><input class="fi" id="f-bank-branch" type="text"></div>
+      <div class="frw"><label class="fl">口座種別</label>
+        <select class="fsl" id="f-bank-type"><option value="">未設定</option><option value="普通">普通</option><option value="当座">当座</option></select>
+      </div>
+      <div class="frw"><label class="fl">口座番号</label><input class="fi" id="f-bank-no" type="text"></div>
+      <div class="frw"><label class="fl">口座名義（カナ）</label><input class="fi" id="f-bank-kana" type="text"></div>
+    </div>
+    <div style="margin:10px 0;padding:11px;background:#E0F2F1;border-radius:8px;border:1px solid #80CBC4;">
+      <div style="font-size:11px;font-weight:700;color:#004D40;margin-bottom:8px;">🩺 社会保険・労働保険</div>
+      <div class="frw"><label class="fl">健康保険</label>
+        <select class="fsl" id="f-ins-health"><option value="">未設定</option><option value="yes">加入</option><option value="no">未加入</option></select>
+      </div>
+      <div class="frw"><label class="fl">厚生年金</label>
+        <select class="fsl" id="f-ins-pension"><option value="">未設定</option><option value="yes">加入</option><option value="no">未加入</option></select>
+      </div>
+      <div class="frw"><label class="fl">雇用保険</label>
+        <select class="fsl" id="f-ins-emp"><option value="">未設定</option><option value="yes">加入</option><option value="no">未加入</option></select>
+      </div>
+      <div class="frw"><label class="fl">労災保険</label>
+        <select class="fsl" id="f-ins-work"><option value="">未設定</option><option value="yes">加入</option><option value="no">未加入</option></select>
+      </div>
+    </div>
+    <div style="margin:10px 0;padding:11px;background:#FFFDE7;border-radius:8px;border:1px solid #FFE082;">
+      <div style="font-size:11px;font-weight:700;color:#F57F17;margin-bottom:8px;">📝 特約事項</div>
+      <div class="frw"><label class="fl">競業避止</label>
+        <select class="fsl" id="f-non-compete"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
+      </div>
+      <div class="frw"><label class="fl">期間</label><input class="fi" id="f-non-compete-period" type="text"></div>
+      <div class="frw"><label class="fl">秘密保持</label>
+        <select class="fsl" id="f-confidentiality"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
+      </div>
+      <div class="frw"><label class="fl">副業</label>
+        <select class="fsl" id="f-sidejob"><option value="">未設定</option><option value="ok">可</option><option value="ng">不可</option><option value="approval">要承認</option></select>
+      </div>
+      <div class="frw"><label class="fl">その他特約</label>
+        <textarea id="f-special-note" rows="3" style="flex:1;padding:7px;border:1px solid var(--br);border-radius:7px;font-size:11px;font-family:inherit;resize:vertical;"></textarea>
+      </div>
+    </div>
+  </div>
   <div style="margin-top:11px;padding:11px;background:#FFF3E0;border:1px solid #FFB74D;border-radius:8px;">
     <div style="font-weight:600;font-size:12px;color:#E65100;margin-bottom:8px;">⚙️ 管理画面の権限</div>
     <div class="frw"><label class="fl">権限</label>
@@ -897,10 +1108,12 @@ console.log('Firebase initialized (compat)');
         <option value="">なし（管理画面に入れない）</option>
         <option value="normal_koyokai">一般管理者（香庸会のみ）</option>
         <option value="normal_fulllife">一般管理者（フルラフのみ）</option>
-        <option value="super_both">スーパー管理者（両社・PW変更可）</option>
+        <option value="super_both">総合上級管理者（両社・PW変更可・給与可）</option>
+        <option value="senior_koyokai">上級管理者（香庸会・給与可）</option>
+        <option value="senior_fulllife">上級管理者（フルラフ・給与可）</option>
       </select>
     </div>
-    <div style="font-size:10px;color:var(--t2);margin-top:5px;">※スーパー管理者は他人のPWを変更できます</div>
+    <div style="font-size:10px;color:var(--t2);margin-top:5px;">※総合上級管理者は他人のPWを変更できます</div>
   </div>
   </div>
   <input type="hidden" id="ff" value="0">
@@ -1194,6 +1407,9 @@ function fbSaveSettings() {
     paidGrants: DB.paidGrants||[],
     paidGrantsV2: DB.paidGrantsV2||[],
     paidHistory: DB.paidHistory||[],
+    jobs: DB.jobs||[],
+    licenses: DB.licenses||[],
+    rehab: DB.rehab||[],
     substitute: DB.substitute||[],
     subOff: DB.subOff||[],
     subGrants: DB.subGrants||[],
@@ -1211,15 +1427,35 @@ function fbSaveSettings() {
 
 const TL={in:'出勤',out:'退勤',break:'休憩開始',resume:'勤務再開',early:'早出',fare:'交通費',paid:'有給',lunch:'ランチデリ'};
 
-let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[]};
+let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[]};
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
+
+
+// 職種・資格マスタの初期化
+function initJobLicenseMasters(){
+  if(!DB.jobs)DB.jobs=[];
+  if(!DB.licenses)DB.licenses=[];
+  // 職種の初期値
+  if(DB.jobs.length===0){
+    ['医師','看護師','理学療法士','作業療法士','言語聴覚士','認定心理士','管理栄養士','放射線技師','臨床検査技師','事務','ドライバー'].forEach(name=>{
+      DB.jobs.push({id:Date.now()+Math.random(),name});
+    });
+  }
+  // 資格の初期値
+  if(DB.licenses.length===0){
+    ['第1種運転免許','第2種運転免許'].forEach(name=>{
+      DB.licenses.push({id:Date.now()+Math.random(),name});
+    });
+  }
+  if(!DB.rehab)DB.rehab=[];
+}
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2001'; // 19:30変更バージョン
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
-    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[]},d);
+    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[]},d);
   }catch(e){}
   // スタッフデータのバージョンが古い（17:45が含まれる）場合はスタッフのみリセット
   const staffVer=localStorage.getItem('kintai_staff_ver');
@@ -1232,6 +1468,7 @@ function lDB(){
     
     sDB();
   }
+  initJobLicenseMasters();
 }
 
 function pad(n){return String(n).padStart(2,'0');}
@@ -2216,7 +2453,7 @@ function showPg(p){
 }
 
 
-// ═══ PW管理（スーパー管理者専用）═══
+// ═══ PW管理（総合上級管理者専用）═══
 function initPwmStaffSelect(){
   const sel=document.getElementById('pwm-staff');
   if(!sel)return;
@@ -2446,6 +2683,531 @@ function onPaidModeChange(){
   const w=document.getElementById('f-wdays-wrap');
   if(w)w.style.display=(mode==='auto_part')?'':'none';
 }
+
+
+// ═══ マスタ管理タブ切替 ═══
+let currentMTab='basic';
+
+function setMTab(tab){
+  currentMTab=tab;
+  // タブボタン切替
+  document.querySelectorAll('.mtb').forEach(btn=>{
+    btn.classList.toggle('active',btn.dataset.tab===tab);
+  });
+  // 基本情報タブの内容（既存項目）
+  const basicElements=[
+    '#fn','#feid',
+    'div[style*="🏷️ 職種・資格"]',
+    'div[style*="🚃 通勤情報"]',
+    'div[style*="📋 有給設定"]',
+    'div[style*="⚙️ 管理画面の権限"]'
+  ];
+  // 「基本情報」タブ時のみ既存項目を表示
+  // 実装：各タブセクション(data-section)はCSSで切替、既存項目はbasic時のみ表示
+  // ただし、既存項目は構造が複雑なので、各タブで「非基本情報」だけ隠す
+  document.querySelectorAll('.mtab-section').forEach(sec=>{
+    sec.style.display=(sec.dataset.section===tab)?'block':'none';
+  });
+  // 「基本情報」では既存項目をすべて表示
+  // 「基本情報」以外では既存項目を隠す → 既存項目をスペシャルクラスで囲む必要
+  // 別の方法：基本情報以外のタブが選ばれたら、既存の主要セクション（職種、通勤、有給、権限）を隠す
+  const existingSections=[
+    document.querySelector('#stm div[style*="🏷️ 職種・資格"]')?.closest('div[style*="background:#E8F5E9"]'),
+    document.querySelector('#stm div[style*="🚃 通勤情報"]')?.closest('div[style*="background:#E3F2FD"]'),
+    document.querySelector('#stm div[style*="📋 有給設定"]')?.closest('div[style*="background:#FFF8E1"]'),
+    document.querySelector('#stm div[style*="⚙️ 管理画面の権限"]')?.closest('div[style*="background:#FFF3E0"]'),
+  ];
+  const fnField=document.getElementById('fn')?.closest('.frw');
+  const eidField=document.getElementById('feid')?.closest('.frw');
+  const typeField=document.querySelector('#stm .typesel')?.closest('div[style*="margin-top:11px"]');
+  
+  if(tab==='basic'){
+    // 基本情報：既存項目を全て表示
+    [fnField,eidField,...existingSections].forEach(el=>{if(el)el.style.display='';});
+  }else{
+    // 他のタブ：基本情報の既存項目を非表示
+    [fnField,eidField,...existingSections].forEach(el=>{if(el)el.style.display='none';});
+  }
+  
+  // 給与・賞与タブの権限制御
+  if(tab==='wage'||tab==='bonus'){
+    const canView=(typeof canViewSalary==='function')?canViewSalary():false;
+    const lockedEl=document.getElementById(tab+'-locked');
+    const contentEl=document.getElementById(tab+'-content');
+    if(lockedEl)lockedEl.style.display=canView?'none':'block';
+    if(contentEl)contentEl.style.display=canView?'block':'none';
+  }
+}
+
+// マスタ管理データの読込（編集時）
+function loadMasterFields(s){
+  if(!s)s={};
+  // 基本情報（既存外）
+  const fields={
+    'f-furigana':s.furigana||'',
+    'f-gender':s.gender||'',
+    'f-birth':s.birthDate||'',
+    'f-address':s.address||'',
+    'f-phone':s.phone||'',
+    'f-email':s.email||'',
+    'f-retire-date':s.retireDate||'',
+    'f-emp-type':s.empType||'',
+    'f-emp-period':s.empPeriod||'indefinite',
+    'f-emp-start':s.empStart||'',
+    'f-emp-end':s.empEnd||'',
+    'f-probation':s.probation||'none',
+    'f-probation-months':s.probationMonths||'',
+    'f-renewal':s.renewal||'',
+    'f-workplace':s.workplace||'',
+    'f-duty':s.duty||'',
+    'f-emerg-name':s.emergName||'',
+    'f-emerg-rel':s.emergRel||'',
+    'f-emerg-phone':s.emergPhone||'',
+    'f-overtime':s.overtime||'',
+    'f-irregular':s.irregular||'',
+    'f-wage-type':s.wageType||'',
+    'f-base-wage':s.baseWage||'',
+    'f-cutoff-day':s.cutoffDay||'',
+    'f-pay-day':s.payDay||'',
+    'f-overtime-calc':s.overtimeCalc||'legal',
+    'f-raise':s.raise||'',
+    'f-bonus-regular':s.bonusRegular||'',
+    'f-bonus-timing':s.bonusTiming||'',
+    'f-bonus-calc':s.bonusCalc||'',
+    'f-bonus-extra':s.bonusExtra||'',
+    'f-bonus-extra-cond':s.bonusExtraCond||'',
+    'f-retire-age':s.retireAge||'',
+    'f-severance':s.severance||'',
+    'f-severance-rule':s.severanceRule||'',
+    'f-dismissal':s.dismissal||'',
+    'f-bank':s.bank||'',
+    'f-bank-branch':s.bankBranch||'',
+    'f-bank-type':s.bankType||'',
+    'f-bank-no':s.bankNo||'',
+    'f-bank-kana':s.bankKana||'',
+    'f-ins-health':s.insHealth||'',
+    'f-ins-pension':s.insPension||'',
+    'f-ins-emp':s.insEmp||'',
+    'f-ins-work':s.insWork||'',
+    'f-non-compete':s.nonCompete||'',
+    'f-non-compete-period':s.nonCompetePeriod||'',
+    'f-confidentiality':s.confidentiality||'',
+    'f-sidejob':s.sidejob||'',
+    'f-special-note':s.specialNote||'',
+  };
+  Object.entries(fields).forEach(([id,v])=>{
+    const el=document.getElementById(id);
+    if(el)el.value=v;
+  });
+}
+
+// マスタ管理データの収集（保存時）
+function collectMasterFields(){
+  const g=id=>{const el=document.getElementById(id);return el?el.value:'';};
+  return {
+    furigana:g('f-furigana'),
+    gender:g('f-gender'),
+    birthDate:g('f-birth'),
+    address:g('f-address'),
+    phone:g('f-phone'),
+    email:g('f-email'),
+    retireDate:g('f-retire-date'),
+    empType:g('f-emp-type'),
+    empPeriod:g('f-emp-period'),
+    empStart:g('f-emp-start'),
+    empEnd:g('f-emp-end'),
+    probation:g('f-probation'),
+    probationMonths:g('f-probation-months'),
+    renewal:g('f-renewal'),
+    workplace:g('f-workplace'),
+    duty:g('f-duty'),
+    emergName:g('f-emerg-name'),
+    emergRel:g('f-emerg-rel'),
+    emergPhone:g('f-emerg-phone'),
+    overtime:g('f-overtime'),
+    irregular:g('f-irregular'),
+    wageType:g('f-wage-type'),
+    baseWage:g('f-base-wage'),
+    cutoffDay:g('f-cutoff-day'),
+    payDay:g('f-pay-day'),
+    overtimeCalc:g('f-overtime-calc'),
+    raise:g('f-raise'),
+    bonusRegular:g('f-bonus-regular'),
+    bonusTiming:g('f-bonus-timing'),
+    bonusCalc:g('f-bonus-calc'),
+    bonusExtra:g('f-bonus-extra'),
+    bonusExtraCond:g('f-bonus-extra-cond'),
+    retireAge:g('f-retire-age'),
+    severance:g('f-severance'),
+    severanceRule:g('f-severance-rule'),
+    dismissal:g('f-dismissal'),
+    bank:g('f-bank'),
+    bankBranch:g('f-bank-branch'),
+    bankType:g('f-bank-type'),
+    bankNo:g('f-bank-no'),
+    bankKana:g('f-bank-kana'),
+    insHealth:g('f-ins-health'),
+    insPension:g('f-ins-pension'),
+    insEmp:g('f-ins-emp'),
+    insWork:g('f-ins-work'),
+    nonCompete:g('f-non-compete'),
+    nonCompetePeriod:g('f-non-compete-period'),
+    confidentiality:g('f-confidentiality'),
+    sidejob:g('f-sidejob'),
+    specialNote:g('f-special-note'),
+  };
+}
+
+
+// ═══ 職種・資格マスタ管理 ═══
+let pickerStaffJobs=[]; // 現在編集中スタッフの職種IDs（仮選択）
+let pickerStaffLics=[];
+
+function openMasterEditModal(){
+  setMeTab('jobs');
+  document.getElementById('master-edit-modal').style.display='flex';
+  renderMeJobs();
+  renderMeLics();
+}
+function closeMasterEditModal(){
+  document.getElementById('master-edit-modal').style.display='none';
+  // 編集モーダルが開いていれば、チップ再描画
+  renderJobsChips();
+  renderLicsChips();
+}
+function setMeTab(tab){
+  document.getElementById('me-tab-jobs').classList.toggle('active',tab==='jobs');
+  document.getElementById('me-tab-lics').classList.toggle('active',tab==='lics');
+  document.getElementById('me-view-jobs').style.display=tab==='jobs'?'block':'none';
+  document.getElementById('me-view-lics').style.display=tab==='lics'?'block':'none';
+}
+
+function addJob(){
+  const inp=document.getElementById('me-job-new');
+  const name=inp.value.trim();
+  if(!name){showToast('職種名を入力してください');return;}
+  if(!DB.jobs)DB.jobs=[];
+  if(DB.jobs.find(j=>j.name===name)){showToast('既に登録されています');return;}
+  DB.jobs.push({id:Date.now()+Math.random(),name});
+  sDB();fbSaveSettings();
+  inp.value='';
+  renderMeJobs();
+}
+function delJob(id){
+  if(!confirm('この職種を削除しますか？\n※既に割当中のスタッフへの影響に注意'))return;
+  DB.jobs=DB.jobs.filter(j=>j.id!==id);
+  sDB();fbSaveSettings();
+  renderMeJobs();
+}
+function renderMeJobs(){
+  const el=document.getElementById('me-jobs-list');
+  if(!el)return;
+  if(!DB.jobs||!DB.jobs.length){el.innerHTML='<div style="color:var(--t2);text-align:center;padding:14px;font-size:11px;">職種未登録</div>';return;}
+  el.innerHTML=DB.jobs.map(j=>`<div style="display:flex;align-items:center;gap:9px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${j.name}</span><button class="fd" onclick="delJob(${j.id})">削除</button></div>`).join('');
+}
+
+function addLicense(){
+  const inp=document.getElementById('me-lic-new');
+  const name=inp.value.trim();
+  if(!name){showToast('資格名を入力してください');return;}
+  if(!DB.licenses)DB.licenses=[];
+  if(DB.licenses.find(j=>j.name===name)){showToast('既に登録されています');return;}
+  DB.licenses.push({id:Date.now()+Math.random(),name});
+  sDB();fbSaveSettings();
+  inp.value='';
+  renderMeLics();
+}
+function delLicense(id){
+  if(!confirm('この資格を削除しますか？'))return;
+  DB.licenses=DB.licenses.filter(j=>j.id!==id);
+  sDB();fbSaveSettings();
+  renderMeLics();
+}
+function renderMeLics(){
+  const el=document.getElementById('me-lics-list');
+  if(!el)return;
+  if(!DB.licenses||!DB.licenses.length){el.innerHTML='<div style="color:var(--t2);text-align:center;padding:14px;font-size:11px;">資格未登録</div>';return;}
+  el.innerHTML=DB.licenses.map(l=>`<div style="display:flex;align-items:center;gap:9px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${l.name}</span><button class="fd" onclick="delLicense(${l.id})">削除</button></div>`).join('');
+}
+
+// 編集中スタッフのチップ描画
+function renderJobsChips(){
+  const el=document.getElementById('f-jobs-chips');
+  if(!el)return;
+  const names=(pickerStaffJobs||[]).map(id=>{const j=(DB.jobs||[]).find(x=>x.id==id);return j?j.name:null;}).filter(Boolean);
+  if(!names.length){el.innerHTML='<span style="color:var(--t2);font-size:10px;padding:4px;">タップして選択</span>';return;}
+  el.innerHTML=names.map(n=>`<span style="display:inline-block;padding:3px 9px;background:#E8F5E9;color:#1B5E20;border-radius:11px;font-size:10px;font-weight:600;">${n}</span>`).join('');
+}
+function renderLicsChips(){
+  const el=document.getElementById('f-lics-chips');
+  if(!el)return;
+  const names=(pickerStaffLics||[]).map(id=>{const j=(DB.licenses||[]).find(x=>x.id==id);return j?j.name:null;}).filter(Boolean);
+  if(!names.length){el.innerHTML='<span style="color:var(--t2);font-size:10px;padding:4px;">タップして選択</span>';return;}
+  el.innerHTML=names.map(n=>`<span style="display:inline-block;padding:3px 9px;background:#E3F2FD;color:#0D47A1;border-radius:11px;font-size:10px;font-weight:600;">${n}</span>`).join('');
+}
+
+// 職種選択モーダル
+function openJobsPicker(){
+  const el=document.getElementById('jobs-picker-list');
+  if(!el)return;
+  if(!DB.jobs||!DB.jobs.length){
+    el.innerHTML='<div style="color:var(--t2);text-align:center;padding:14px;font-size:11px;">職種未登録（マスタ編集から追加してください）</div>';
+  }else{
+    el.innerHTML=DB.jobs.map(j=>{
+      const checked=(pickerStaffJobs||[]).includes(j.id)?'checked':'';
+      return `<label style="display:flex;align-items:center;gap:9px;padding:7px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:11px;"><input type="checkbox" class="job-cb" data-id="${j.id}" ${checked} style="width:18px;height:18px;"><span>${j.name}</span></label>`;
+    }).join('');
+  }
+  document.getElementById('jobs-picker-modal').style.display='flex';
+}
+function closeJobsPicker(){document.getElementById('jobs-picker-modal').style.display='none';}
+function saveJobsPicker(){
+  pickerStaffJobs=[];
+  document.querySelectorAll('.job-cb:checked').forEach(cb=>{
+    pickerStaffJobs.push(parseFloat(cb.dataset.id));
+  });
+  closeJobsPicker();
+  renderJobsChips();
+}
+
+
+
+// ═══ 交通費（チェック式・新仕様）═══
+function submitPIFareCheck(){
+  if(!piStaff){showToast('ログインしてください');return;}
+  const date=document.getElementById('pi-fare-date').value;
+  if(!date){showToast('日付を入力してください');return;}
+  // 1日1回制限
+  const existing=DB.fare.find(f=>f.staffId===piStaff.id&&f.date===date);
+  if(existing){showToast(date+'は既に請求済みです');return;}
+  DB.fare.push({
+    id:Date.now(),
+    staffId:piStaff.id,
+    staffName:piStaff.name,
+    company:piStaff.company,
+    date,
+    amount:0, // 金額は使わない（旧データ互換のため0）
+    memo:'',
+    checkOnly:true // 新仕様の識別フラグ
+  });
+  sDB();fbSaveSettings();
+  renderPiFareList();
+  showToast('交通費を請求しました ✓');
+}
+
+function renderPiFareList(){
+  if(!piStaff)return;
+  const el=document.getElementById('pi-fare-list');
+  if(!el)return;
+  const list=(DB.fare||[]).filter(f=>f.staffId===piStaff.id).sort((a,b)=>a.date<b.date?1:-1);
+  if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:11px;text-align:center;padding:14px;">履歴なし</div>';return;}
+  el.innerHTML=list.map(f=>{
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #f0f0f0;font-size:11px;">
+      <span>${f.date}</span>
+      <span style="color:#0277BD;font-weight:600;">✓ 請求</span>
+      <button class="fd" onclick="delPiFare('${f.id}')" style="font-size:10px;padding:3px 8px;">削除</button>
+    </div>`;
+  }).join('');
+}
+
+function delPiFare(id){
+  if(!confirm('この記録を削除しますか？'))return;
+  DB.fare=DB.fare.filter(f=>String(f.id)!==String(id));
+  sDB();fbSaveSettings();
+  renderPiFareList();
+  showToast('削除しました');
+}
+
+// ═══ リハビリ臨時勤務（対象職種限定）═══
+const REHAB_JOB_NAMES=['理学療法士','作業療法士','言語聴覚士','認定心理士','管理栄養士'];
+
+// スタッフがリハビリ対象職種か判定
+function isRehabStaff(staff){
+  if(!staff||!staff.jobs||!staff.jobs.length)return false;
+  const jobNames=staff.jobs.map(jid=>{
+    const j=(DB.jobs||[]).find(x=>x.id==jid);
+    return j?j.name:'';
+  });
+  return jobNames.some(n=>REHAB_JOB_NAMES.includes(n));
+}
+
+// 個人画面：リハビリタブ表示制御（pi-rehab-only クラス）
+function applyPiRehabVisibility(){
+  const isTarget=piStaff&&isRehabStaff(piStaff);
+  document.querySelectorAll('.pi-rehab-only').forEach(el=>{
+    el.style.display=isTarget?'':'none';
+  });
+}
+
+// 個人画面：リハビリ記録の送信
+function submitPIRehab(){
+  if(!piStaff){showToast('ログインしてください');return;}
+  if(!isRehabStaff(piStaff)){showToast('対象外の職種です');return;}
+  const date=document.getElementById('pi-rh-date').value;
+  const count=parseInt(document.getElementById('pi-rh-count').value);
+  if(!date){showToast('日付を入力してください');return;}
+  if(!count||count<1){showToast('人数を入力してください');return;}
+  // 1日1回制限
+  if(!DB.rehab)DB.rehab=[];
+  const existing=DB.rehab.find(r=>r.staffId===piStaff.id&&r.date===date);
+  if(existing){
+    if(!confirm(date+'は既に記録済みです（'+existing.count+'人）。\n上書きしますか？'))return;
+    existing.count=count;
+    existing.updatedAt=new Date().toISOString();
+  }else{
+    DB.rehab.push({
+      id:Date.now()+Math.random(),
+      staffId:piStaff.id,
+      staffName:piStaff.name,
+      company:piStaff.company,
+      date,
+      count,
+      createdAt:new Date().toISOString()
+    });
+  }
+  sDB();fbSaveSettings();
+  renderPiRehabList();
+  document.getElementById('pi-rh-count').value='';
+  showToast('記録しました ✓');
+}
+
+function renderPiRehabList(){
+  if(!piStaff)return;
+  const el=document.getElementById('pi-rh-list');
+  if(!el)return;
+  const list=(DB.rehab||[]).filter(r=>r.staffId===piStaff.id).sort((a,b)=>a.date<b.date?1:-1);
+  if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:11px;text-align:center;padding:14px;">記録なし</div>';return;}
+  el.innerHTML=list.map(r=>{
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #f0f0f0;font-size:11px;">
+      <span>${r.date}</span>
+      <span style="font-weight:700;color:#1B5E20;">${r.count}人</span>
+      <button class="fd" onclick="delPiRehab('${r.id}')" style="font-size:10px;padding:3px 8px;">削除</button>
+    </div>`;
+  }).join('');
+}
+
+function delPiRehab(id){
+  if(!confirm('この記録を削除しますか？'))return;
+  DB.rehab=DB.rehab.filter(r=>String(r.id)!==String(id));
+  sDB();fbSaveSettings();
+  renderPiRehabList();
+  showToast('削除しました');
+}
+
+// ═══ 管理画面：リハビリ管理 ═══
+function initRehabAdmin(){
+  const ms=document.getElementById('rha-month');
+  if(ms&&!ms.options.length){
+    const now=new Date();
+    for(let i=-6;i<=6;i++){
+      const dt=new Date(now.getFullYear(),now.getMonth()+i,1);
+      const v=dt.getFullYear()+'-'+pad(dt.getMonth()+1);
+      const o=document.createElement('option');o.value=v;
+      o.textContent=dt.getFullYear()+'年'+(dt.getMonth()+1)+'月';
+      if(i===0)o.selected=true;
+      ms.appendChild(o);
+    }
+  }
+  renderRehabAdmin();
+}
+
+function renderRehabAdmin(){
+  const tb=document.getElementById('rha-tb');
+  if(!tb)return;
+  const ym=document.getElementById('rha-month')?document.getElementById('rha-month').value:null;
+  let list=(DB.rehab||[]).filter(r=>r.company===CO);
+  if(ym)list=list.filter(r=>r.date.startsWith(ym));
+  list.sort((a,b)=>a.date<b.date?1:-1);
+  
+  // サマリー：スタッフ別合計人数
+  const summary={};
+  list.forEach(r=>{
+    if(!summary[r.staffId])summary[r.staffId]={name:r.staffName,total:0,count:0};
+    summary[r.staffId].total+=r.count;
+    summary[r.staffId].count++;
+  });
+  const sumEl=document.getElementById('rha-summary');
+  if(sumEl){
+    const sumArr=Object.entries(summary).map(([sid,s])=>`${s.name}: ${s.total}人 (${s.count}日)`);
+    sumEl.innerHTML=sumArr.length?'<b>スタッフ別合計：</b> '+sumArr.join(' / '):'<span style="color:var(--t2);">該当なし</span>';
+  }
+  
+  if(!list.length){
+    tb.innerHTML='<tr><td colspan="5" style="color:var(--t2);text-align:center;padding:14px;">該当なし</td></tr>';
+    return;
+  }
+  tb.innerHTML=list.map(r=>{
+    return `<tr><td>${r.date}</td><td>${r.staffName||'?'}</td><td style="text-align:center;font-weight:700;color:#1B5E20;">${r.count}人</td><td style="font-size:10px;color:var(--t2);">${(r.createdAt||'').substring(0,10)}</td><td><button class="fd" onclick="delRehab('${r.id}')">削除</button></td></tr>`;
+  }).join('');
+}
+
+function delRehab(id){
+  if(!confirm('この記録を削除しますか？'))return;
+  DB.rehab=DB.rehab.filter(r=>String(r.id)!==String(id));
+  sDB();fbSaveSettings();
+  renderRehabAdmin();
+  showToast('削除しました');
+}
+
+// CSV出力
+function exportRehabCSV(){
+  const ym=document.getElementById('rha-month')?document.getElementById('rha-month').value:null;
+  let list=(DB.rehab||[]).filter(r=>r.company===CO);
+  if(ym)list=list.filter(r=>r.date.startsWith(ym));
+  list.sort((a,b)=>a.date<b.date?-1:1);
+  if(!list.length){showToast('データがありません');return;}
+  let csv='\uFEFF';
+  csv+='日付,スタッフ,人数\n';
+  list.forEach(r=>{
+    csv+=`${r.date},${r.staffName||''},${r.count}\n`;
+  });
+  // スタッフ別合計
+  csv+='\n[スタッフ別合計]\n';
+  csv+='スタッフ,合計人数,記録日数\n';
+  const summary={};
+  list.forEach(r=>{
+    if(!summary[r.staffId])summary[r.staffId]={name:r.staffName,total:0,count:0};
+    summary[r.staffId].total+=r.count;
+    summary[r.staffId].count++;
+  });
+  Object.values(summary).forEach(s=>{
+    csv+=`${s.name},${s.total},${s.count}\n`;
+  });
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='rehab_'+(ym||'all')+'_'+CO+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('CSV出力しました ✓');
+}
+
+
+// 資格選択モーダル
+function openLicsPicker(){
+  const el=document.getElementById('lics-picker-list');
+  if(!el)return;
+  if(!DB.licenses||!DB.licenses.length){
+    el.innerHTML='<div style="color:var(--t2);text-align:center;padding:14px;font-size:11px;">資格未登録（マスタ編集から追加してください）</div>';
+  }else{
+    el.innerHTML=DB.licenses.map(j=>{
+      const checked=(pickerStaffLics||[]).includes(j.id)?'checked':'';
+      return `<label style="display:flex;align-items:center;gap:9px;padding:7px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:11px;"><input type="checkbox" class="lic-cb" data-id="${j.id}" ${checked} style="width:18px;height:18px;"><span>${j.name}</span></label>`;
+    }).join('');
+  }
+  document.getElementById('lics-picker-modal').style.display='flex';
+}
+function closeLicsPicker(){document.getElementById('lics-picker-modal').style.display='none';}
+function saveLicsPicker(){
+  pickerStaffLics=[];
+  document.querySelectorAll('.lic-cb:checked').forEach(cb=>{
+    pickerStaffLics.push(parseFloat(cb.dataset.id));
+  });
+  closeLicsPicker();
+  renderLicsChips();
+}
+
+
 
 
 
@@ -3226,7 +3988,8 @@ function showAS(sub){
   if(sub==='shiftcal')initShiftCal();
   if(sub==='group')initGroupAdmin();
   if(sub==='allshift')initAllShift();
-  if(sub==='ot')initOTAdmin();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}
+  if(sub==='ot')initOTAdmin();
+  if(sub==='rehab')initRehabAdmin();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}
   // 打刻修正・日次シフト・特別枠のスタッフ選択肢を会社別に更新
   if(sub==='rec'||sub==='shift'||sub==='special'){if(typeof loadAS==='function')loadAS();}
   if(sub==='shift'&&typeof renderDSL==='function')renderDSL();
@@ -3727,6 +4490,20 @@ function initPanels(ds){
 function openAdd(){eSid=null;document.getElementById('stm-t').textContent='スタッフを追加';setFft(false);document.getElementById('fn').value='';document.getElementById('feid').value='';document.getElementById('ft').value='contract';document.getElementById('fstd').value='480';document.getElementById('fbk').value='0';document.getElementById('ff').value='0';onTC();initPanels(null);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));const f1el=document.getElementById('ff1min');
   if(f1el)f1el.value=45;
   const arEl=document.getElementById('ar');
+  // マスタ管理フィールド初期化
+  if(typeof loadMasterFields==='function')loadMasterFields({});
+  if(typeof setMTab==='function')setMTab('basic');
+  // マスタ管理フィールド
+  const masterFields=(typeof collectMasterFields==='function')?collectMasterFields():{};
+  // 通勤情報 初期化
+  const crEl=document.getElementById('f-commute-route');if(crEl)crEl.value='';
+  const coEl=document.getElementById('f-commute-once');if(coEl)coEl.value='';
+  const cpEl=document.getElementById('f-commute-pass');if(cpEl)cpEl.value='';
+  // 職種・資格 初期化
+  pickerStaffJobs=[];
+  pickerStaffLics=[];
+  renderJobsChips();
+  renderLicsChips();
   // 有給設定の初期化（新規）
   const hireEl=document.getElementById('f-hire');
   if(hireEl)hireEl.value='';
@@ -3745,6 +4522,8 @@ function openEdit(id){const s=DB.staff.find(x=>x.id===id);if(!s)return;eSid=id;d
   const arEl=document.getElementById('ar');
   if(arEl){
     if(s.adminRole==='super')arEl.value='super_both';
+    else if(s.adminRole==='senior'&&s.adminPerm==='koyokai')arEl.value='senior_koyokai';
+    else if(s.adminRole==='senior'&&s.adminPerm==='fulllife')arEl.value='senior_fulllife';
     else if(s.adminRole==='normal'&&s.adminPerm==='koyokai')arEl.value='normal_koyokai';
     else if(s.adminRole==='normal'&&s.adminPerm==='fulllife')arEl.value='normal_fulllife';
     
@@ -3752,6 +4531,23 @@ function openEdit(id){const s=DB.staff.find(x=>x.id===id);if(!s)return;eSid=id;d
     // スーパー管理者でなければ権限欄を編集不可に
     arEl.disabled=!(currentAdmin&&currentAdmin.role==='super');
   }
+  // マスタ管理フィールド読込
+  if(typeof loadMasterFields==='function')loadMasterFields(s);
+  if(typeof setMTab==='function')setMTab('basic');
+  // 通勤情報の読込
+  const crEl=document.getElementById('f-commute-route');if(crEl)crEl.value=s.commuteRoute||'';
+  const coEl=document.getElementById('f-commute-once');if(coEl)coEl.value=s.commuteOnce||'';
+  const cpEl=document.getElementById('f-commute-pass');if(cpEl)cpEl.value=s.commutePass||'';
+  // 職種・資格の読込
+  pickerStaffJobs=s.jobs?s.jobs.slice():[];
+  pickerStaffLics=s.licenses?s.licenses.slice():[];
+  if(typeof renderJobsChips==='function')renderJobsChips();
+  if(typeof renderLicsChips==='function')renderLicsChips();
+  // 有給設定の読込
+  const hireEl=document.getElementById('f-hire');if(hireEl)hireEl.value=s.hireDate||'';
+  const pmEl=document.getElementById('f-pmode');if(pmEl)pmEl.value=s.paidMode||'manual';
+  const wdEl=document.getElementById('f-wdays');if(wdEl)wdEl.value=s.weeklyDays||'4';
+  if(typeof onPaidModeChange==='function')onPaidModeChange();
   onTC();initPanels(s.dowShifts);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));document.getElementById('stm').classList.remove('hidden');}
 function closeSTM(e){if(!e||e.target===document.getElementById('stm'))document.getElementById('stm').classList.add('hidden');}
 function onTC(){
@@ -3821,6 +4617,15 @@ function saveSt(){const name=document.getElementById('fn').value.trim();if(!name
 const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)?0:Math.max(0,bkRaw);const fareRaw=parseInt(document.getElementById('ff').value);const fare=isNaN(fareRaw)?0:Math.max(0,fareRaw);const freeEnd=document.getElementById('fft').value==='1';
   const free1MinEl=document.getElementById('ff1min');
   const free1Min=free1MinEl?parseInt(free1MinEl.value):45;
+  // 職種・資格
+  // マスタ管理フィールド
+  const masterFields=(typeof collectMasterFields==='function')?collectMasterFields():{};
+  // 通勤情報
+  const commuteRoute=document.getElementById('f-commute-route')?document.getElementById('f-commute-route').value:'';
+  const commuteOnce=document.getElementById('f-commute-once')?parseInt(document.getElementById('f-commute-once').value)||0:0;
+  const commutePass=document.getElementById('f-commute-pass')?parseInt(document.getElementById('f-commute-pass').value)||0:0;
+  const jobs=pickerStaffJobs?pickerStaffJobs.slice():[];
+  const licenses=pickerStaffLics?pickerStaffLics.slice():[];
   // 有給設定
   const hireDate=document.getElementById('f-hire')?document.getElementById('f-hire').value:'';
   const paidMode=document.getElementById('f-pmode')?document.getElementById('f-pmode').value:'manual';
@@ -3831,12 +4636,14 @@ const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)
   if(arVal==='super_both'){adminRole='super';adminPerm='both';}
   else if(arVal==='normal_koyokai'){adminRole='normal';adminPerm='koyokai';}
   else if(arVal==='normal_fulllife'){adminRole='normal';adminPerm='fulllife';}
+  else if(arVal==='senior_koyokai'){adminRole='senior';adminPerm='koyokai';}
+  else if(arVal==='senior_fulllife'){adminRole='senior';adminPerm='fulllife';}
   // スーパー管理者のみ権限変更可（自分自身は変更可）
   const isCurrSuper=currentAdmin&&currentAdmin.role==='super';
   if(eSid){
     const idx=DB.staff.findIndex(s=>s.id===eSid);
     if(idx>=0){
-      const updates={...DB.staff[idx],name,employeeId:eid,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min,hireDate,paidMode,weeklyDays};
+      const updates={...DB.staff[idx],name,employeeId:eid,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min,hireDate,paidMode,weeklyDays,jobs,licenses,commuteRoute,commuteOnce,commutePass,...masterFields};
       if(isCurrSuper){
         updates.adminRole=adminRole;
         updates.adminPerm=adminPerm;
@@ -3858,7 +4665,7 @@ const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)
       // 香庸会は社員番号と一致
       nid=eid||(Math.max(0,...DB.staff.filter(s=>s.company==='koyokai').map(s=>s.id))+1);
     }
-    const newSt={id:nid,name,employeeId:eid||nid,company:CO,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min,hireDate,paidMode,weeklyDays};
+    const newSt={id:nid,name,employeeId:eid||nid,company:CO,type,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min,hireDate,paidMode,weeklyDays,jobs,licenses,commuteRoute,commuteOnce,commutePass,...masterFields};
     if(isCurrSuper&&adminRole){
       newSt.adminRole=adminRole;
       newSt.adminPerm=adminPerm;
@@ -4826,7 +5633,7 @@ function logoutPersonal(){
 }
 
 function showPTab(tab){
-  ['log','paid','sub','ot','fare','expense','pw'].forEach(t=>{
+  ['log','paid','sub','ot','rehab','fare','expense','pw'].forEach(t=>{
     const v=document.getElementById('pview-'+t);
     const b=document.getElementById('ptab-'+t);
     if(v)v.style.display=t===tab?'block':'none';
@@ -4981,6 +5788,23 @@ const DEFAULT_ADMINS = [];
 // adminPw: 管理画面ログイン用PW（初期 '2525'）
 // 川口(id:1)と壹岐(id:3)はDB.staff初期化時にadminRole:'super', adminPerm:'both'を設定
 
+
+// ═══ 権限チェック ═══
+// 給与情報を見られるか（総合上級 or 上級管理者）
+function canViewSalary(){
+  if(!currentAdmin)return false;
+  return currentAdmin.role==='super'||currentAdmin.role==='senior';
+}
+// 給与情報を編集できるか（総合上級 or 上級管理者）
+function canEditSalary(){
+  return canViewSalary();
+}
+// 会社切替できるか（総合上級のみ）
+function canSwitchCompany(){
+  if(!currentAdmin)return false;
+  return currentAdmin.role==='super';
+}
+
 function getAdmins(){return DB.admins&&DB.admins.length?DB.admins:DEFAULT_ADMINS;}
 
 let currentAdmin = null;
@@ -5046,7 +5870,9 @@ function applyAdminPermissions(admin){
   const el=document.getElementById('admin-co-label');
   if(el){
     const coName={koyokai:'香庸会',fulllife:'フルラフ',both:'両社'}[admin.company]||'';
-    const roleName=isSuperAdmin?'スーパー管理者':'管理者';
+    let roleName='管理者';
+    if(isSuperAdmin)roleName='総合上級管理者';
+    else if(admin.role==='senior')roleName='上級管理者';
     el.textContent=admin.name+'（'+roleName+'・'+coName+'）';
   }
   // レポート出力を会社でフィルタ
@@ -5183,6 +6009,7 @@ function loginPersonalInline(){
   if((staff.pw||'0000')!==pw){document.getElementById('pi-err').textContent='PWが違います';return;}
   piStaff=staff;
   if(typeof applyPiFlOnlyVisibility==='function')applyPiFlOnlyVisibility();
+  if(typeof applyPiRehabVisibility==='function')applyPiRehabVisibility();
   document.getElementById('personal-inline-login').style.display='none';
   document.getElementById('personal-inline-main').style.display='block';
   const coName={koyokai:'医療法人 香庸会',fulllife:'株式会社 フルラフ'};
@@ -5206,7 +6033,7 @@ function logoutPersonalInline(){
 }
 
 function showPITab(tab){
-  ['log','paid','sub','ot','fare','expense','pw'].forEach(t=>{
+  ['log','paid','sub','ot','rehab','fare','expense','pw'].forEach(t=>{
     const v=document.getElementById('pi-view-'+t);
     const b=document.getElementById('pi-tab-'+t);
     if(v)v.style.display=t===tab?'block':'none';
@@ -5219,6 +6046,8 @@ function showPITab(tab){
   if(tab==='expense')renderPIList('expense');
   if(tab==='sub'){renderPiSubRemain();renderPiSubList();setPiSubMode('substitute');}
   if(tab==='ot'){renderPiOTList();const dEl=document.getElementById('pi-ot-date');if(dEl&&!dEl.value)dEl.value=todayStr();}
+  if(tab==='rehab'){renderPiRehabList();const dEl2=document.getElementById('pi-rh-date');if(dEl2&&!dEl2.value)dEl2.value=todayStr();}
+  if(tab==='fare'){renderPiFareList();const dEl3=document.getElementById('pi-fare-date');if(dEl3&&!dEl3.value)dEl3.value=todayStr();}
 }
 
 function initPILogMonth(){
@@ -5739,5 +6568,56 @@ lDB();autoStart();setInterval(tick,30000);tick();
     </div>
   </div>
 </div>
+
+<!-- 職種・資格マスタ編集モーダル -->
+<div id="master-edit-modal" class="mod" style="display:none;">
+  <div class="mc">
+    <div class="cl">🏷️ 職種・資格マスタ編集</div>
+    <div style="display:flex;gap:4px;margin-bottom:9px;">
+      <button class="ptab active" id="me-tab-jobs" onclick="setMeTab('jobs')">職種</button>
+      <button class="ptab" id="me-tab-lics" onclick="setMeTab('lics')">資格</button>
+    </div>
+    <div id="me-view-jobs">
+      <div class="frw">
+        <input class="fi" type="text" id="me-job-new" placeholder="新しい職種を入力">
+        <button class="bg" onclick="addJob()">+ 追加</button>
+      </div>
+      <div id="me-jobs-list" style="max-height:300px;overflow-y:auto;"></div>
+    </div>
+    <div id="me-view-lics" style="display:none;">
+      <div class="frw">
+        <input class="fi" type="text" id="me-lic-new" placeholder="新しい資格を入力">
+        <button class="bg" onclick="addLicense()">+ 追加</button>
+      </div>
+      <div id="me-lics-list" style="max-height:300px;overflow-y:auto;"></div>
+    </div>
+    <button class="bn" onclick="closeMasterEditModal()" style="width:100%;margin-top:10px;">閉じる</button>
+  </div>
+</div>
+
+<!-- 職種選択モーダル -->
+<div id="jobs-picker-modal" class="mod" style="display:none;">
+  <div class="mc">
+    <div class="cl">職種を選択</div>
+    <div id="jobs-picker-list" style="max-height:400px;overflow-y:auto;"></div>
+    <div style="display:flex;gap:9px;margin-top:11px;">
+      <button class="bn" onclick="closeJobsPicker()" style="flex:1;">キャンセル</button>
+      <button class="fb" onclick="saveJobsPicker()" style="flex:1;">確定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 資格選択モーダル -->
+<div id="lics-picker-modal" class="mod" style="display:none;">
+  <div class="mc">
+    <div class="cl">資格を選択</div>
+    <div id="lics-picker-list" style="max-height:400px;overflow-y:auto;"></div>
+    <div style="display:flex;gap:9px;margin-top:11px;">
+      <button class="bn" onclick="closeLicsPicker()" style="flex:1;">キャンセル</button>
+      <button class="fb" onclick="saveLicsPicker()" style="flex:1;">確定</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
