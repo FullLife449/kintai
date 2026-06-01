@@ -847,7 +847,8 @@ console.log('Firebase initialized (compat)');
     <button class="mtb" data-tab="retire" onclick="setMTab('retire')">退職</button>
     <button class="mtb" data-tab="other" onclick="setMTab('other')">その他</button>
   </div>
-  <div class="frw"><label class="fl">名前</label><input class="fi" id="fn" placeholder="例: 山田 太郎"></div>
+  <div class="frw"><label class="fl">氏名</label><input class="fi" id="fn" placeholder="例: 山田 太郎（姓と名の間に1マス空けてください）"></div>
+  <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-furigana-basic" type="text" placeholder="例: ヤマダ タロウ（姓と名の間に1マス空けてください）"></div>
   <div class="frw"><label class="fl">社員番号</label><input class="fi" id="feid" type="number" placeholder="例: 2"></div>
   <div style="margin:10px 0;padding:11px;background:#E8F5E9;border-radius:8px;border:1px solid #A5D6A7;">
     <div style="font-size:11px;font-weight:700;color:#1B5E20;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
@@ -863,7 +864,9 @@ console.log('Firebase initialized (compat)');
   </div>
   <div style="margin:10px 0;padding:11px;background:#E3F2FD;border-radius:8px;border:1px solid #90CAF9;">
     <div style="font-size:11px;font-weight:700;color:#0D47A1;margin-bottom:8px;">🚃 通勤情報（参考・集計には使いません）</div>
-    <div class="frw"><label class="fl">通勤区間</label><input class="fi" id="f-commute-route" type="text" placeholder="例: 枚方市駅→香里園駅"></div>
+    <div class="frw"><label class="fl">乗車駅</label><input class="fi" id="f-commute-from" type="text" placeholder="例: 枚方市駅"></div>
+    <div class="frw"><label class="fl">中継点（任意）</label><input class="fi" id="f-commute-via" type="text" placeholder="例: 京橋駅（任意）"></div>
+    <div class="frw"><label class="fl">目的地</label><input class="fi" id="f-commute-to" type="text" value="香里園" placeholder="香里園"></div>
     <div class="frw"><label class="fl">単回（円）</label><input class="fi" id="f-commute-once" type="number" min="0" placeholder="例: 300"></div>
     <div class="frw"><label class="fl">6ヶ月定期（円）</label><input class="fi" id="f-commute-pass" type="number" min="0" placeholder="例: 30000"></div>
   </div>
@@ -980,10 +983,15 @@ console.log('Firebase initialized (compat)');
       </div>
       <div class="frw"><label class="fl">試用期間（月数）</label><input class="fi" id="f-probation-months" type="number" min="0"></div>
       <div class="frw"><label class="fl">更新条件</label><input class="fi" id="f-renewal" type="text"></div>
-      <div class="frw"><label class="fl">就業場所</label><input class="fi" id="f-workplace" type="text"></div>
-      <div class="frw"><label class="fl">業務内容</label><input class="fi" id="f-duty" type="text"></div>
+      <div class="frw"><label class="fl">就業場所</label>
+        <select class="fsl" id="f-workplace"></select>
+      </div>
+      <div class="frw"><label class="fl">業務内容</label>
+        <select class="fsl" id="f-duty"></select>
+      </div>
       <hr style="margin:10px 0;border:none;border-top:1px solid #CE93D8;">
-      <div class="frw"><label class="fl">緊急連絡先 氏名</label><input class="fi" id="f-emerg-name" type="text"></div>
+      <div class="frw"><label class="fl">緊急連絡先 氏名</label><input class="fi" id="f-emerg-name" type="text" placeholder="例: 山田 花子（姓と名の間に1マス）"></div>
+      <div class="frw"><label class="fl">緊急連絡先 フリガナ</label><input class="fi" id="f-emerg-furigana" type="text" placeholder="例: ヤマダ ハナコ"></div>
       <div class="frw"><label class="fl">緊急連絡先 続柄</label><input class="fi" id="f-emerg-rel" type="text" placeholder="配偶者など"></div>
       <div class="frw"><label class="fl">緊急連絡先 電話</label><input class="fi" id="f-emerg-phone" type="tel"></div>
     </div>
@@ -1410,6 +1418,8 @@ function fbSaveSettings() {
     jobs: DB.jobs||[],
     licenses: DB.licenses||[],
     rehab: DB.rehab||[],
+    workplaces: DB.workplaces||[],
+    duties: DB.duties||[],
     substitute: DB.substitute||[],
     subOff: DB.subOff||[],
     subGrants: DB.subGrants||[],
@@ -1427,7 +1437,7 @@ function fbSaveSettings() {
 
 const TL={in:'出勤',out:'退勤',break:'休憩開始',resume:'勤務再開',early:'早出',fare:'交通費',paid:'有給',lunch:'ランチデリ'};
 
-let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[]};
+let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],workplaces:[],duties:[]};
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 
@@ -1448,6 +1458,20 @@ function initJobLicenseMasters(){
     });
   }
   if(!DB.rehab)DB.rehab=[];
+  // 就業場所
+  if(!DB.workplaces)DB.workplaces=[];
+  if(DB.workplaces.length===0){
+    ['香里園','寝屋川市成田','枚方市走谷'].forEach(name=>{
+      DB.workplaces.push({id:Date.now()+Math.random(),name});
+    });
+  }
+  // 業務内容
+  if(!DB.duties)DB.duties=[];
+  if(DB.duties.length===0){
+    ['診療','リハビリ','看護','心理評価及びカウンセリング','事務及び診療補助','検査','栄養指導'].forEach(name=>{
+      DB.duties.push({id:Date.now()+Math.random(),name});
+    });
+  }
 }
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
@@ -1455,7 +1479,7 @@ const STAFF_VER='v2001'; // 19:30変更バージョン
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
-    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[]},d);
+    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],workplaces:[],duties:[]},d);
   }catch(e){}
   // スタッフデータのバージョンが古い（17:45が含まれる）場合はスタッフのみリセット
   const staffVer=localStorage.getItem('kintai_staff_ver');
@@ -2449,7 +2473,7 @@ function showPg(p){
   if(p==='punch')renderPunchGrid();
   if(p==='log'){renderLog();initLogYM();}
   if(p==='report'){initMS();renderRep();updIS();}
-  if(p==='admin'){renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}
+  if(p==='admin'){if(currentAdmin&&typeof applyAdminPermissions==='function')applyAdminPermissions(currentAdmin);renderAL();loadAS();renderDSL();renderSPL();showAS('staff');}
 }
 
 
@@ -2742,6 +2766,18 @@ function setMTab(tab){
 // マスタ管理データの読込（編集時）
 function loadMasterFields(s){
   if(!s)s={};
+  // プルダウン更新
+  if(typeof populateWorkplaceSelect==='function')populateWorkplaceSelect();
+  if(typeof populateDutySelect==='function')populateDutySelect();
+  // フリガナ（基本情報タブ）
+  const fnB=document.getElementById('f-furigana-basic');
+  if(fnB)fnB.value=s.furigana||'';
+  // 通勤区間（新仕様）
+  const fcf=document.getElementById('f-commute-from');if(fcf)fcf.value=s.commuteFrom||'';
+  const fcv=document.getElementById('f-commute-via');if(fcv)fcv.value=s.commuteVia||'';
+  const fct=document.getElementById('f-commute-to');if(fct)fct.value=s.commuteTo||'香里園';
+  // 緊急連絡先フリガナ
+  const efu=document.getElementById('f-emerg-furigana');if(efu)efu.value=s.emergFurigana||'';
   // 基本情報（既存外）
   const fields={
     'f-furigana':s.furigana||'',
@@ -2805,7 +2841,11 @@ function loadMasterFields(s){
 function collectMasterFields(){
   const g=id=>{const el=document.getElementById(id);return el?el.value:'';};
   return {
-    furigana:g('f-furigana'),
+    commuteFrom:g('f-commute-from'),
+    commuteVia:g('f-commute-via'),
+    commuteTo:g('f-commute-to'),
+    emergFurigana:g('f-emerg-furigana'),
+    furigana:g('f-furigana-basic')||g('f-furigana'),
     gender:g('f-gender'),
     birthDate:g('f-birth'),
     address:g('f-address'),
@@ -2868,6 +2908,8 @@ function openMasterEditModal(){
   document.getElementById('master-edit-modal').style.display='flex';
   renderMeJobs();
   renderMeLics();
+  if(typeof renderMeWorkplaces==='function')renderMeWorkplaces();
+  if(typeof renderMeDuties==='function')renderMeDuties();
 }
 function closeMasterEditModal(){
   document.getElementById('master-edit-modal').style.display='none';
@@ -2876,10 +2918,12 @@ function closeMasterEditModal(){
   renderLicsChips();
 }
 function setMeTab(tab){
-  document.getElementById('me-tab-jobs').classList.toggle('active',tab==='jobs');
-  document.getElementById('me-tab-lics').classList.toggle('active',tab==='lics');
-  document.getElementById('me-view-jobs').style.display=tab==='jobs'?'block':'none';
-  document.getElementById('me-view-lics').style.display=tab==='lics'?'block':'none';
+  ['jobs','lics','wp','duty'].forEach(t=>{
+    const btn=document.getElementById('me-tab-'+t);
+    if(btn)btn.classList.toggle('active',tab===t);
+    const view=document.getElementById('me-view-'+t);
+    if(view)view.style.display=tab===t?'block':'none';
+  });
 }
 
 function addJob(){
@@ -2917,6 +2961,80 @@ function addLicense(){
   inp.value='';
   renderMeLics();
 }
+
+// ═══ 就業場所・業務内容マスタ ═══
+function addWorkplace(){
+  const inp=document.getElementById('me-wp-new');
+  const name=inp.value.trim();
+  if(!name){showToast('就業場所名を入力してください');return;}
+  if(!DB.workplaces)DB.workplaces=[];
+  if(DB.workplaces.find(w=>w.name===name)){showToast('既に登録されています');return;}
+  DB.workplaces.push({id:Date.now()+Math.random(),name});
+  sDB();fbSaveSettings();
+  inp.value='';
+  renderMeWorkplaces();
+  populateWorkplaceSelect();
+}
+function delWorkplace(id){
+  if(!confirm('この就業場所を削除しますか？'))return;
+  DB.workplaces=DB.workplaces.filter(w=>w.id!==id);
+  sDB();fbSaveSettings();
+  renderMeWorkplaces();
+  populateWorkplaceSelect();
+}
+function renderMeWorkplaces(){
+  const el=document.getElementById('me-wp-list');
+  if(!el)return;
+  if(!DB.workplaces||!DB.workplaces.length){el.innerHTML='<div style="color:var(--t2);text-align:center;padding:14px;font-size:11px;">就業場所未登録</div>';return;}
+  el.innerHTML=DB.workplaces.map(w=>`<div style="display:flex;align-items:center;gap:9px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${w.name}</span><button class="fd" onclick="delWorkplace(${w.id})">削除</button></div>`).join('');
+}
+
+function addDuty(){
+  const inp=document.getElementById('me-duty-new');
+  const name=inp.value.trim();
+  if(!name){showToast('業務内容を入力してください');return;}
+  if(!DB.duties)DB.duties=[];
+  if(DB.duties.find(d=>d.name===name)){showToast('既に登録されています');return;}
+  DB.duties.push({id:Date.now()+Math.random(),name});
+  sDB();fbSaveSettings();
+  inp.value='';
+  renderMeDuties();
+  populateDutySelect();
+}
+function delDuty(id){
+  if(!confirm('この業務内容を削除しますか？'))return;
+  DB.duties=DB.duties.filter(d=>d.id!==id);
+  sDB();fbSaveSettings();
+  renderMeDuties();
+  populateDutySelect();
+}
+function renderMeDuties(){
+  const el=document.getElementById('me-duty-list');
+  if(!el)return;
+  if(!DB.duties||!DB.duties.length){el.innerHTML='<div style="color:var(--t2);text-align:center;padding:14px;font-size:11px;">業務内容未登録</div>';return;}
+  el.innerHTML=DB.duties.map(d=>`<div style="display:flex;align-items:center;gap:9px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${d.name}</span><button class="fd" onclick="delDuty(${d.id})">削除</button></div>`).join('');
+}
+
+// プルダウンに反映
+function populateWorkplaceSelect(){
+  const sel=document.getElementById('f-workplace');
+  if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">未設定</option>';
+  (DB.workplaces||[]).forEach(w=>{
+    sel.innerHTML+='<option value="'+w.name+'"'+(cur===w.name?' selected':'')+'>'+w.name+'</option>';
+  });
+}
+function populateDutySelect(){
+  const sel=document.getElementById('f-duty');
+  if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">未設定</option>';
+  (DB.duties||[]).forEach(d=>{
+    sel.innerHTML+='<option value="'+d.name+'"'+(cur===d.name?' selected':'')+'>'+d.name+'</option>';
+  });
+}
+
 function delLicense(id){
   if(!confirm('この資格を削除しますか？'))return;
   DB.licenses=DB.licenses.filter(j=>j.id!==id);
@@ -4557,8 +4675,8 @@ function onTC(){
   document.getElementById('fca').style.display=t==='contract'?'':'none';
   const f1=document.getElementById('free1-opt');
   if(f1)f1.style.display=t==='free1'?'block':'none';
-  // 契約型以外: シフト・休憩・終了時刻フリーを非表示
-  const isAnnual=t!=='contract';
+  // 契約型・年俸型: シフト・休憩・終了時刻フリーを表示（年俸型は契約上の記載用）
+  const isAnnual=!(t==='contract'||t==='annual');
   const setHide=(el,hide)=>{if(!el)return;if(hide){el.setAttribute('data-hidden','1');el.style.setProperty('display','none','important');}else{el.removeAttribute('data-hidden');el.style.removeProperty('display');}};
   // シフト関連の親カード（曜日別シフト設定全体）
   // 「曜日別シフト設定」のラベルを含む親要素を探す
@@ -6574,9 +6692,11 @@ lDB();autoStart();setInterval(tick,30000);tick();
 <div id="master-edit-modal" class="mod" style="display:none;">
   <div class="mc">
     <div class="cl">🏷️ 職種・資格マスタ編集</div>
-    <div style="display:flex;gap:4px;margin-bottom:9px;">
+    <div style="display:flex;gap:4px;margin-bottom:9px;flex-wrap:wrap;">
       <button class="ptab active" id="me-tab-jobs" onclick="setMeTab('jobs')">職種</button>
       <button class="ptab" id="me-tab-lics" onclick="setMeTab('lics')">資格</button>
+      <button class="ptab" id="me-tab-wp" onclick="setMeTab('wp')">就業場所</button>
+      <button class="ptab" id="me-tab-duty" onclick="setMeTab('duty')">業務内容</button>
     </div>
     <div id="me-view-jobs">
       <div class="frw">
@@ -6591,6 +6711,20 @@ lDB();autoStart();setInterval(tick,30000);tick();
         <button class="bg" onclick="addLicense()">+ 追加</button>
       </div>
       <div id="me-lics-list" style="max-height:300px;overflow-y:auto;"></div>
+    </div>
+    <div id="me-view-wp" style="display:none;">
+      <div class="frw">
+        <input class="fi" type="text" id="me-wp-new" placeholder="新しい就業場所を入力">
+        <button class="bg" onclick="addWorkplace()">+ 追加</button>
+      </div>
+      <div id="me-wp-list" style="max-height:300px;overflow-y:auto;"></div>
+    </div>
+    <div id="me-view-duty" style="display:none;">
+      <div class="frw">
+        <input class="fi" type="text" id="me-duty-new" placeholder="新しい業務内容を入力">
+        <button class="bg" onclick="addDuty()">+ 追加</button>
+      </div>
+      <div id="me-duty-list" style="max-height:300px;overflow-y:auto;"></div>
     </div>
     <button class="bn" onclick="closeMasterEditModal()" style="width:100%;margin-top:10px;">閉じる</button>
   </div>
