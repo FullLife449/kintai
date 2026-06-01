@@ -3978,8 +3978,10 @@ function showAS(sub){
   const el=document.getElementById('admin-co-label');
   if(el){
     const admin=currentAdmin||{name:'管理者',company:'both'};
-    const coName={koyokai:'香庸会',fulllife:'フルラフ',both:'両社'}[admin.company]||'';
-    el.textContent=admin.name+(coName?'（'+coName+'）':'');
+    let roleName='管理者';
+    if(admin.role==='super')roleName='総合上級管理者';
+    else if(admin.role==='senior')roleName='上級管理者';
+    el.textContent=admin.name+'（'+roleName+'）';
   }
   ['staff','shift','rec','paid','special','log','report','data','pw','devset','pattern','shiftcal','allshift','group','ot'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
   if(sub==='pw')initPwmStaffSelect();
@@ -5869,11 +5871,10 @@ function applyAdminPermissions(admin){
   // 管理画面のタイトルに権限表示
   const el=document.getElementById('admin-co-label');
   if(el){
-    const coName={koyokai:'香庸会',fulllife:'フルラフ',both:'両社'}[admin.company]||'';
     let roleName='管理者';
     if(isSuperAdmin)roleName='総合上級管理者';
     else if(admin.role==='senior')roleName='上級管理者';
-    el.textContent=admin.name+'（'+roleName+'・'+coName+'）';
+    el.textContent=admin.name+'（'+roleName+'）';
   }
   // レポート出力を会社でフィルタ
   window.adminCompanyFilter = (isSuperAdmin || admin.company === 'both') ? null : admin.company;
