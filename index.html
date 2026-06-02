@@ -837,69 +837,83 @@ console.log('Firebase initialized (compat)');
 <!-- スタッフモーダル -->
 <div class="ov hidden" id="stm" onclick="closeSTM(event)"><div class="mo" onclick="event.stopPropagation()">
   <div class="mt" id="stm-t">スタッフを追加</div>
-  <!-- マスタ管理タブナビ -->
-  <div style="display:flex;gap:3px;margin-bottom:10px;overflow-x:auto;flex-wrap:wrap;">
-    <button class="mtb active" data-tab="basic" onclick="setMTab('basic')">基本情報</button>
-    <button class="mtb" data-tab="employ" onclick="setMTab('employ')">雇用</button>
-    <button class="mtb" data-tab="work" onclick="setMTab('work')">勤務</button>
-    <button class="mtb" data-tab="wage" onclick="setMTab('wage')">賃金</button>
-    <button class="mtb" data-tab="bonus" onclick="setMTab('bonus')">賞与</button>
-    <button class="mtb" data-tab="retire" onclick="setMTab('retire')">退職</button>
-    <button class="mtb" data-tab="other" onclick="setMTab('other')">その他</button>
-  </div>
+  <!-- 常時表示ヘッダー: 氏名・フリガナ・社員番号 -->
   <div class="frw"><label class="fl">氏名</label><input class="fi" id="fn" placeholder="例: 山田 太郎（姓と名の間に1マス空けてください）"></div>
   <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-furigana-basic" type="text" placeholder="例: ヤマダ タロウ（姓と名の間に1マス空けてください）"></div>
   <div class="frw"><label class="fl">社員番号</label><input class="fi" id="feid" type="number" placeholder="例: 2"></div>
-  <div style="margin:10px 0;padding:11px;background:#E8F5E9;border-radius:8px;border:1px solid #A5D6A7;">
-    <div style="font-size:11px;font-weight:700;color:#1B5E20;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
-      <span>🏷️ 職種・資格</span>
-      <button onclick="openMasterEditModal()" style="padding:4px 9px;border:1px solid #1B5E20;border-radius:6px;background:#fff;color:#1B5E20;font-size:10px;cursor:pointer;font-family:inherit;">マスタ編集</button>
+  <input type="hidden" id="fstd" value="480">
+  <!-- マスタ管理タブナビ（8タブ・後半4つは上級以上のみ🔒） -->
+  <div style="display:flex;gap:3px;margin-bottom:10px;overflow-x:auto;flex-wrap:wrap;">
+    <button class="mtb active" data-tab="basic" onclick="setMTab('basic')">基本情報</button>
+    <button class="mtb" data-tab="work" onclick="setMTab('work')">勤務</button>
+    <button class="mtb" data-tab="insurance" onclick="setMTab('insurance')">保険</button>
+    <button class="mtb" data-tab="other" onclick="setMTab('other')">その他</button>
+    <button class="mtb mtb-lock" data-tab="contract" onclick="setMTab('contract')">雇用契約🔒</button>
+    <button class="mtb mtb-lock" data-tab="wage" onclick="setMTab('wage')">賃金🔒</button>
+    <button class="mtb mtb-lock" data-tab="retire" onclick="setMTab('retire')">退職🔒</button>
+    <button class="mtb mtb-lock" data-tab="document" onclick="setMTab('document')">契約書🔒</button>
+  </div>
+
+  <!-- ① 基本情報 -->
+  <div class="mtab-section active" data-section="basic" style="display:block;">
+    <div class="frw"><label class="fl">郵便番号</label><input class="fi" id="f-postal" type="text" placeholder="例: 573-0000"></div>
+    <div class="frw"><label class="fl">住所</label><input class="fi" id="f-address" type="text" placeholder="例: 大阪府枚方市..."></div>
+    <div class="frw"><label class="fl">電話</label><input class="fi" id="f-phone" type="tel"></div>
+    <div class="frw"><label class="fl">メール</label><input class="fi" id="f-email" type="email"></div>
+    <div class="frw"><label class="fl">生年月日</label><input class="fi" id="f-birth" type="date"></div>
+    <div class="frw"><label class="fl">性別</label>
+      <select class="fsl" id="f-gender"><option value="">未設定</option><option value="男">男性</option><option value="女">女性</option><option value="他">その他</option></select>
     </div>
-    <div class="frw"><label class="fl">職種（複数選択可）</label>
-      <div id="f-jobs-chips" style="display:flex;flex-wrap:wrap;gap:4px;flex:1;min-height:28px;border:1px solid var(--br);border-radius:7px;padding:4px;background:#fff;cursor:pointer;" onclick="openJobsPicker()"></div>
+    <div style="margin:10px 0;padding:11px;background:#FFF3E0;border-radius:8px;border:1px solid #FFCC80;">
+      <div style="font-size:11px;font-weight:700;color:#E65100;margin-bottom:8px;">👤 保証人（緊急連絡先）</div>
+      <div class="frw"><label class="fl">氏名</label><input class="fi" id="f-emerg-name" type="text" placeholder="例: 山田 花子（姓と名の間に1マス）"></div>
+      <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-emerg-furigana" type="text" placeholder="例: ヤマダ ハナコ"></div>
+      <div class="frw"><label class="fl">続柄</label><input class="fi" id="f-emerg-rel" type="text" placeholder="配偶者など"></div>
+      <div class="frw"><label class="fl">電話</label><input class="fi" id="f-emerg-phone" type="tel"></div>
     </div>
-    <div class="frw"><label class="fl">資格（複数選択可）</label>
-      <div id="f-lics-chips" style="display:flex;flex-wrap:wrap;gap:4px;flex:1;min-height:28px;border:1px solid var(--br);border-radius:7px;padding:4px;background:#fff;cursor:pointer;" onclick="openLicsPicker()"></div>
+    <div style="margin-top:11px;padding:11px;background:#FFF3E0;border:1px solid #FFB74D;border-radius:8px;">
+      <div style="font-weight:600;font-size:12px;color:#E65100;margin-bottom:8px;">⚙️ 管理画面の権限</div>
+      <div class="frw"><label class="fl">権限</label>
+        <select class="fi" id="ar">
+          <option value="">なし（管理画面に入れない）</option>
+          <option value="normal_koyokai">一般管理者（香庸会のみ）</option>
+          <option value="normal_fulllife">一般管理者（フルラフのみ）</option>
+          <option value="super_both">総合上級管理者（両社・PW変更可・給与可）</option>
+          <option value="senior_koyokai">上級管理者（香庸会・給与可）</option>
+          <option value="senior_fulllife">上級管理者（フルラフ・給与可）</option>
+        </select>
+      </div>
+      <div style="font-size:10px;color:var(--t2);margin-top:5px;">※総合上級管理者は他人のPWを変更できます</div>
     </div>
   </div>
-  <div style="margin:10px 0;padding:11px;background:#E3F2FD;border-radius:8px;border:1px solid #90CAF9;">
-    <div style="font-size:11px;font-weight:700;color:#0D47A1;margin-bottom:8px;">🚃 通勤情報（参考・集計には使いません）</div>
-    <div class="frw"><label class="fl">乗車駅</label><input class="fi" id="f-commute-from" type="text" placeholder="例: 枚方市駅"></div>
-    <div class="frw"><label class="fl">中継点（任意）</label><input class="fi" id="f-commute-via" type="text" placeholder="例: 京橋駅（任意）"></div>
-    <div class="frw"><label class="fl">目的地</label><input class="fi" id="f-commute-to" type="text" value="香里園" placeholder="香里園"></div>
-    <div class="frw"><label class="fl">単回（円）</label><input class="fi" id="f-commute-once" type="number" min="0" placeholder="例: 300"></div>
-    <div class="frw"><label class="fl">6ヶ月定期（円）</label><input class="fi" id="f-commute-pass" type="number" min="0" placeholder="例: 30000"></div>
-  </div>
-  <div style="margin:10px 0;padding:11px;background:#FFF8E1;border-radius:8px;border:1px solid #FFE082;">
-    <div style="font-size:11px;font-weight:700;color:#F57F17;margin-bottom:8px;">📋 有給設定</div>
-    <div class="frw"><label class="fl">入職日</label><input class="fi" id="f-hire" type="date"></div>
-    <div class="frw"><label class="fl">有給付与方式</label>
-      <select class="fsl" id="f-pmode" onchange="onPaidModeChange()">
-        <option value="manual">手動付与（管理者が個別設定）</option>
-        <option value="auto_full">自動・常勤（週5日以上 or 週30h以上）</option>
-        <option value="auto_part">自動・比例付与（週4日以下）</option>
+
+  <!-- ② 勤務（運用） -->
+  <div class="mtab-section" data-section="work" style="display:none;">
+    <!-- 職種・資格 -->
+    <div style="margin:10px 0;padding:11px;background:#E8F5E9;border-radius:8px;border:1px solid #A5D6A7;">
+      <div style="font-size:11px;font-weight:700;color:#1B5E20;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span>🏷️ 職種・資格</span>
+        <button onclick="openMasterEditModal()" style="padding:4px 9px;border:1px solid #1B5E20;border-radius:6px;background:#fff;color:#1B5E20;font-size:10px;cursor:pointer;font-family:inherit;">マスタ編集</button>
+      </div>
+      <div class="frw"><label class="fl">職種（複数選択可）</label>
+        <div id="f-jobs-chips" style="display:flex;flex-wrap:wrap;gap:4px;flex:1;min-height:28px;border:1px solid var(--br);border-radius:7px;padding:4px;background:#fff;cursor:pointer;" onclick="openJobsPicker()"></div>
+      </div>
+      <div class="frw"><label class="fl">資格（複数選択可）</label>
+        <div id="f-lics-chips" style="display:flex;flex-wrap:wrap;gap:4px;flex:1;min-height:28px;border:1px solid var(--br);border-radius:7px;padding:4px;background:#fff;cursor:pointer;" onclick="openLicsPicker()"></div>
+      </div>
+      <div id="f-lic-details" style="margin-top:8px;"></div>
+    </div>
+    <!-- 勤務情報（勤務タイプ＋曜日別シフト） -->
+    <div class="frw"><label class="fl">勤務タイプ</label>
+      <select class="fsl" id="ft" onchange="onTC()">
+        <option value="contract">契約型（契約時間から算出）</option>
+        <option value="free">フリー型（打刻時刻そのまま）</option>
+        <option value="free1">フリー①型（XX:45自動切り上げ）</option>
+        <option value="annual">年俸型（総勤務時間のみ）</option>
       </select>
     </div>
-    <div class="frw" id="f-wdays-wrap" style="display:none;"><label class="fl">週所定労働日数</label>
-      <select class="fsl" id="f-wdays">
-        <option value="4">週4日</option>
-        <option value="3">週3日</option>
-        <option value="2">週2日</option>
-        <option value="1">週1日</option>
-      </select>
-    </div>
-  </div>
-  <div class="frw"><label class="fl">勤務タイプ</label>
-    <select class="fsl" id="ft" onchange="onTC()">
-      <option value="contract">契約型（契約時間から算出）</option>
-      <option value="free">フリー型（打刻時刻そのまま）</option>
-      <option value="free1">フリー①型（XX:45自動切り上げ）</option>
-      <option value="annual">年俸型（総勤務時間のみ）</option>
-    </select>
-  </div>
-  <div id="fca">
-    <div class="fs2">契約時間より早い打刻は契約開始時刻から計算。早出ボタン押下時はその時刻から計算。</div>
-    
+    <div id="fca">
+      <div class="fs2">契約時間より早い打刻は契約開始時刻から計算。早出ボタン押下時はその時刻から計算。</div>
     </div>
     <div class="cl" style="margin-bottom:8px;">曜日別シフト設定（15分刻み）</div>
     <div class="dow-tabs">
@@ -932,75 +946,33 @@ console.log('Firebase initialized (compat)');
     </div>
     <div class="dow-panel" id="dp-sun"></div>
     <div class="frw" style="margin-top:10px;"><label class="fl">休憩時間（分）<span style="color:var(--t2);font-size:9px;font-weight:400;">　打刻管理の場合は0</span></label><input class="fi" id="fbk" type="number" value="0"></div>
-  <div style="margin-top:8px;padding:10px;background:var(--bll);border-radius:8px;">
-    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-      <div id="fft-box" onclick="toggleFft()" style="width:22px;height:22px;border-radius:5px;border:2px solid var(--br);background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;transition:all 0.15s;"></div>
-      <div>
-        <div style="font-size:12px;font-weight:600;color:#0C447C;">終了時刻フリー</div>
-        <div style="font-size:10px;color:#378ADD;">開始時刻は固定、退勤は打刻通り。早退判定なし。</div>
-      </div>
-    </label>
-  </div>
-  <input type="hidden" id="fft" value="0">
-  <div id="free1-opt" style="display:none;margin-top:9px;padding:10px;background:#FFF8E1;border-radius:8px;">
-    <label style="font-size:11px;font-weight:600;color:#5D4037;display:block;margin-bottom:5px;">フリー①：開始基準「分」</label>
-    <div style="display:flex;align-items:center;gap:7px;">
-      <span style="font-size:12px;color:var(--t2);">XX:</span>
-      <select class="fsl" id="ff1min" style="width:80px;">
-        <option value="0">00分</option>
-        <option value="15">15分</option>
-        <option value="30">30分</option>
-        <option value="45" selected>45分</option>
-      </select>
-      <span style="font-size:10px;color:var(--t2);">からの1時間内に打刻→XX:MM起点</span>
+    <div style="margin-top:8px;padding:10px;background:var(--bll);border-radius:8px;">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <div id="fft-box" onclick="toggleFft()" style="width:22px;height:22px;border-radius:5px;border:2px solid var(--br);background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;transition:all 0.15s;"></div>
+        <div>
+          <div style="font-size:12px;font-weight:600;color:#0C447C;">終了時刻フリー</div>
+          <div style="font-size:10px;color:#378ADD;">開始時刻は固定、退勤は打刻通り。早退判定なし。</div>
+        </div>
+      </label>
     </div>
-    <div style="font-size:10px;color:#795548;margin-top:4px;">例：基準45分→11:00〜11:44打刻→11:45から計算</div>
-  </div>
-  <!-- ▼ 雇用タブ -->
-  <div class="mtab-section" data-section="employ" style="display:none;">
-    <div style="margin:10px 0;padding:11px;background:#F3E5F5;border-radius:8px;border:1px solid #CE93D8;">
-      <div style="font-size:11px;font-weight:700;color:#4A148C;margin-bottom:8px;">📑 雇用情報</div>
-      <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-furigana" type="text" placeholder="例: ヤマダ タロウ"></div>
-      <div class="frw"><label class="fl">性別</label>
-        <select class="fsl" id="f-gender"><option value="">未設定</option><option value="男">男性</option><option value="女">女性</option><option value="他">その他</option></select>
+    <input type="hidden" id="fft" value="0">
+    <div id="free1-opt" style="display:none;margin-top:9px;padding:10px;background:#FFF8E1;border-radius:8px;">
+      <label style="font-size:11px;font-weight:600;color:#5D4037;display:block;margin-bottom:5px;">フリー①：開始基準「分」</label>
+      <div style="display:flex;align-items:center;gap:7px;">
+        <span style="font-size:12px;color:var(--t2);">XX:</span>
+        <select class="fsl" id="ff1min" style="width:80px;">
+          <option value="0">00分</option>
+          <option value="15">15分</option>
+          <option value="30">30分</option>
+          <option value="45" selected>45分</option>
+        </select>
+        <span style="font-size:10px;color:var(--t2);">からの1時間内に打刻→XX:MM起点</span>
       </div>
-      <div class="frw"><label class="fl">生年月日</label><input class="fi" id="f-birth" type="date"></div>
-      <div class="frw"><label class="fl">住所</label><input class="fi" id="f-address" type="text" placeholder="例: 大阪府枚方市..."></div>
-      <div class="frw"><label class="fl">電話</label><input class="fi" id="f-phone" type="tel"></div>
-      <div class="frw"><label class="fl">メール</label><input class="fi" id="f-email" type="email"></div>
-      <div class="frw"><label class="fl">退職日</label><input class="fi" id="f-retire-date" type="date"></div>
-      <hr style="margin:10px 0;border:none;border-top:1px solid #CE93D8;">
-      <div class="frw"><label class="fl">雇用形態</label>
-        <select class="fsl" id="f-emp-type"><option value="">未設定</option><option value="正社員">正社員</option><option value="契約社員">契約社員</option><option value="パート">パート</option><option value="アルバイト">アルバイト</option><option value="嘱託">嘱託</option></select>
-      </div>
-      <div class="frw"><label class="fl">雇用期間</label>
-        <select class="fsl" id="f-emp-period"><option value="indefinite">無期</option><option value="fixed">有期</option></select>
-      </div>
-      <div class="frw"><label class="fl">期間開始日</label><input class="fi" id="f-emp-start" type="date"></div>
-      <div class="frw"><label class="fl">期間終了日</label><input class="fi" id="f-emp-end" type="date"></div>
-      <div class="frw"><label class="fl">試用期間</label>
-        <select class="fsl" id="f-probation"><option value="none">なし</option><option value="exists">あり</option></select>
-      </div>
-      <div class="frw"><label class="fl">試用期間（月数）</label><input class="fi" id="f-probation-months" type="number" min="0"></div>
-      <div class="frw"><label class="fl">更新条件</label><input class="fi" id="f-renewal" type="text"></div>
-      <div class="frw"><label class="fl">就業場所</label>
-        <select class="fsl" id="f-workplace"></select>
-      </div>
-      <div class="frw"><label class="fl">業務内容</label>
-        <select class="fsl" id="f-duty"></select>
-      </div>
-      <hr style="margin:10px 0;border:none;border-top:1px solid #CE93D8;">
-      <div class="frw"><label class="fl">緊急連絡先 氏名</label><input class="fi" id="f-emerg-name" type="text" placeholder="例: 山田 花子（姓と名の間に1マス）"></div>
-      <div class="frw"><label class="fl">緊急連絡先 フリガナ</label><input class="fi" id="f-emerg-furigana" type="text" placeholder="例: ヤマダ ハナコ"></div>
-      <div class="frw"><label class="fl">緊急連絡先 続柄</label><input class="fi" id="f-emerg-rel" type="text" placeholder="配偶者など"></div>
-      <div class="frw"><label class="fl">緊急連絡先 電話</label><input class="fi" id="f-emerg-phone" type="tel"></div>
+      <div style="font-size:10px;color:#795548;margin-top:4px;">例：基準45分→11:00〜11:44打刻→11:45から計算</div>
     </div>
-  </div>
-  <!-- ▼ 勤務タブ -->
-  <div class="mtab-section" data-section="work" style="display:none;">
+    <!-- 時間外・変形労働 -->
     <div style="margin:10px 0;padding:11px;background:#E0F7FA;border-radius:8px;border:1px solid #80DEEA;">
-      <div style="font-size:11px;font-weight:700;color:#00838F;margin-bottom:8px;">🕐 勤務情報（追加）</div>
-      <div class="fs2" style="margin-bottom:8px;">基本の勤務設定は「基本情報」タブの既存項目を参照</div>
+      <div style="font-size:11px;font-weight:700;color:#00838F;margin-bottom:8px;">🕐 労働時間に関する事項</div>
       <div class="frw"><label class="fl">時間外労働</label>
         <select class="fsl" id="f-overtime"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
       </div>
@@ -1008,75 +980,65 @@ console.log('Firebase initialized (compat)');
         <select class="fsl" id="f-irregular"><option value="">未設定</option><option value="no">採用なし</option><option value="1month">1ヶ月単位</option><option value="1year">1年単位</option></select>
       </div>
     </div>
-  </div>
-  <!-- ▼ 賃金タブ -->
-  <div class="mtab-section" data-section="wage" style="display:none;">
-    <div id="wage-locked" style="margin:10px 0;padding:14px;background:#FFEBEE;border-radius:8px;border:1px solid #EF9A9A;text-align:center;color:#C62828;font-size:11px;">🔒 給与情報は<b>上級管理者以上</b>のみ閲覧可能です</div>
-    <div id="wage-content" style="display:none;">
-      <div style="margin:10px 0;padding:11px;background:#FFF3E0;border-radius:8px;border:1px solid #FFB74D;">
-        <div style="font-size:11px;font-weight:700;color:#E65100;margin-bottom:8px;">💰 賃金</div>
-        <div class="frw"><label class="fl">給与形態</label>
-          <select class="fsl" id="f-wage-type"><option value="">未設定</option><option value="annual">年俸</option><option value="monthly">月給</option><option value="daily">日給</option><option value="hourly">時給</option></select>
-        </div>
-        <div class="frw"><label class="fl">基本給（円）</label><input class="fi" id="f-base-wage" type="number" min="0"></div>
-        <div class="frw"><label class="fl">締切日</label><input class="fi" id="f-cutoff-day" type="text" placeholder="例: 毎月末日"></div>
-        <div class="frw"><label class="fl">支払日</label><input class="fi" id="f-pay-day" type="text" placeholder="例: 翌月25日"></div>
-        <div class="frw"><label class="fl">残業代計算</label>
-          <select class="fsl" id="f-overtime-calc"><option value="legal">法定通り</option><option value="fixed">固定残業代制</option><option value="custom">その他</option></select>
-        </div>
-        <div class="frw"><label class="fl">昇給</label>
-          <select class="fsl" id="f-raise"><option value="">未設定</option><option value="yes">あり</option><option value="discretion">業績による</option><option value="no">なし</option></select>
-        </div>
+    <!-- 通勤情報 -->
+    <div style="margin:10px 0;padding:11px;background:#E3F2FD;border-radius:8px;border:1px solid #90CAF9;">
+      <div style="font-size:11px;font-weight:700;color:#0D47A1;margin-bottom:8px;">🚃 通勤情報（参考・集計には使いません）</div>
+      <div class="frw"><label class="fl">乗車駅</label><input class="fi" id="f-commute-from" type="text" placeholder="例: 枚方市駅"></div>
+      <div class="frw"><label class="fl">中継点（任意）</label><input class="fi" id="f-commute-via" type="text" placeholder="例: 京橋駅（任意）"></div>
+      <div class="frw"><label class="fl">目的地</label><input class="fi" id="f-commute-to" type="text" value="香里園" placeholder="香里園"></div>
+      <div class="frw"><label class="fl">単回（円）</label><input class="fi" id="f-commute-once" type="number" min="0" placeholder="例: 300"></div>
+      <div class="frw"><label class="fl">6ヶ月定期（円）</label><input class="fi" id="f-commute-pass" type="number" min="0" placeholder="例: 30000"></div>
+    </div>
+    <!-- 有給設定 -->
+    <div style="margin:10px 0;padding:11px;background:#FFF8E1;border-radius:8px;border:1px solid #FFE082;">
+      <div style="font-size:11px;font-weight:700;color:#F57F17;margin-bottom:8px;">📋 有給設定</div>
+      <div class="frw"><label class="fl">入職日</label><input class="fi" id="f-hire" type="date"></div>
+      <div class="frw"><label class="fl">有給付与方式</label>
+        <select class="fsl" id="f-pmode" onchange="onPaidModeChange()">
+          <option value="manual">手動付与（管理者が個別設定）</option>
+          <option value="auto_full">自動・常勤（週5日以上 or 週30h以上）</option>
+          <option value="auto_part">自動・比例付与（週4日以下）</option>
+        </select>
+      </div>
+      <div class="frw" id="f-wdays-wrap" style="display:none;"><label class="fl">週所定労働日数</label>
+        <select class="fsl" id="f-wdays">
+          <option value="4">週4日</option>
+          <option value="3">週3日</option>
+          <option value="2">週2日</option>
+          <option value="1">週1日</option>
+        </select>
       </div>
     </div>
-  </div>
-  <!-- ▼ 賞与タブ -->
-  <div class="mtab-section" data-section="bonus" style="display:none;">
-    <div id="bonus-locked" style="margin:10px 0;padding:14px;background:#FFEBEE;border-radius:8px;border:1px solid #EF9A9A;text-align:center;color:#C62828;font-size:11px;">🔒 賞与情報は<b>上級管理者以上</b>のみ閲覧可能です</div>
-    <div id="bonus-content" style="display:none;">
-      <div style="margin:10px 0;padding:11px;background:#FCE4EC;border-radius:8px;border:1px solid #F48FB1;">
-        <div style="font-size:11px;font-weight:700;color:#880E4F;margin-bottom:8px;">🎁 通常賞与</div>
-        <div class="frw"><label class="fl">通常賞与</label>
-          <select class="fsl" id="f-bonus-regular"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
-        </div>
-        <div class="frw"><label class="fl">支給時期</label><input class="fi" id="f-bonus-timing" type="text" placeholder="例: 年2回"></div>
-        <div class="frw"><label class="fl">計算方法</label><input class="fi" id="f-bonus-calc" type="text"></div>
-      </div>
-      <div style="margin:10px 0;padding:11px;background:#FCE4EC;border-radius:8px;border:1px solid #F48FB1;">
-        <div style="font-size:11px;font-weight:700;color:#880E4F;margin-bottom:8px;">💎 臨時賞与</div>
-        <div class="frw"><label class="fl">臨時賞与</label>
-          <select class="fsl" id="f-bonus-extra"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
-        </div>
-        <div class="frw"><label class="fl">支給条件</label><input class="fi" id="f-bonus-extra-cond" type="text"></div>
-      </div>
-    </div>
-  </div>
-  <!-- ▼ 退職タブ -->
-  <div class="mtab-section" data-section="retire" style="display:none;">
-    <div style="margin:10px 0;padding:11px;background:#EFEBE9;border-radius:8px;border:1px solid #BCAAA4;">
-      <div style="font-size:11px;font-weight:700;color:#3E2723;margin-bottom:8px;">🚪 退職に関する事項</div>
-      <div class="frw"><label class="fl">定年年齢</label><input class="fi" id="f-retire-age" type="number" min="0"></div>
-      <div class="frw"><label class="fl">退職金</label>
-        <select class="fsl" id="f-severance"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
-      </div>
-      <div class="frw"><label class="fl">退職金規定</label><input class="fi" id="f-severance-rule" type="text"></div>
-      <div class="frw"><label class="fl">解雇事由</label>
-        <textarea id="f-dismissal" rows="3" style="flex:1;padding:7px;border:1px solid var(--br);border-radius:7px;font-size:11px;font-family:inherit;resize:vertical;"></textarea>
-      </div>
-    </div>
-  </div>
-  <!-- ▼ その他タブ -->
-  <div class="mtab-section" data-section="other" style="display:none;">
+    <!-- 賃金支払スケジュール -->
     <div style="margin:10px 0;padding:11px;background:#F1F8E9;border-radius:8px;border:1px solid #C5E1A5;">
-      <div style="font-size:11px;font-weight:700;color:#33691E;margin-bottom:8px;">🏦 銀行口座（給与振込）</div>
-      <div class="frw"><label class="fl">銀行名</label><input class="fi" id="f-bank" type="text"></div>
-      <div class="frw"><label class="fl">支店名</label><input class="fi" id="f-bank-branch" type="text"></div>
-      <div class="frw"><label class="fl">口座種別</label>
-        <select class="fsl" id="f-bank-type"><option value="">未設定</option><option value="普通">普通</option><option value="当座">当座</option></select>
+      <div style="font-size:11px;font-weight:700;color:#33691E;margin-bottom:8px;">📅 締切・支払・残業</div>
+      <div class="frw"><label class="fl">締切日</label><input class="fi" id="f-cutoff-day" type="text" placeholder="例: 毎月末日"></div>
+      <div class="frw"><label class="fl">支払日</label><input class="fi" id="f-pay-day" type="text" placeholder="例: 翌月25日"></div>
+      <div class="frw"><label class="fl">残業代計算</label>
+        <select class="fsl" id="f-overtime-calc"><option value="legal">法定通り</option><option value="fixed">固定残業代制</option><option value="custom">その他</option></select>
       </div>
-      <div class="frw"><label class="fl">口座番号</label><input class="fi" id="f-bank-no" type="text"></div>
-      <div class="frw"><label class="fl">口座名義（カナ）</label><input class="fi" id="f-bank-kana" type="text"></div>
+      <div class="frw"><label class="fl">昇給</label>
+        <select class="fsl" id="f-raise"><option value="">未設定</option><option value="yes">あり</option><option value="discretion">業績による</option><option value="no">なし</option></select>
+      </div>
     </div>
+    <!-- 所属・役職 -->
+    <div style="margin:10px 0;padding:11px;background:#EDE7F6;border-radius:8px;border:1px solid #B39DDB;">
+      <div style="font-size:11px;font-weight:700;color:#4527A0;margin-bottom:8px;">🏢 所属・役職</div>
+      <div class="frw"><label class="fl">所属部署</label><input class="fi" id="f-department" type="text" placeholder="例: 介護部"></div>
+      <div class="frw"><label class="fl">役職</label><input class="fi" id="f-position" type="text" placeholder="例: 主任"></div>
+    </div>
+    <!-- 扶養家族 -->
+    <div style="margin:10px 0;padding:11px;background:#FCE4EC;border-radius:8px;border:1px solid #F8BBD0;">
+      <div style="font-size:11px;font-weight:700;color:#880E4F;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span>👪 扶養家族</span>
+        <button onclick="addDependentRow()" style="padding:4px 9px;border:1px solid #880E4F;border-radius:6px;background:#fff;color:#880E4F;font-size:10px;cursor:pointer;font-family:inherit;">＋ 追加</button>
+      </div>
+      <div id="f-dependents"></div>
+    </div>
+  </div>
+
+  <!-- ③ 保険 -->
+  <div class="mtab-section" data-section="insurance" style="display:none;">
     <div style="margin:10px 0;padding:11px;background:#E0F2F1;border-radius:8px;border:1px solid #80CBC4;">
       <div style="font-size:11px;font-weight:700;color:#004D40;margin-bottom:8px;">🩺 社会保険・労働保険</div>
       <div class="frw"><label class="fl">健康保険</label>
@@ -1091,38 +1053,159 @@ console.log('Firebase initialized (compat)');
       <div class="frw"><label class="fl">労災保険</label>
         <select class="fsl" id="f-ins-work"><option value="">未設定</option><option value="yes">加入</option><option value="no">未加入</option></select>
       </div>
+      <hr style="margin:10px 0;border:none;border-top:1px solid #80CBC4;">
+      <div class="frw"><label class="fl">基礎年金番号</label><input class="fi" id="f-pension-no" type="text" placeholder="例: 1234-567890"></div>
+      <div class="frw"><label class="fl">雇用保険被保険者番号</label><input class="fi" id="f-emp-ins-no" type="text"></div>
+      <div class="frw"><label class="fl">資格取得日</label><input class="fi" id="f-ins-acq" type="date"></div>
+      <div class="frw"><label class="fl">資格喪失日</label><input class="fi" id="f-ins-loss" type="date"></div>
     </div>
-    <div style="margin:10px 0;padding:11px;background:#FFFDE7;border-radius:8px;border:1px solid #FFE082;">
-      <div style="font-size:11px;font-weight:700;color:#F57F17;margin-bottom:8px;">📝 特約事項</div>
-      <div class="frw"><label class="fl">競業避止</label>
-        <select class="fsl" id="f-non-compete"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
-      </div>
-      <div class="frw"><label class="fl">期間</label><input class="fi" id="f-non-compete-period" type="text"></div>
-      <div class="frw"><label class="fl">秘密保持</label>
-        <select class="fsl" id="f-confidentiality"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
-      </div>
-      <div class="frw"><label class="fl">副業</label>
-        <select class="fsl" id="f-sidejob"><option value="">未設定</option><option value="ok">可</option><option value="ng">不可</option><option value="approval">要承認</option></select>
-      </div>
-      <div class="frw"><label class="fl">その他特約</label>
-        <textarea id="f-special-note" rows="3" style="flex:1;padding:7px;border:1px solid var(--br);border-radius:7px;font-size:11px;font-family:inherit;resize:vertical;"></textarea>
+  </div>
+
+  <!-- ④ その他 -->
+  <div class="mtab-section" data-section="other" style="display:none;">
+    <div style="margin:10px 0;padding:11px;background:#F1F8E9;border-radius:8px;border:1px solid #C5E1A5;">
+      <div style="font-size:11px;font-weight:700;color:#33691E;margin-bottom:8px;">🏥 健康診断・その他</div>
+      <div class="frw"><label class="fl">健康診断 実施日</label><input class="fi" id="f-checkup" type="date"></div>
+    </div>
+  </div>
+
+  <!-- ⑤ 雇用契約 🔒 -->
+  <div class="mtab-section" data-section="contract" style="display:none;">
+    <div id="contract-locked" style="margin:10px 0;padding:14px;background:#FFEBEE;border-radius:8px;border:1px solid #EF9A9A;text-align:center;color:#C62828;font-size:11px;">🔒 雇用契約情報は<b>上級管理者以上</b>のみ閲覧可能です</div>
+    <div id="contract-content" style="display:none;">
+      <div style="margin:10px 0;padding:11px;background:#F3E5F5;border-radius:8px;border:1px solid #CE93D8;">
+        <div style="font-size:11px;font-weight:700;color:#4A148C;margin-bottom:8px;">📑 雇用契約条件</div>
+        <div class="frw"><label class="fl">雇用形態</label>
+          <select class="fsl" id="f-emp-type"><option value="">未設定</option><option value="正社員">正社員</option><option value="契約社員">契約社員</option><option value="パート">パート</option><option value="アルバイト">アルバイト</option><option value="嘱託">嘱託</option></select>
+        </div>
+        <div class="frw"><label class="fl">雇用期間</label>
+          <select class="fsl" id="f-emp-period"><option value="indefinite">無期</option><option value="fixed">有期</option></select>
+        </div>
+        <div class="frw"><label class="fl">期間開始日</label><input class="fi" id="f-emp-start" type="date"></div>
+        <div class="frw"><label class="fl">期間終了日</label><input class="fi" id="f-emp-end" type="date"></div>
+        <div class="frw"><label class="fl">試用期間</label>
+          <select class="fsl" id="f-probation"><option value="none">なし</option><option value="exists">あり</option></select>
+        </div>
+        <div class="frw"><label class="fl">試用期間（月数）</label><input class="fi" id="f-probation-months" type="number" min="0"></div>
+        <div class="frw"><label class="fl">更新条件</label><input class="fi" id="f-renewal" type="text"></div>
+        <div class="frw"><label class="fl">就業場所</label>
+          <select class="fsl" id="f-workplace"></select>
+        </div>
+        <div class="frw"><label class="fl">業務内容</label>
+          <select class="fsl" id="f-duty"></select>
+        </div>
       </div>
     </div>
   </div>
-  <div style="margin-top:11px;padding:11px;background:#FFF3E0;border:1px solid #FFB74D;border-radius:8px;">
-    <div style="font-weight:600;font-size:12px;color:#E65100;margin-bottom:8px;">⚙️ 管理画面の権限</div>
-    <div class="frw"><label class="fl">権限</label>
-      <select class="fi" id="ar">
-        <option value="">なし（管理画面に入れない）</option>
-        <option value="normal_koyokai">一般管理者（香庸会のみ）</option>
-        <option value="normal_fulllife">一般管理者（フルラフのみ）</option>
-        <option value="super_both">総合上級管理者（両社・PW変更可・給与可）</option>
-        <option value="senior_koyokai">上級管理者（香庸会・給与可）</option>
-        <option value="senior_fulllife">上級管理者（フルラフ・給与可）</option>
-      </select>
+
+  <!-- ⑥ 賃金 🔒 -->
+  <div class="mtab-section" data-section="wage" style="display:none;">
+    <div id="wage-locked" style="margin:10px 0;padding:14px;background:#FFEBEE;border-radius:8px;border:1px solid #EF9A9A;text-align:center;color:#C62828;font-size:11px;">🔒 賃金情報は<b>上級管理者以上</b>のみ閲覧可能です</div>
+    <div id="wage-content" style="display:none;">
+      <datalist id="dl-allowance"></datalist>
+      <div style="margin:10px 0;padding:11px;background:#FFF3E0;border-radius:8px;border:1px solid #FFB74D;">
+        <div style="font-size:11px;font-weight:700;color:#E65100;margin-bottom:8px;">💰 賃金</div>
+        <div class="frw"><label class="fl">年俸額（円）</label><input class="fi" id="f-annual-wage" type="number" min="0"></div>
+        <div class="frw"><label class="fl">月給（円）</label><input class="fi" id="f-monthly-wage" type="number" min="0"></div>
+        <div class="frw"><label class="fl">時給パターン</label><input class="fi" id="f-hourly-pattern" type="text" placeholder="例: 平日1100円/土日1200円"></div>
+        <hr style="margin:10px 0;border:none;border-top:1px solid #FFCC80;">
+        <div class="frw"><label class="fl">給与形態</label>
+          <select class="fsl" id="f-wage-type"><option value="">未設定</option><option value="annual">年俸</option><option value="monthly">月給</option><option value="daily">日給</option><option value="hourly">時給</option></select>
+        </div>
+        <div class="frw"><label class="fl">基本給（円）</label><input class="fi" id="f-base-wage" type="number" min="0"></div>
+      </div>
+      <div style="margin:10px 0;padding:11px;background:#FFF8E1;border-radius:8px;border:1px solid #FFE082;">
+        <div style="font-size:11px;font-weight:700;color:#F57F17;margin-bottom:8px;">💴 手当（名称はプルダウン選択・新規入力可）</div>
+        <div style="margin-bottom:6px;"><div style="font-size:10px;color:var(--t2);margin-bottom:2px;">手当①</div><div style="display:flex;gap:5px;"><input class="fi" id="f-allow1-name" list="dl-allowance" placeholder="名称（選択/入力）" style="flex:1.3;"><input class="fi" id="f-allow1" type="number" placeholder="金額" style="flex:1;"><select class="fsl" id="f-allow1-period" style="flex:0.7;"><option value="month">月額</option><option value="year">年額</option></select></div></div>
+        <div style="margin-bottom:6px;"><div style="font-size:10px;color:var(--t2);margin-bottom:2px;">手当②</div><div style="display:flex;gap:5px;"><input class="fi" id="f-allow2-name" list="dl-allowance" placeholder="名称（選択/入力）" style="flex:1.3;"><input class="fi" id="f-allow2" type="number" placeholder="金額" style="flex:1;"><select class="fsl" id="f-allow2-period" style="flex:0.7;"><option value="month">月額</option><option value="year">年額</option></select></div></div>
+        <div style="margin-bottom:6px;"><div style="font-size:10px;color:var(--t2);margin-bottom:2px;">手当③</div><div style="display:flex;gap:5px;"><input class="fi" id="f-allow3-name" list="dl-allowance" placeholder="名称（選択/入力）" style="flex:1.3;"><input class="fi" id="f-allow3" type="number" placeholder="金額" style="flex:1;"><select class="fsl" id="f-allow3-period" style="flex:0.7;"><option value="month">月額</option><option value="year">年額</option></select></div></div>
+        <div style="margin-bottom:6px;"><div style="font-size:10px;color:var(--t2);margin-bottom:2px;">手当④</div><div style="display:flex;gap:5px;"><input class="fi" id="f-allow4-name" list="dl-allowance" placeholder="名称（選択/入力）" style="flex:1.3;"><input class="fi" id="f-allow4" type="number" placeholder="金額" style="flex:1;"><select class="fsl" id="f-allow4-period" style="flex:0.7;"><option value="month">月額</option><option value="year">年額</option></select></div></div>
+        <div style="margin-bottom:0;"><div style="font-size:10px;color:var(--t2);margin-bottom:2px;">手当⑤</div><div style="display:flex;gap:5px;"><input class="fi" id="f-allow5-name" list="dl-allowance" placeholder="名称（選択/入力）" style="flex:1.3;"><input class="fi" id="f-allow5" type="number" placeholder="金額" style="flex:1;"><select class="fsl" id="f-allow5-period" style="flex:0.7;"><option value="month">月額</option><option value="year">年額</option></select></div></div>
+      </div>
+      <div style="margin:10px 0;padding:11px;background:#FCE4EC;border-radius:8px;border:1px solid #F48FB1;">
+        <div style="font-size:11px;font-weight:700;color:#880E4F;margin-bottom:8px;">🎁 通常賞与</div>
+        <div class="frw"><label class="fl">通常賞与</label>
+          <select class="fsl" id="f-bonus-regular"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
+        </div>
+        <div class="frw"><label class="fl">支給時期</label><input class="fi" id="f-bonus-timing" type="text" placeholder="12月から5月、6月から11月の成績に応じて年2回支払う"></div>
+        <div class="frw"><label class="fl">計算方法</label><input class="fi" id="f-bonus-calc" type="text"></div>
+      </div>
+      <div style="margin:10px 0;padding:11px;background:#FCE4EC;border-radius:8px;border:1px solid #F48FB1;">
+        <div style="font-size:11px;font-weight:700;color:#880E4F;margin-bottom:8px;">💎 臨時賞与</div>
+        <div class="frw"><label class="fl">臨時賞与</label>
+          <select class="fsl" id="f-bonus-extra"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
+        </div>
+        <div class="frw"><label class="fl">支給条件</label><input class="fi" id="f-bonus-extra-cond" type="text"></div>
+      </div>
+      <div style="margin:10px 0;padding:11px;background:#EFEBE9;border-radius:8px;border:1px solid #BCAAA4;">
+        <div style="font-size:11px;font-weight:700;color:#3E2723;margin-bottom:8px;">🏦 退職金</div>
+        <div class="frw"><label class="fl">退職金</label>
+          <select class="fsl" id="f-severance"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
+        </div>
+        <div class="frw"><label class="fl">退職金規定</label><input class="fi" id="f-severance-rule" type="text"></div>
+      </div>
+      <div style="margin:10px 0;padding:11px;background:#F1F8E9;border-radius:8px;border:1px solid #C5E1A5;">
+        <div style="font-size:11px;font-weight:700;color:#33691E;margin-bottom:8px;">🏧 銀行口座（給与振込）</div>
+        <div class="frw"><label class="fl">銀行名</label><input class="fi" id="f-bank" type="text"></div>
+        <div class="frw"><label class="fl">支店名</label><input class="fi" id="f-bank-branch" type="text"></div>
+        <div class="frw"><label class="fl">口座種別</label>
+          <select class="fsl" id="f-bank-type"><option value="">未設定</option><option value="普通">普通</option><option value="当座">当座</option></select>
+        </div>
+        <div class="frw"><label class="fl">口座番号</label><input class="fi" id="f-bank-no" type="text"></div>
+        <div class="frw"><label class="fl">口座名義（カナ）</label><input class="fi" id="f-bank-kana" type="text"></div>
+      </div>
+      <div style="margin:10px 0;padding:11px;background:#FFFDE7;border-radius:8px;border:1px solid #FFE082;">
+        <div style="font-size:11px;font-weight:700;color:#F57F17;margin-bottom:8px;">📝 副業・特約事項</div>
+        <div class="frw"><label class="fl">副業</label>
+          <select class="fsl" id="f-sidejob"><option value="">未設定</option><option value="ok">可</option><option value="ng">不可</option><option value="approval">要承認</option></select>
+        </div>
+        <div class="frw"><label class="fl">特約事項</label>
+          <textarea id="f-special-note" rows="3" style="flex:1;padding:7px;border:1px solid var(--br);border-radius:7px;font-size:11px;font-family:inherit;resize:vertical;"></textarea>
+        </div>
+      </div>
     </div>
-    <div style="font-size:10px;color:var(--t2);margin-top:5px;">※総合上級管理者は他人のPWを変更できます</div>
   </div>
+
+  <!-- ⑦ 退職 🔒 -->
+  <div class="mtab-section" data-section="retire" style="display:none;">
+    <div id="retire-locked" style="margin:10px 0;padding:14px;background:#FFEBEE;border-radius:8px;border:1px solid #EF9A9A;text-align:center;color:#C62828;font-size:11px;">🔒 退職情報は<b>上級管理者以上</b>のみ閲覧可能です</div>
+    <div id="retire-content" style="display:none;">
+      <div style="margin:10px 0;padding:11px;background:#EFEBE9;border-radius:8px;border:1px solid #BCAAA4;">
+        <div style="font-size:11px;font-weight:700;color:#3E2723;margin-bottom:8px;">🚪 退職に関する事項</div>
+        <div class="frw"><label class="fl">退職事由</label>
+          <textarea id="f-retire-reason" rows="2" style="flex:1;padding:7px;border:1px solid var(--br);border-radius:7px;font-size:11px;font-family:inherit;resize:vertical;" placeholder="自己都合・契約満了 等"></textarea>
+        </div>
+        <div class="frw"><label class="fl">解雇事由</label>
+          <textarea id="f-dismissal" rows="3" style="flex:1;padding:7px;border:1px solid var(--br);border-radius:7px;font-size:11px;font-family:inherit;resize:vertical;"></textarea>
+        </div>
+        <div class="frw"><label class="fl">退職時手続きフロー</label>
+          <textarea id="f-retire-flow" rows="3" style="flex:1;padding:7px;border:1px solid var(--br);border-radius:7px;font-size:11px;font-family:inherit;resize:vertical;" placeholder="保険資格喪失届・離職票・貸与品返却 等"></textarea>
+        </div>
+        <div class="frw"><label class="fl">定年年齢</label><input class="fi" id="f-retire-age" type="number" min="0" placeholder="60"></div>
+        <div class="frw"><label class="fl">退職日</label><input class="fi" id="f-retire-date" type="date"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑧ 契約書記載事項 🔒 -->
+  <div class="mtab-section" data-section="document" style="display:none;">
+    <div id="document-locked" style="margin:10px 0;padding:14px;background:#FFEBEE;border-radius:8px;border:1px solid #EF9A9A;text-align:center;color:#C62828;font-size:11px;">🔒 契約書記載事項は<b>上級管理者以上</b>のみ閲覧可能です</div>
+    <div id="document-content" style="display:none;">
+      <div style="margin:10px 0;padding:11px;background:#FFFDE7;border-radius:8px;border:1px solid #FFE082;">
+        <div style="font-size:11px;font-weight:700;color:#F57F17;margin-bottom:8px;">📜 契約書共通記載事項</div>
+        <div class="frw"><label class="fl">秘密保持</label>
+          <select class="fsl" id="f-confidentiality"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
+        </div>
+        <div class="frw"><label class="fl">競業避止</label>
+          <select class="fsl" id="f-non-compete"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
+        </div>
+        <div class="frw"><label class="fl">競業避止 期間</label><input class="fi" id="f-non-compete-period" type="text" placeholder="例: 退職後1年"></div>
+      </div>
+      <div style="margin:10px 0;padding:11px;background:#E8F5E9;border-radius:8px;border:1px solid #A5D6A7;text-align:center;">
+        <div style="font-size:10px;color:#1B5E20;margin-bottom:8px;">出力時に「65歳まで継続雇用、70歳まで努力義務」を自動追記します</div>
+        <button onclick="exportContract()" style="padding:9px 18px;border:none;border-radius:8px;background:#1B5E20;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📄 契約書を出力</button>
+      </div>
+    </div>
   </div>
   <input type="hidden" id="ff" value="0">
   <div class="btr"><button class="fc" onclick="closeSTM()">キャンセル</button><button class="fb" onclick="saveSt()">保存</button></div>
@@ -2712,55 +2795,32 @@ function onPaidModeChange(){
 // ═══ マスタ管理タブ切替 ═══
 let currentMTab='basic';
 
+// 上級以上のみ閲覧できるロックタブ
+const LOCKED_MTABS=['contract','wage','retire','document'];
 function setMTab(tab){
+  const canView=(typeof canViewSalary==='function')?canViewSalary():false;
+  // 権限なしでロックタブを開こうとしたら基本情報へフォールバック
+  if(LOCKED_MTABS.includes(tab)&&!canView)tab='basic';
   currentMTab=tab;
-  // タブボタン切替
-  document.querySelectorAll('.mtb').forEach(btn=>{
+  // ロックタブのボタンは権限なしでは非表示
+  document.querySelectorAll('#stm .mtb-lock').forEach(btn=>{
+    btn.style.display=canView?'':'none';
+  });
+  // タブボタン active 切替
+  document.querySelectorAll('#stm .mtb').forEach(btn=>{
     btn.classList.toggle('active',btn.dataset.tab===tab);
   });
-  // 基本情報タブの内容（既存項目）
-  const basicElements=[
-    '#fn','#feid',
-    'div[style*="🏷️ 職種・資格"]',
-    'div[style*="🚃 通勤情報"]',
-    'div[style*="📋 有給設定"]',
-    'div[style*="⚙️ 管理画面の権限"]'
-  ];
-  // 「基本情報」タブ時のみ既存項目を表示
-  // 実装：各タブセクション(data-section)はCSSで切替、既存項目はbasic時のみ表示
-  // ただし、既存項目は構造が複雑なので、各タブで「非基本情報」だけ隠す
-  document.querySelectorAll('.mtab-section').forEach(sec=>{
+  // セクション表示切替（data-section 一致のみ表示）
+  document.querySelectorAll('#stm .mtab-section').forEach(sec=>{
     sec.style.display=(sec.dataset.section===tab)?'block':'none';
   });
-  // 「基本情報」では既存項目をすべて表示
-  // 「基本情報」以外では既存項目を隠す → 既存項目をスペシャルクラスで囲む必要
-  // 別の方法：基本情報以外のタブが選ばれたら、既存の主要セクション（職種、通勤、有給、権限）を隠す
-  const existingSections=[
-    document.querySelector('#stm div[style*="🏷️ 職種・資格"]')?.closest('div[style*="background:#E8F5E9"]'),
-    document.querySelector('#stm div[style*="🚃 通勤情報"]')?.closest('div[style*="background:#E3F2FD"]'),
-    document.querySelector('#stm div[style*="📋 有給設定"]')?.closest('div[style*="background:#FFF8E1"]'),
-    document.querySelector('#stm div[style*="⚙️ 管理画面の権限"]')?.closest('div[style*="background:#FFF3E0"]'),
-  ];
-  const fnField=document.getElementById('fn')?.closest('.frw');
-  const eidField=document.getElementById('feid')?.closest('.frw');
-  const typeField=document.querySelector('#stm .typesel')?.closest('div[style*="margin-top:11px"]');
-  
-  if(tab==='basic'){
-    // 基本情報：既存項目を全て表示
-    [fnField,eidField,...existingSections].forEach(el=>{if(el)el.style.display='';});
-  }else{
-    // 他のタブ：基本情報の既存項目を非表示
-    [fnField,eidField,...existingSections].forEach(el=>{if(el)el.style.display='none';});
-  }
-  
-  // 給与・賞与タブの権限制御
-  if(tab==='wage'||tab==='bonus'){
-    const canView=(typeof canViewSalary==='function')?canViewSalary():false;
-    const lockedEl=document.getElementById(tab+'-locked');
-    const contentEl=document.getElementById(tab+'-content');
+  // ロックタブのコンテンツ/ロックメッセージ制御（フォールバックの二重防御）
+  LOCKED_MTABS.forEach(t=>{
+    const lockedEl=document.getElementById(t+'-locked');
+    const contentEl=document.getElementById(t+'-content');
     if(lockedEl)lockedEl.style.display=canView?'none':'block';
     if(contentEl)contentEl.style.display=canView?'block':'none';
-  }
+  });
 }
 
 // マスタ管理データの読込（編集時）
@@ -2812,7 +2872,7 @@ function loadMasterFields(s){
     'f-bonus-calc':s.bonusCalc||'',
     'f-bonus-extra':s.bonusExtra||'',
     'f-bonus-extra-cond':s.bonusExtraCond||'',
-    'f-retire-age':s.retireAge||'',
+    'f-retire-age':s.retireAge||'60',
     'f-severance':s.severance||'',
     'f-severance-rule':s.severanceRule||'',
     'f-dismissal':s.dismissal||'',
@@ -2830,11 +2890,37 @@ function loadMasterFields(s){
     'f-confidentiality':s.confidentiality||'',
     'f-sidejob':s.sidejob||'',
     'f-special-note':s.specialNote||'',
+    // ▼ 新規追加フィールド
+    'f-postal':s.postalCode||'',
+    'f-department':s.department||'',
+    'f-position':s.position||'',
+    'f-pension-no':s.pensionNo||'',
+    'f-emp-ins-no':s.empInsNo||'',
+    'f-ins-acq':s.insAcqDate||'',
+    'f-ins-loss':s.insLossDate||'',
+    'f-retire-reason':s.retireReason||'',
+    'f-retire-flow':s.retireFlow||'',
+    'f-checkup':s.checkupDate||'',
+    'f-annual-wage':s.annualWage||'',
+    'f-monthly-wage':s.monthlyWage||'',
+    'f-hourly-pattern':s.hourlyPattern||'',
+    'f-allow1-name':s.allowance1Name||'','f-allow1':s.allowance1||'','f-allow1-period':s.allowance1Period||'month',
+    'f-allow2-name':s.allowance2Name||'','f-allow2':s.allowance2||'','f-allow2-period':s.allowance2Period||'month',
+    'f-allow3-name':s.allowance3Name||'','f-allow3':s.allowance3||'','f-allow3-period':s.allowance3Period||'month',
+    'f-allow4-name':s.allowance4Name||'','f-allow4':s.allowance4||'','f-allow4-period':s.allowance4Period||'month',
+    'f-allow5-name':s.allowance5Name||'','f-allow5':s.allowance5||'','f-allow5-period':s.allowance5Period||'month',
   };
   Object.entries(fields).forEach(([id,v])=>{
     const el=document.getElementById(id);
     if(el)el.value=v;
   });
+  // 扶養家族・資格詳細・手当名称候補の描画
+  if(typeof renderDependents==='function')renderDependents(s.dependents||[]);
+  // 旧スタッフのDOM残りを先にクリア（sync誤混入防止）してから読込値をセット
+  const _ld=document.getElementById('f-lic-details');if(_ld)_ld.innerHTML='';
+  licDetailsData=(s.licDetails&&typeof s.licDetails==='object')?JSON.parse(JSON.stringify(s.licDetails)):{};
+  if(typeof renderLicDetails==='function')renderLicDetails();
+  if(typeof buildAllowanceDatalist==='function')buildAllowanceDatalist();
 }
 
 // マスタ管理データの収集（保存時）
@@ -2895,7 +2981,146 @@ function collectMasterFields(){
     confidentiality:g('f-confidentiality'),
     sidejob:g('f-sidejob'),
     specialNote:g('f-special-note'),
+    // ▼ 新規追加フィールド
+    postalCode:g('f-postal'),
+    department:g('f-department'),
+    position:g('f-position'),
+    pensionNo:g('f-pension-no'),
+    empInsNo:g('f-emp-ins-no'),
+    insAcqDate:g('f-ins-acq'),
+    insLossDate:g('f-ins-loss'),
+    retireReason:g('f-retire-reason'),
+    retireFlow:g('f-retire-flow'),
+    checkupDate:g('f-checkup'),
+    annualWage:g('f-annual-wage'),
+    monthlyWage:g('f-monthly-wage'),
+    hourlyPattern:g('f-hourly-pattern'),
+    allowance1Name:g('f-allow1-name'),allowance1:g('f-allow1'),allowance1Period:g('f-allow1-period'),
+    allowance2Name:g('f-allow2-name'),allowance2:g('f-allow2'),allowance2Period:g('f-allow2-period'),
+    allowance3Name:g('f-allow3-name'),allowance3:g('f-allow3'),allowance3Period:g('f-allow3-period'),
+    allowance4Name:g('f-allow4-name'),allowance4:g('f-allow4'),allowance4Period:g('f-allow4-period'),
+    allowance5Name:g('f-allow5-name'),allowance5:g('f-allow5'),allowance5Period:g('f-allow5-period'),
+    dependents:(typeof collectDependents==='function')?collectDependents():[],
+    licDetails:(typeof collectLicDetails==='function')?collectLicDetails():{},
   };
+}
+
+// ═══ 扶養家族・資格詳細・手当名称候補・契約書出力 ═══
+let licDetailsData={};
+
+// 扶養家族（可変長リスト）
+function addDependentRow(d){
+  const wrap=document.getElementById('f-dependents');
+  if(!wrap)return;
+  d=d||{};
+  const row=document.createElement('div');
+  row.className='dep-row';
+  row.style.cssText='display:flex;gap:5px;margin-bottom:5px;align-items:center;';
+  row.innerHTML='<input class="fi dep-name" type="text" placeholder="氏名" style="flex:1.2;" value="'+(d.name||'').replace(/"/g,'&quot;')+'">'
+    +'<input class="fi dep-rel" type="text" placeholder="続柄" style="flex:0.8;" value="'+(d.relation||'').replace(/"/g,'&quot;')+'">'
+    +'<input class="fi dep-birth" type="date" style="flex:1.2;" value="'+(d.birthDate||'')+'">'
+    +'<button onclick="this.parentElement.remove()" style="flex-shrink:0;padding:5px 9px;border:1px solid #C62828;border-radius:6px;background:#fff;color:#C62828;font-size:11px;cursor:pointer;font-family:inherit;">×</button>';
+  wrap.appendChild(row);
+}
+function renderDependents(list){
+  const wrap=document.getElementById('f-dependents');
+  if(!wrap)return;
+  wrap.innerHTML='';
+  (list||[]).forEach(d=>addDependentRow(d));
+}
+function collectDependents(){
+  const wrap=document.getElementById('f-dependents');
+  if(!wrap)return [];
+  return Array.from(wrap.querySelectorAll('.dep-row')).map(r=>({
+    name:r.querySelector('.dep-name')?r.querySelector('.dep-name').value:'',
+    relation:r.querySelector('.dep-rel')?r.querySelector('.dep-rel').value:'',
+    birthDate:r.querySelector('.dep-birth')?r.querySelector('.dep-birth').value:''
+  })).filter(d=>d.name||d.relation||d.birthDate);
+}
+
+// 資格詳細（選択中の資格ごとに 取得日/期限/免許番号）
+function syncLicDetailsFromDOM(){
+  const wrap=document.getElementById('f-lic-details');
+  if(!wrap)return;
+  wrap.querySelectorAll('.lic-detail-row').forEach(r=>{
+    const id=r.dataset.licId;
+    if(!id)return;
+    licDetailsData[id]={
+      acquiredDate:r.querySelector('.lic-acq')?r.querySelector('.lic-acq').value:'',
+      expiry:r.querySelector('.lic-exp')?r.querySelector('.lic-exp').value:'',
+      licenseNo:r.querySelector('.lic-no')?r.querySelector('.lic-no').value:''
+    };
+  });
+}
+function renderLicDetails(){
+  const wrap=document.getElementById('f-lic-details');
+  if(!wrap)return;
+  syncLicDetailsFromDOM();
+  const ids=(typeof pickerStaffLics!=='undefined'&&pickerStaffLics)?pickerStaffLics:[];
+  if(!ids.length){wrap.innerHTML='';return;}
+  wrap.innerHTML=ids.map(id=>{
+    const lic=(DB.licenses||[]).find(x=>x.id==id);
+    const nm=lic?lic.name:('資格#'+id);
+    const d=licDetailsData[id]||{};
+    return '<div class="lic-detail-row" data-lic-id="'+id+'" style="margin-bottom:6px;padding:7px;background:#fff;border:1px solid #C8E6C9;border-radius:6px;">'
+      +'<div style="font-size:10px;font-weight:700;color:#1B5E20;margin-bottom:3px;">'+nm+'</div>'
+      +'<div style="display:flex;gap:5px;">'
+      +'<input class="fi lic-acq" type="date" title="取得日" style="flex:1;" value="'+(d.acquiredDate||'')+'">'
+      +'<input class="fi lic-exp" type="date" title="期限" style="flex:1;" value="'+(d.expiry||'')+'">'
+      +'<input class="fi lic-no" type="text" placeholder="免許番号" style="flex:1;" value="'+(d.licenseNo||'').replace(/"/g,'&quot;')+'">'
+      +'</div></div>';
+  }).join('');
+}
+function collectLicDetails(){
+  syncLicDetailsFromDOM();
+  const ids=(typeof pickerStaffLics!=='undefined'&&pickerStaffLics)?pickerStaffLics:[];
+  const out={};
+  ids.forEach(id=>{if(licDetailsData[id])out[id]=licDetailsData[id];});
+  return out;
+}
+
+// 手当名称の候補（全スタッフの過去入力から動的生成）
+function buildAllowanceDatalist(){
+  const dl=document.getElementById('dl-allowance');
+  if(!dl)return;
+  const set=new Set();
+  (DB.staff||[]).forEach(s=>{
+    for(let i=1;i<=5;i++){const v=s['allowance'+i+'Name'];if(v&&v.trim())set.add(v.trim());}
+  });
+  dl.innerHTML=Array.from(set).map(n=>'<option value="'+n.replace(/"/g,'&quot;')+'">').join('');
+}
+
+// 契約書出力（65歳継続雇用・70歳努力義務を自動追記）
+function exportContract(){
+  const g=id=>{const el=document.getElementById(id);return el?el.value:'';};
+  const m=(typeof collectMasterFields==='function')?collectMasterFields():{};
+  const name=g('fn'), eid=g('feid');
+  const empTypeSel=document.getElementById('f-emp-type');
+  const empType=empTypeSel?(empTypeSel.options[empTypeSel.selectedIndex]||{}).text||'':'';
+  const esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const period=m.empPeriod==='fixed'?('有期（'+(m.empStart||'')+' 〜 '+(m.empEnd||'')+'）'):'無期';
+  const allowRows=[1,2,3,4,5].map(i=>{
+    const nm=m['allowance'+i+'Name'],amt=m['allowance'+i],per=m['allowance'+i+'Period']==='year'?'年額':'月額';
+    return (nm||amt)?('<tr><td>'+esc(nm||('手当'+i))+'</td><td>'+esc(amt)+' 円（'+per+'）</td></tr>'):'';
+  }).join('');
+  const row=(k,v)=>'<tr><th>'+k+'</th><td>'+esc(v)+'</td></tr>';
+  const html='<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>雇用契約書 '+esc(name)+'</title>'
+    +'<style>body{font-family:sans-serif;padding:30px;color:#222;font-size:13px;line-height:1.7;}h1{font-size:20px;text-align:center;margin-bottom:24px;}h2{font-size:14px;border-left:4px solid #1B5E20;padding-left:8px;margin:20px 0 8px;}table{border-collapse:collapse;width:100%;margin-bottom:10px;}th,td{border:1px solid #bbb;padding:6px 9px;text-align:left;vertical-align:top;}th{background:#f3f3f3;width:32%;white-space:nowrap;}.note{margin-top:24px;padding:12px;background:#E8F5E9;border:1px solid #A5D6A7;border-radius:6px;font-weight:600;}@media print{button{display:none;}}</style></head><body>'
+    +'<h1>雇用契約書</h1>'
+    +'<h2>基本情報</h2><table>'+row('氏名',name)+row('社員番号',eid)+row('住所',m.address)+row('生年月日',m.birthDate)+'</table>'
+    +'<h2>雇用契約条件</h2><table>'+row('雇用形態',empType)+row('雇用期間',period)+row('試用期間',m.probation==='exists'?((m.probationMonths||'')+'ヶ月'):'なし')+row('就業場所',m.workplace)+row('業務内容',m.duty)+row('更新条件',m.renewal)+'</table>'
+    +'<h2>賃金</h2><table>'+row('年俸額',m.annualWage)+row('月給',m.monthlyWage)+row('時給パターン',m.hourlyPattern)+row('基本給',m.baseWage)+'</table>'
+    +(allowRows?('<h2>手当</h2><table><tr><th>名称</th><td>金額</td></tr>'+allowRows+'</table>'):'')
+    +'<h2>賞与</h2><table>'+row('通常賞与 支給時期',m.bonusTiming)+row('通常賞与 計算',m.bonusCalc)+row('臨時賞与 条件',m.bonusExtraCond)+'</table>'
+    +'<h2>退職に関する事項</h2><table>'+row('定年',((m.retireAge||'60'))+'歳')+row('退職事由',m.retireReason)+row('退職金規定',m.severanceRule)+'</table>'
+    +'<h2>その他</h2><table>'+row('秘密保持',m.confidentiality==='yes'?'あり':(m.confidentiality==='no'?'なし':''))+row('競業避止',(m.nonCompete==='yes'?'あり':(m.nonCompete==='no'?'なし':''))+(m.nonCompetePeriod?('（'+m.nonCompetePeriod+'）'):''))+'</table>'
+    +'<div class="note">※ 定年後は65歳まで継続雇用、70歳まで就業確保の努力義務とする。</div>'
+    +'<div style="text-align:center;margin-top:24px;"><button onclick="window.print()" style="padding:9px 18px;border:none;border-radius:6px;background:#1B5E20;color:#fff;font-weight:700;cursor:pointer;">印刷 / PDF保存</button></div>'
+    +'</body></html>';
+  const w=window.open('','_blank');
+  if(!w){showToast('ポップアップがブロックされました');return;}
+  w.document.write(html);
+  w.document.close();
 }
 
 
@@ -3058,6 +3283,7 @@ function renderJobsChips(){
 }
 function renderLicsChips(){
   const el=document.getElementById('f-lics-chips');
+  if(typeof renderLicDetails==='function')renderLicDetails();
   if(!el)return;
   const names=(pickerStaffLics||[]).map(id=>{const j=(DB.licenses||[]).find(x=>x.id==id);return j?j.name:null;}).filter(Boolean);
   if(!names.length){el.innerHTML='<span style="color:var(--t2);font-size:10px;padding:4px;">タップして選択</span>';return;}
