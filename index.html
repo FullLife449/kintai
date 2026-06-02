@@ -839,7 +839,7 @@ console.log('Firebase initialized (compat)');
   <div class="mt" id="stm-t">スタッフを追加</div>
   <!-- 常時表示ヘッダー: 氏名・フリガナ・社員番号 -->
   <div class="frw"><label class="fl">氏名</label><input class="fi" id="fn" placeholder="例: 山田 太郎（姓と名の間に1マス空けてください）"></div>
-  <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-furigana-basic" type="text" placeholder="例: ヤマダ タロウ（姓と名の間に1マス空けてください）"></div>
+  <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-furigana-basic" type="text" oninput="kanaOnly(this)" placeholder="例: ヤマダ タロウ（姓と名の間に1マス空けてください）"></div>
   <div class="frw"><label class="fl">社員番号</label><input class="fi" id="feid" type="number" placeholder="例: 2"></div>
   <input type="hidden" id="fstd" value="480">
   <!-- マスタ管理タブナビ（8タブ・後半4つは上級以上のみ🔒） -->
@@ -848,7 +848,7 @@ console.log('Firebase initialized (compat)');
     <button class="mtb" data-tab="work" onclick="setMTab('work')">勤務</button>
     <button class="mtb" data-tab="insurance" onclick="setMTab('insurance')">保険</button>
     <button class="mtb" data-tab="other" onclick="setMTab('other')">その他</button>
-    <button class="mtb mtb-lock" data-tab="contract" onclick="setMTab('contract')">雇用契約🔒</button>
+    <button class="mtb" data-tab="contract" onclick="setMTab('contract')">雇用契約</button>
     <button class="mtb mtb-lock" data-tab="wage" onclick="setMTab('wage')">賃金🔒</button>
     <button class="mtb mtb-lock" data-tab="retire" onclick="setMTab('retire')">退職🔒</button>
     <button class="mtb mtb-lock" data-tab="document" onclick="setMTab('document')">契約書🔒</button>
@@ -867,7 +867,7 @@ console.log('Firebase initialized (compat)');
     <div style="margin:10px 0;padding:11px;background:#FFF3E0;border-radius:8px;border:1px solid #FFCC80;">
       <div style="font-size:11px;font-weight:700;color:#E65100;margin-bottom:8px;">👤 保証人（緊急連絡先）</div>
       <div class="frw"><label class="fl">氏名</label><input class="fi" id="f-emerg-name" type="text" placeholder="例: 山田 花子（姓と名の間に1マス）"></div>
-      <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-emerg-furigana" type="text" placeholder="例: ヤマダ ハナコ"></div>
+      <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-emerg-furigana" type="text" oninput="kanaOnly(this)" placeholder="例: ヤマダ ハナコ"></div>
       <div class="frw"><label class="fl">続柄</label><input class="fi" id="f-emerg-rel" type="text" placeholder="配偶者など"></div>
       <div class="frw"><label class="fl">電話</label><input class="fi" id="f-emerg-phone" type="tel"></div>
     </div>
@@ -915,7 +915,10 @@ console.log('Firebase initialized (compat)');
     <div id="fca">
       <div class="fs2">契約時間より早い打刻は契約開始時刻から計算。早出ボタン押下時はその時刻から計算。</div>
     </div>
-    <div class="cl" style="margin-bottom:8px;">曜日別シフト設定（15分刻み）</div>
+    <!-- 勤務タイプごとの給与計算への反映方法（onTCで内容更新） -->
+    <div id="ft-payroll-note" style="margin:6px 0 4px;padding:8px 10px;background:#EDE7F6;border:1px solid #B39DDB;border-radius:7px;font-size:10px;line-height:1.6;color:#4527A0;"></div>
+    <div class="cl" style="margin-bottom:4px;">📅 予定勤務形態（曜日別・15分刻み）</div>
+    <div class="fs2" style="margin-bottom:8px;">全スタッフで契約上の予定勤務時間を記録できます（例: 月 8:45-12:45 / 15:45-19:45、土曜は第1〜5週ごと）。</div>
     <div class="dow-tabs">
       <button class="dow-tab active" onclick="selDow('mon',this)">月</button>
       <button class="dow-tab" onclick="selDow('tue',this)">火</button>
@@ -1069,10 +1072,9 @@ console.log('Firebase initialized (compat)');
     </div>
   </div>
 
-  <!-- ⑤ 雇用契約 🔒 -->
+  <!-- ⑤ 雇用契約（ロックなし・全管理者閲覧可） -->
   <div class="mtab-section" data-section="contract" style="display:none;">
-    <div id="contract-locked" style="margin:10px 0;padding:14px;background:#FFEBEE;border-radius:8px;border:1px solid #EF9A9A;text-align:center;color:#C62828;font-size:11px;">🔒 雇用契約情報は<b>上級管理者以上</b>のみ閲覧可能です</div>
-    <div id="contract-content" style="display:none;">
+    <div id="contract-content" style="display:block;">
       <div style="margin:10px 0;padding:11px;background:#F3E5F5;border-radius:8px;border:1px solid #CE93D8;">
         <div style="font-size:11px;font-weight:700;color:#4A148C;margin-bottom:8px;">📑 雇用契約条件</div>
         <div class="frw"><label class="fl">雇用形態</label>
@@ -1105,9 +1107,12 @@ console.log('Firebase initialized (compat)');
       <datalist id="dl-allowance"></datalist>
       <div style="margin:10px 0;padding:11px;background:#FFF3E0;border-radius:8px;border:1px solid #FFB74D;">
         <div style="font-size:11px;font-weight:700;color:#E65100;margin-bottom:8px;">💰 賃金</div>
-        <div class="frw"><label class="fl">年俸額（円）</label><input class="fi" id="f-annual-wage" type="number" min="0"></div>
-        <div class="frw"><label class="fl">月給（円）</label><input class="fi" id="f-monthly-wage" type="number" min="0"></div>
-        <div class="frw"><label class="fl">時給パターン</label><input class="fi" id="f-hourly-pattern" type="text" placeholder="例: 平日1100円/土日1200円"></div>
+        <div class="frw"><label class="fl">年俸額（円）</label><input class="fi" id="f-annual-wage" type="text" inputmode="numeric" oninput="numComma(this)" placeholder="例: 4,800,000"></div>
+        <div class="frw"><label class="fl">月給（円）</label><input class="fi" id="f-monthly-wage" type="text" inputmode="numeric" oninput="numComma(this)" placeholder="例: 250,000"></div>
+        <div style="margin-top:8px;">
+          <div style="font-size:10px;color:var(--t2);margin-bottom:4px;">時給パターン（最大5件・金額／曜日／時間帯。給与計算CSVに連動）</div>
+          <div id="f-hourly-patterns"></div>
+        </div>
         <hr style="margin:10px 0;border:none;border-top:1px solid #FFCC80;">
         <div class="frw"><label class="fl">給与形態</label>
           <select class="fsl" id="f-wage-type"><option value="">未設定</option><option value="annual">年俸</option><option value="monthly">月給</option><option value="daily">日給</option><option value="hourly">時給</option></select>
@@ -1127,8 +1132,7 @@ console.log('Firebase initialized (compat)');
         <div class="frw"><label class="fl">通常賞与</label>
           <select class="fsl" id="f-bonus-regular"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
         </div>
-        <div class="frw"><label class="fl">支給時期</label><input class="fi" id="f-bonus-timing" type="text" placeholder="12月から5月、6月から11月の成績に応じて年2回支払う"></div>
-        <div class="frw"><label class="fl">計算方法</label><input class="fi" id="f-bonus-calc" type="text"></div>
+        <div class="frw"><label class="fl">支給時期</label><input class="fi" id="f-bonus-timing" type="text"></div>
       </div>
       <div style="margin:10px 0;padding:11px;background:#FCE4EC;border-radius:8px;border:1px solid #F48FB1;">
         <div style="font-size:11px;font-weight:700;color:#880E4F;margin-bottom:8px;">💎 臨時賞与</div>
@@ -1136,6 +1140,7 @@ console.log('Firebase initialized (compat)');
           <select class="fsl" id="f-bonus-extra"><option value="">未設定</option><option value="yes">あり</option><option value="no">なし</option></select>
         </div>
         <div class="frw"><label class="fl">支給条件</label><input class="fi" id="f-bonus-extra-cond" type="text"></div>
+        <div style="font-size:9px;color:var(--t2);margin-top:2px;">未入力時は「業績による」が初期表示されます</div>
       </div>
       <div style="margin:10px 0;padding:11px;background:#EFEBE9;border-radius:8px;border:1px solid #BCAAA4;">
         <div style="font-size:11px;font-weight:700;color:#3E2723;margin-bottom:8px;">🏦 退職金</div>
@@ -1152,7 +1157,7 @@ console.log('Firebase initialized (compat)');
           <select class="fsl" id="f-bank-type"><option value="">未設定</option><option value="普通">普通</option><option value="当座">当座</option></select>
         </div>
         <div class="frw"><label class="fl">口座番号</label><input class="fi" id="f-bank-no" type="text"></div>
-        <div class="frw"><label class="fl">口座名義（カナ）</label><input class="fi" id="f-bank-kana" type="text"></div>
+        <div class="frw"><label class="fl">口座名義（カナ）</label><input class="fi" id="f-bank-kana" type="text" oninput="kanaOnly(this)"></div>
       </div>
       <div style="margin:10px 0;padding:11px;background:#FFFDE7;border-radius:8px;border:1px solid #FFE082;">
         <div style="font-size:11px;font-weight:700;color:#F57F17;margin-bottom:8px;">📝 副業・特約事項</div>
@@ -1362,17 +1367,31 @@ const COMPANIES = {
 };
 let currentCompany = localStorage.getItem('kintai_company') || '';
 
+// 会社表示（上部バー・管理画面「現在の会社」）をCOに同期する唯一の関数
+function updateCompanyHeader(){
+  const info = COMPANIES[CO] || {};
+  const hcoLabel = document.getElementById('hco-label');
+  const hcoName = document.getElementById('hco-name');
+  if(hcoLabel) hcoLabel.textContent = info.label || '';
+  if(hcoName) hcoName.textContent = (info.name || '') + ' 勤怠タッチ Pro';
+  const el = document.getElementById('admin-co-label');
+  if(el){
+    let txt = info.name || '-';
+    if(currentAdmin){
+      const roleName = currentAdmin.role==='super' ? '総合上級管理者' : (currentAdmin.role==='senior' ? '上級管理者' : '管理者');
+      txt += '　/　' + currentAdmin.name + '（' + roleName + '）';
+    }
+    el.textContent = txt;
+  }
+}
+
 function selectCompany(co) {
   currentCompany = co;
   CO = co; // 表示用変数も更新
   currentCoTab = co;
   localStorage.setItem('kintai_company', co);
-  // ヘッダー更新
-  const info = COMPANIES[co] || {};
-  const hcoLabel = document.getElementById('hco-label');
-  const hcoName = document.getElementById('hco-name');
-  if(hcoLabel) hcoLabel.textContent = info.label || '';
-  if(hcoName) hcoName.textContent = info.name + ' 勤怠タッチ Pro' || '';
+  // ヘッダー更新（上部バー・管理画面の会社表示をCOに同期）
+  updateCompanyHeader();
   // 起動画面を隠してメイン表示
   document.getElementById('cs').style.display = 'none';
   document.getElementById('ms').style.display = 'flex';
@@ -1448,6 +1467,7 @@ function fbLoadAndSync(co) {
       if(s.lunchEnabled) DB.lunchEnabled = Array.isArray(s.lunchEnabled) ? s.lunchEnabled : Object.values(s.lunchEnabled);
       if(s.expenses) DB.expenses = Array.isArray(s.expenses) ? s.expenses : Object.values(s.expenses);
       if(s.paidGrants) DB.paidGrants = Array.isArray(s.paidGrants) ? s.paidGrants : Object.values(s.paidGrants);
+      if(s.contractClauses) DB.contractClauses = Array.isArray(s.contractClauses) ? s.contractClauses : Object.values(s.contractClauses);
       if(s.adminPw) DB.adminPw = s.adminPw;
     }
     sDB();
@@ -1503,6 +1523,7 @@ function fbSaveSettings() {
     rehab: DB.rehab||[],
     workplaces: DB.workplaces||[],
     duties: DB.duties||[],
+    contractClauses: DB.contractClauses||[],
     substitute: DB.substitute||[],
     subOff: DB.subOff||[],
     subGrants: DB.subGrants||[],
@@ -1520,7 +1541,7 @@ function fbSaveSettings() {
 
 const TL={in:'出勤',out:'退勤',break:'休憩開始',resume:'勤務再開',early:'早出',fare:'交通費',paid:'有給',lunch:'ランチデリ'};
 
-let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],workplaces:[],duties:[]};
+let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],workplaces:[],duties:[],contractClauses:[]};
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 
@@ -2795,8 +2816,8 @@ function onPaidModeChange(){
 // ═══ マスタ管理タブ切替 ═══
 let currentMTab='basic';
 
-// 上級以上のみ閲覧できるロックタブ
-const LOCKED_MTABS=['contract','wage','retire','document'];
+// 上級以上のみ閲覧できるロックタブ（雇用契約はロックなしに変更）
+const LOCKED_MTABS=['wage','retire','document'];
 function setMTab(tab){
   const canView=(typeof canViewSalary==='function')?canViewSalary():false;
   // 権限なしでロックタブを開こうとしたら基本情報へフォールバック
@@ -2868,10 +2889,9 @@ function loadMasterFields(s){
     'f-overtime-calc':s.overtimeCalc||'legal',
     'f-raise':s.raise||'',
     'f-bonus-regular':s.bonusRegular||'',
-    'f-bonus-timing':s.bonusTiming||'',
-    'f-bonus-calc':s.bonusCalc||'',
+    'f-bonus-timing':s.bonusTiming||'12月から5月、6月から11月の成績に応じて年2回支払う',
     'f-bonus-extra':s.bonusExtra||'',
-    'f-bonus-extra-cond':s.bonusExtraCond||'',
+    'f-bonus-extra-cond':s.bonusExtraCond||'業績による',
     'f-retire-age':s.retireAge||'60',
     'f-severance':s.severance||'',
     'f-severance-rule':s.severanceRule||'',
@@ -2901,9 +2921,8 @@ function loadMasterFields(s){
     'f-retire-reason':s.retireReason||'',
     'f-retire-flow':s.retireFlow||'',
     'f-checkup':s.checkupDate||'',
-    'f-annual-wage':s.annualWage||'',
-    'f-monthly-wage':s.monthlyWage||'',
-    'f-hourly-pattern':s.hourlyPattern||'',
+    'f-annual-wage':fmtComma(s.annualWage),
+    'f-monthly-wage':fmtComma(s.monthlyWage),
     'f-allow1-name':s.allowance1Name||'','f-allow1':s.allowance1||'','f-allow1-period':s.allowance1Period||'month',
     'f-allow2-name':s.allowance2Name||'','f-allow2':s.allowance2||'','f-allow2-period':s.allowance2Period||'month',
     'f-allow3-name':s.allowance3Name||'','f-allow3':s.allowance3||'','f-allow3-period':s.allowance3Period||'month',
@@ -2914,6 +2933,9 @@ function loadMasterFields(s){
     const el=document.getElementById(id);
     if(el)el.value=v;
   });
+  // 時給パターンの描画
+  hourlyPatternsData=(Array.isArray(s.hourlyPatterns)?JSON.parse(JSON.stringify(s.hourlyPatterns)):[]);
+  if(typeof renderHourlyPatterns==='function')renderHourlyPatterns();
   // 扶養家族・資格詳細・手当名称候補の描画
   if(typeof renderDependents==='function')renderDependents(s.dependents||[]);
   // 旧スタッフのDOM残りを先にクリア（sync誤混入防止）してから読込値をセット
@@ -2960,7 +2982,6 @@ function collectMasterFields(){
     raise:g('f-raise'),
     bonusRegular:g('f-bonus-regular'),
     bonusTiming:g('f-bonus-timing'),
-    bonusCalc:g('f-bonus-calc'),
     bonusExtra:g('f-bonus-extra'),
     bonusExtraCond:g('f-bonus-extra-cond'),
     retireAge:g('f-retire-age'),
@@ -2992,9 +3013,10 @@ function collectMasterFields(){
     retireReason:g('f-retire-reason'),
     retireFlow:g('f-retire-flow'),
     checkupDate:g('f-checkup'),
-    annualWage:g('f-annual-wage'),
-    monthlyWage:g('f-monthly-wage'),
-    hourlyPattern:g('f-hourly-pattern'),
+    annualWage:parseNum(g('f-annual-wage')),
+    monthlyWage:parseNum(g('f-monthly-wage')),
+    hourlyPatterns:(typeof collectHourlyPatterns==='function')?collectHourlyPatterns():[],
+    hourlyPattern:(typeof collectHourlyPatterns==='function')?hourlyPatternsSummary(collectHourlyPatterns()):'',
     allowance1Name:g('f-allow1-name'),allowance1:g('f-allow1'),allowance1Period:g('f-allow1-period'),
     allowance2Name:g('f-allow2-name'),allowance2:g('f-allow2'),allowance2Period:g('f-allow2-period'),
     allowance3Name:g('f-allow3-name'),allowance3:g('f-allow3'),allowance3Period:g('f-allow3-period'),
@@ -3005,21 +3027,60 @@ function collectMasterFields(){
   };
 }
 
+// ═══ 入力ヘルパー（カタカナ制限・数値カンマ）═══
+// カタカナのみ許可（ひらがなは自動変換、それ以外は除去）
+function kanaOnly(el){
+  if(!el)return;
+  let v=el.value
+    // ひらがな→カタカナ
+    .replace(/[ぁ-ゖ]/g,c=>String.fromCharCode(c.charCodeAt(0)+0x60))
+    // 全角スペースは半角に
+    .replace(/　/g,' ');
+  // カタカナ・長音符・スペース以外を除去
+  v=v.replace(/[^゠-ヿㇰ-ㇿー\s]/g,'');
+  if(el.value!==v)el.value=v;
+}
+// 数値を3桁カンマ区切り表示（入力中）
+function numComma(el){
+  if(!el)return;
+  const start=el.selectionStart;
+  const before=el.value;
+  const digits=before.replace(/[^0-9]/g,'');
+  const formatted=digits?Number(digits).toLocaleString('en-US'):'';
+  el.value=formatted;
+  // カーソル位置を概ね維持
+  const diff=formatted.length-before.length;
+  if(start!=null){try{el.setSelectionRange(start+diff,start+diff);}catch(e){}}
+}
+// カンマ付き文字列→数値文字列（保存用）
+function parseNum(v){return String(v==null?'':v).replace(/[^0-9]/g,'');}
+// 数値→カンマ表示（読込用）
+function fmtComma(v){const d=parseNum(v);return d?Number(d).toLocaleString('en-US'):'';}
+
 // ═══ 扶養家族・資格詳細・手当名称候補・契約書出力 ═══
 let licDetailsData={};
+const DEP_RELATIONS=['配偶者','子','父','母','祖父','祖母','兄弟姉妹','その他'];
 
-// 扶養家族（可変長リスト）
+// 扶養家族（可変長リスト）氏名・フリガナ・続柄(プルダウン)・生年月日
 function addDependentRow(d){
   const wrap=document.getElementById('f-dependents');
   if(!wrap)return;
   d=d||{};
   const row=document.createElement('div');
   row.className='dep-row';
-  row.style.cssText='display:flex;gap:5px;margin-bottom:5px;align-items:center;';
-  row.innerHTML='<input class="fi dep-name" type="text" placeholder="氏名" style="flex:1.2;" value="'+(d.name||'').replace(/"/g,'&quot;')+'">'
-    +'<input class="fi dep-rel" type="text" placeholder="続柄" style="flex:0.8;" value="'+(d.relation||'').replace(/"/g,'&quot;')+'">'
+  row.style.cssText='margin-bottom:7px;padding:6px;background:#fff;border:1px solid #F8BBD0;border-radius:6px;';
+  const rels=DEP_RELATIONS.slice();
+  if(d.relation&&rels.indexOf(d.relation)<0)rels.unshift(d.relation); // 既存の自由入力値を保持
+  const relOpts=rels.map(r=>'<option value="'+r.replace(/"/g,'&quot;')+'"'+((d.relation||'')===r?' selected':'')+'>'+r.replace(/</g,'&lt;')+'</option>').join('');
+  row.innerHTML='<div style="display:flex;gap:5px;margin-bottom:4px;align-items:center;">'
+    +'<input class="fi dep-name" type="text" placeholder="氏名" style="flex:1.2;" value="'+(d.name||'').replace(/"/g,'&quot;')+'">'
+    +'<select class="fsl dep-rel" style="flex:0.9;">'+relOpts+'</select>'
+    +'<button onclick="this.closest(\'.dep-row\').remove()" style="flex-shrink:0;padding:5px 9px;border:1px solid #C62828;border-radius:6px;background:#fff;color:#C62828;font-size:11px;cursor:pointer;font-family:inherit;">×</button>'
+    +'</div>'
+    +'<div style="display:flex;gap:5px;align-items:center;">'
+    +'<input class="fi dep-furigana" type="text" oninput="kanaOnly(this)" placeholder="フリガナ" style="flex:1.2;" value="'+(d.furigana||'').replace(/"/g,'&quot;')+'">'
     +'<input class="fi dep-birth" type="date" style="flex:1.2;" value="'+(d.birthDate||'')+'">'
-    +'<button onclick="this.parentElement.remove()" style="flex-shrink:0;padding:5px 9px;border:1px solid #C62828;border-radius:6px;background:#fff;color:#C62828;font-size:11px;cursor:pointer;font-family:inherit;">×</button>';
+    +'</div>';
   wrap.appendChild(row);
 }
 function renderDependents(list){
@@ -3033,9 +3094,122 @@ function collectDependents(){
   if(!wrap)return [];
   return Array.from(wrap.querySelectorAll('.dep-row')).map(r=>({
     name:r.querySelector('.dep-name')?r.querySelector('.dep-name').value:'',
+    furigana:r.querySelector('.dep-furigana')?r.querySelector('.dep-furigana').value:'',
     relation:r.querySelector('.dep-rel')?r.querySelector('.dep-rel').value:'',
     birthDate:r.querySelector('.dep-birth')?r.querySelector('.dep-birth').value:''
-  })).filter(d=>d.name||d.relation||d.birthDate);
+  })).filter(d=>d.name||d.furigana||d.birthDate);
+}
+
+// ═══ 時給パターン（最大5件: 金額/曜日/時間帯）═══
+const HP_DOWS=[['all','全曜日'],['mon','月'],['tue','火'],['wed','水'],['thu','木'],['fri','金'],['sat','土'],['sun','日・祝']];
+const HP_AMPM=[['all','終日'],['am','午前'],['pm','午後']];
+let hourlyPatternsData=[];
+function renderHourlyPatterns(){
+  const wrap=document.getElementById('f-hourly-patterns');
+  if(!wrap)return;
+  const list=hourlyPatternsData.length?hourlyPatternsData:[{}];
+  wrap.innerHTML=list.slice(0,5).map((p,i)=>{
+    const dowOpts=HP_DOWS.map(([v,l])=>'<option value="'+v+'"'+((p.dow||'all')===v?' selected':'')+'>'+l+'</option>').join('');
+    const apOpts=HP_AMPM.map(([v,l])=>'<option value="'+v+'"'+((p.ampm||'all')===v?' selected':'')+'>'+l+'</option>').join('');
+    return '<div class="hp-row" style="display:flex;gap:4px;margin-bottom:4px;align-items:center;">'
+      +'<span style="font-size:10px;color:var(--t2);width:14px;flex-shrink:0;">'+(i+1)+'</span>'
+      +'<input class="fi hp-amt" type="text" inputmode="numeric" oninput="numComma(this)" placeholder="時給(円)" style="flex:1.1;" value="'+fmtComma(p.amount)+'">'
+      +'<select class="fsl hp-dow" style="flex:0.9;">'+dowOpts+'</select>'
+      +'<select class="fsl hp-ampm" style="flex:0.8;">'+apOpts+'</select>'
+      +'<button onclick="delHourlyPattern('+i+')" style="flex-shrink:0;padding:5px 8px;border:1px solid #C62828;border-radius:6px;background:#fff;color:#C62828;font-size:11px;cursor:pointer;font-family:inherit;">×</button>'
+      +'</div>';
+  }).join('')
+    +(list.length<5?'<button class="fa" onclick="addHourlyPattern()" style="margin-top:2px;">＋ パターンを追加</button>':'');
+}
+function syncHourlyPatternsFromDOM(){
+  const wrap=document.getElementById('f-hourly-patterns');
+  if(!wrap)return;
+  const rows=wrap.querySelectorAll('.hp-row');
+  if(!rows.length)return;
+  hourlyPatternsData=Array.from(rows).map(r=>({
+    amount:parseNum(r.querySelector('.hp-amt')?r.querySelector('.hp-amt').value:''),
+    dow:r.querySelector('.hp-dow')?r.querySelector('.hp-dow').value:'all',
+    ampm:r.querySelector('.hp-ampm')?r.querySelector('.hp-ampm').value:'all'
+  }));
+}
+function addHourlyPattern(){syncHourlyPatternsFromDOM();if(hourlyPatternsData.length<5)hourlyPatternsData.push({});renderHourlyPatterns();}
+function delHourlyPattern(i){syncHourlyPatternsFromDOM();hourlyPatternsData.splice(i,1);renderHourlyPatterns();}
+function collectHourlyPatterns(){
+  syncHourlyPatternsFromDOM();
+  return hourlyPatternsData.filter(p=>p.amount);
+}
+// 旧hourlyPattern(文字列)互換のサマリ生成
+function hourlyPatternsSummary(list){
+  const dowL={all:'全曜日',mon:'月',tue:'火',wed:'水',thu:'木',fri:'金',sat:'土',sun:'日祝'};
+  const apL={all:'',am:'午前',pm:'午後'};
+  return (list||[]).filter(p=>p.amount).map(p=>(dowL[p.dow||'all'])+(apL[p.ampm||'all']?('('+apL[p.ampm]+')'):'')+' '+Number(parseNum(p.amount)).toLocaleString('en-US')+'円').join(' / ');
+}
+
+// ═══ 契約書共通記載事項マスタ ═══
+function addDocClause(){
+  const t=document.getElementById('me-doc-title');
+  const b=document.getElementById('me-doc-body');
+  const title=(t?t.value:'').trim();
+  if(!title){showToast('項目名を入力してください');return;}
+  if(!DB.contractClauses)DB.contractClauses=[];
+  DB.contractClauses.push({id:Date.now()+Math.random(),title,body:(b?b.value:'').trim(),enabled:true});
+  sDB();fbSaveSettings();
+  if(t)t.value='';if(b)b.value='';
+  renderDocClauses();
+}
+function delDocClause(id){
+  if(!confirm('この記載事項を削除しますか？'))return;
+  DB.contractClauses=(DB.contractClauses||[]).filter(c=>c.id!==id);
+  sDB();fbSaveSettings();
+  renderDocClauses();
+}
+function toggleDocClause(id){
+  const c=(DB.contractClauses||[]).find(x=>x.id===id);
+  if(!c)return;
+  c.enabled=!c.enabled;
+  sDB();fbSaveSettings();
+  renderDocClauses();
+}
+function renderDocClauses(){
+  const el=document.getElementById('me-doc-list');
+  if(!el)return;
+  const list=DB.contractClauses||[];
+  if(!list.length){el.innerHTML='<div style="color:var(--t2);text-align:center;padding:14px;font-size:11px;">記載事項未登録</div>';return;}
+  el.innerHTML=list.map((c,i)=>{
+    const e=c.enabled!==false;
+    return '<div style="padding:7px;border-bottom:1px solid #f0f0f0;font-size:11px;">'
+      +'<div style="display:flex;align-items:center;gap:6px;">'
+      +'<span style="flex:1;font-weight:600;">'+(c.title||'').replace(/</g,'&lt;')+'</span>'
+      +moveBtns('contractClauses',c.id,i,list.length)
+      +'<button onclick="toggleDocClause('+c.id+')" style="padding:3px 8px;border:1px solid '+(e?'#1B5E20':'#aaa')+';border-radius:6px;background:'+(e?'#1B5E20':'#fff')+';color:'+(e?'#fff':'#888')+';font-size:10px;cursor:pointer;font-family:inherit;">'+(e?'あり':'なし')+'</button>'
+      +'<button class="fd" onclick="delDocClause('+c.id+')">削除</button>'
+      +'</div>'
+      +(c.body?('<div style="color:var(--t2);font-size:10px;margin-top:3px;white-space:pre-wrap;">'+(c.body||'').replace(/</g,'&lt;')+'</div>'):'')
+      +'</div>';
+  }).join('');
+}
+
+// ═══ マスタ並べ替え（汎用）═══
+function moveBtns(arrName,id,idx,len){
+  const up=idx>0?'<button onclick="moveMaster(\''+arrName+'\','+id+',-1)" style="padding:3px 7px;border:1px solid var(--br);border-radius:6px;background:#fff;font-size:10px;cursor:pointer;font-family:inherit;">▲</button>':'<span style="width:23px;display:inline-block;"></span>';
+  const dn=idx<len-1?'<button onclick="moveMaster(\''+arrName+'\','+id+',1)" style="padding:3px 7px;border:1px solid var(--br);border-radius:6px;background:#fff;font-size:10px;cursor:pointer;font-family:inherit;">▼</button>':'<span style="width:23px;display:inline-block;"></span>';
+  return up+dn;
+}
+function moveMaster(arrName,id,dir){
+  const arr=DB[arrName];
+  if(!arr)return;
+  const i=arr.findIndex(x=>x.id===id);
+  if(i<0)return;
+  const j=i+dir;
+  if(j<0||j>=arr.length)return;
+  const tmp=arr[i];arr[i]=arr[j];arr[j]=tmp;
+  sDB();fbSaveSettings();
+  // 再描画＋プルダウン更新
+  if(arrName==='jobs')renderMeJobs();
+  else if(arrName==='licenses')renderMeLics();
+  else if(arrName==='workplaces'){renderMeWorkplaces();populateWorkplaceSelect();}
+  else if(arrName==='duties'){renderMeDuties();populateDutySelect();}
+  else if(arrName==='contractClauses')renderDocClauses();
 }
 
 // 資格詳細（選択中の資格ごとに 取得日/期限/免許番号）
@@ -3047,6 +3221,7 @@ function syncLicDetailsFromDOM(){
     if(!id)return;
     licDetailsData[id]={
       acquiredDate:r.querySelector('.lic-acq')?r.querySelector('.lic-acq').value:'',
+      lossDate:r.querySelector('.lic-loss')?r.querySelector('.lic-loss').value:'',
       expiry:r.querySelector('.lic-exp')?r.querySelector('.lic-exp').value:'',
       licenseNo:r.querySelector('.lic-no')?r.querySelector('.lic-no').value:''
     };
@@ -3064,10 +3239,13 @@ function renderLicDetails(){
     const d=licDetailsData[id]||{};
     return '<div class="lic-detail-row" data-lic-id="'+id+'" style="margin-bottom:6px;padding:7px;background:#fff;border:1px solid #C8E6C9;border-radius:6px;">'
       +'<div style="font-size:10px;font-weight:700;color:#1B5E20;margin-bottom:3px;">'+nm+'</div>'
+      +'<div style="display:flex;gap:5px;margin-bottom:4px;">'
+      +'<div style="flex:1;"><div style="font-size:9px;color:var(--t2);margin-bottom:1px;">取得日</div><input class="fi lic-acq" type="date" style="width:100%;box-sizing:border-box;" value="'+(d.acquiredDate||'')+'"></div>'
+      +'<div style="flex:1;"><div style="font-size:9px;color:var(--t2);margin-bottom:1px;">喪失日</div><input class="fi lic-loss" type="date" style="width:100%;box-sizing:border-box;" value="'+(d.lossDate||'')+'"></div>'
+      +'</div>'
       +'<div style="display:flex;gap:5px;">'
-      +'<input class="fi lic-acq" type="date" title="取得日" style="flex:1;" value="'+(d.acquiredDate||'')+'">'
-      +'<input class="fi lic-exp" type="date" title="期限" style="flex:1;" value="'+(d.expiry||'')+'">'
-      +'<input class="fi lic-no" type="text" placeholder="免許番号" style="flex:1;" value="'+(d.licenseNo||'').replace(/"/g,'&quot;')+'">'
+      +'<div style="flex:1;"><div style="font-size:9px;color:var(--t2);margin-bottom:1px;">有効期限</div><input class="fi lic-exp" type="date" style="width:100%;box-sizing:border-box;" value="'+(d.expiry||'')+'"></div>'
+      +'<div style="flex:1;"><div style="font-size:9px;color:var(--t2);margin-bottom:1px;">免許番号</div><input class="fi lic-no" type="text" placeholder="免許番号" style="width:100%;box-sizing:border-box;" value="'+(d.licenseNo||'').replace(/"/g,'&quot;')+'"></div>'
       +'</div></div>';
   }).join('');
 }
@@ -3090,6 +3268,14 @@ function buildAllowanceDatalist(){
   dl.innerHTML=Array.from(set).map(n=>'<option value="'+n.replace(/"/g,'&quot;')+'">').join('');
 }
 
+// 契約書共通記載事項（「あり」のものを契約書に追記）
+function docClausesHtml(esc){
+  const list=(DB.contractClauses||[]).filter(c=>c.enabled!==false);
+  if(!list.length)return'';
+  return '<h2>契約書共通記載事項</h2><table>'
+    +list.map(c=>'<tr><th>'+esc(c.title||'')+'</th><td>'+esc(c.body||'')+'</td></tr>').join('')
+    +'</table>';
+}
 // 契約書出力（65歳継続雇用・70歳努力義務を自動追記）
 function exportContract(){
   const g=id=>{const el=document.getElementById(id);return el?el.value:'';};
@@ -3109,11 +3295,12 @@ function exportContract(){
     +'<h1>雇用契約書</h1>'
     +'<h2>基本情報</h2><table>'+row('氏名',name)+row('社員番号',eid)+row('住所',m.address)+row('生年月日',m.birthDate)+'</table>'
     +'<h2>雇用契約条件</h2><table>'+row('雇用形態',empType)+row('雇用期間',period)+row('試用期間',m.probation==='exists'?((m.probationMonths||'')+'ヶ月'):'なし')+row('就業場所',m.workplace)+row('業務内容',m.duty)+row('更新条件',m.renewal)+'</table>'
-    +'<h2>賃金</h2><table>'+row('年俸額',m.annualWage)+row('月給',m.monthlyWage)+row('時給パターン',m.hourlyPattern)+row('基本給',m.baseWage)+'</table>'
+    +'<h2>賃金</h2><table>'+row('年俸額',fmtComma(m.annualWage)?fmtComma(m.annualWage)+' 円':'')+row('月給',fmtComma(m.monthlyWage)?fmtComma(m.monthlyWage)+' 円':'')+row('時給パターン',m.hourlyPattern)+row('基本給',m.baseWage)+'</table>'
     +(allowRows?('<h2>手当</h2><table><tr><th>名称</th><td>金額</td></tr>'+allowRows+'</table>'):'')
-    +'<h2>賞与</h2><table>'+row('通常賞与 支給時期',m.bonusTiming)+row('通常賞与 計算',m.bonusCalc)+row('臨時賞与 条件',m.bonusExtraCond)+'</table>'
+    +'<h2>賞与</h2><table>'+row('通常賞与 支給時期',m.bonusTiming)+row('臨時賞与 条件',m.bonusExtraCond||'業績による')+'</table>'
     +'<h2>退職に関する事項</h2><table>'+row('定年',((m.retireAge||'60'))+'歳')+row('退職事由',m.retireReason)+row('退職金規定',m.severanceRule)+'</table>'
     +'<h2>その他</h2><table>'+row('秘密保持',m.confidentiality==='yes'?'あり':(m.confidentiality==='no'?'なし':''))+row('競業避止',(m.nonCompete==='yes'?'あり':(m.nonCompete==='no'?'なし':''))+(m.nonCompetePeriod?('（'+m.nonCompetePeriod+'）'):''))+'</table>'
+    +docClausesHtml(esc)
     +'<div class="note">※ 定年後は65歳まで継続雇用、70歳まで就業確保の努力義務とする。</div>'
     +'<div style="text-align:center;margin-top:24px;"><button onclick="window.print()" style="padding:9px 18px;border:none;border-radius:6px;background:#1B5E20;color:#fff;font-weight:700;cursor:pointer;">印刷 / PDF保存</button></div>'
     +'</body></html>';
@@ -3135,6 +3322,7 @@ function openMasterEditModal(){
   renderMeLics();
   if(typeof renderMeWorkplaces==='function')renderMeWorkplaces();
   if(typeof renderMeDuties==='function')renderMeDuties();
+  if(typeof renderDocClauses==='function')renderDocClauses();
 }
 function closeMasterEditModal(){
   document.getElementById('master-edit-modal').style.display='none';
@@ -3143,7 +3331,7 @@ function closeMasterEditModal(){
   renderLicsChips();
 }
 function setMeTab(tab){
-  ['jobs','lics','wp','duty'].forEach(t=>{
+  ['jobs','lics','wp','duty','doc'].forEach(t=>{
     const btn=document.getElementById('me-tab-'+t);
     if(btn)btn.classList.toggle('active',tab===t);
     const view=document.getElementById('me-view-'+t);
@@ -3172,7 +3360,7 @@ function renderMeJobs(){
   const el=document.getElementById('me-jobs-list');
   if(!el)return;
   if(!DB.jobs||!DB.jobs.length){el.innerHTML='<div style="color:var(--t2);text-align:center;padding:14px;font-size:11px;">職種未登録</div>';return;}
-  el.innerHTML=DB.jobs.map(j=>`<div style="display:flex;align-items:center;gap:9px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${j.name}</span><button class="fd" onclick="delJob(${j.id})">削除</button></div>`).join('');
+  el.innerHTML=DB.jobs.map((j,i)=>`<div style="display:flex;align-items:center;gap:6px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${j.name}</span>${moveBtns('jobs',j.id,i,DB.jobs.length)}<button class="fd" onclick="delJob(${j.id})">削除</button></div>`).join('');
 }
 
 function addLicense(){
@@ -3211,7 +3399,7 @@ function renderMeWorkplaces(){
   const el=document.getElementById('me-wp-list');
   if(!el)return;
   if(!DB.workplaces||!DB.workplaces.length){el.innerHTML='<div style="color:var(--t2);text-align:center;padding:14px;font-size:11px;">就業場所未登録</div>';return;}
-  el.innerHTML=DB.workplaces.map(w=>`<div style="display:flex;align-items:center;gap:9px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${w.name}</span><button class="fd" onclick="delWorkplace(${w.id})">削除</button></div>`).join('');
+  el.innerHTML=DB.workplaces.map((w,i)=>`<div style="display:flex;align-items:center;gap:6px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${w.name}</span>${moveBtns('workplaces',w.id,i,DB.workplaces.length)}<button class="fd" onclick="delWorkplace(${w.id})">削除</button></div>`).join('');
 }
 
 function addDuty(){
@@ -3237,7 +3425,7 @@ function renderMeDuties(){
   const el=document.getElementById('me-duty-list');
   if(!el)return;
   if(!DB.duties||!DB.duties.length){el.innerHTML='<div style="color:var(--t2);text-align:center;padding:14px;font-size:11px;">業務内容未登録</div>';return;}
-  el.innerHTML=DB.duties.map(d=>`<div style="display:flex;align-items:center;gap:9px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${d.name}</span><button class="fd" onclick="delDuty(${d.id})">削除</button></div>`).join('');
+  el.innerHTML=DB.duties.map((d,i)=>`<div style="display:flex;align-items:center;gap:6px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${d.name}</span>${moveBtns('duties',d.id,i,DB.duties.length)}<button class="fd" onclick="delDuty(${d.id})">削除</button></div>`).join('');
 }
 
 // プルダウンに反映
@@ -3270,7 +3458,7 @@ function renderMeLics(){
   const el=document.getElementById('me-lics-list');
   if(!el)return;
   if(!DB.licenses||!DB.licenses.length){el.innerHTML='<div style="color:var(--t2);text-align:center;padding:14px;font-size:11px;">資格未登録</div>';return;}
-  el.innerHTML=DB.licenses.map(l=>`<div style="display:flex;align-items:center;gap:9px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${l.name}</span><button class="fd" onclick="delLicense(${l.id})">削除</button></div>`).join('');
+  el.innerHTML=DB.licenses.map((l,i)=>`<div style="display:flex;align-items:center;gap:6px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${l.name}</span>${moveBtns('licenses',l.id,i,DB.licenses.length)}<button class="fd" onclick="delLicense(${l.id})">削除</button></div>`).join('');
 }
 
 // 編集中スタッフのチップ描画
@@ -4318,15 +4506,8 @@ function applyFulllifeTabsVisibility(){
 function showAS(sub){
   // 警告も再描画
   if(typeof renderPunchWarnings==='function')renderPunchWarnings();
-  // 管理画面の会社名更新
-  const el=document.getElementById('admin-co-label');
-  if(el){
-    const admin=currentAdmin||{name:'管理者',company:'both'};
-    let roleName='管理者';
-    if(admin.role==='super')roleName='総合上級管理者';
-    else if(admin.role==='senior')roleName='上級管理者';
-    el.textContent=admin.name+'（'+roleName+'）';
-  }
+  // 管理画面の会社名更新（CO同期）
+  if(typeof updateCompanyHeader==='function')updateCompanyHeader();
   ['staff','shift','rec','paid','special','log','report','data','pw','devset','pattern','shiftcal','allshift','group','ot'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
   if(sub==='pw')initPwmStaffSelect();
   if(sub==='devset')initDevset();
@@ -4723,7 +4904,23 @@ function doExportMonthly(ym){
   const ws1=XLSX.utils.aoa_to_sheet(payAoa);
   ws1['!cols']=PAY_HDR.map((_,i)=>({wch:i<2?14:10}));
   XLSX.utils.book_append_sheet(wb,ws1,'給与取り込み');
-  XLSX.writeFile(wb,'香庸会_給与取込_'+ym+'.xlsx');
+  // 時給パターン連動シート（金額・曜日・時間帯）
+  const dowL={all:'全曜日',mon:'月',tue:'火',wed:'水',thu:'木',fri:'金',sat:'土',sun:'日・祝'};
+  const apL={all:'終日',am:'午前',pm:'午後'};
+  const hpHdr=['社員番号','氏名','パターン','時給(円)','曜日','時間帯'];
+  const hpAoa=[hpHdr];
+  list.forEach(s=>{
+    const hps=Array.isArray(s.hourlyPatterns)?s.hourlyPatterns.filter(p=>p&&p.amount):[];
+    hps.forEach((p,i)=>{
+      hpAoa.push([s.employeeId||s.id,s.name,i+1,Number(parseNum(p.amount))||'',dowL[p.dow||'all']||'',apL[p.ampm||'all']||'']);
+    });
+  });
+  if(hpAoa.length>1){
+    const ws2=XLSX.utils.aoa_to_sheet(hpAoa);
+    ws2['!cols']=hpHdr.map((_,i)=>({wch:i===1?14:10}));
+    XLSX.utils.book_append_sheet(wb,ws2,'時給パターン');
+  }
+  XLSX.writeFile(wb,(CO==='fulllife'?'フルラフ':'香庸会')+'_給与取込_'+ym+'.xlsx');
   showToast('月次XLSXをダウンロードしました');
 }
 
@@ -4901,8 +5098,19 @@ function onTC(){
   document.getElementById('fca').style.display=t==='contract'?'':'none';
   const f1=document.getElementById('free1-opt');
   if(f1)f1.style.display=t==='free1'?'block':'none';
-  // 契約型・年俸型: シフト・休憩・終了時刻フリーを表示（年俸型は契約上の記載用）
-  const isAnnual=!(t==='contract'||t==='annual');
+  // 勤務タイプごとの給与計算への反映方法を表示
+  const noteEl=document.getElementById('ft-payroll-note');
+  if(noteEl){
+    const notes={
+      contract:'<b>契約型 → 給与計算への反映:</b> 下記の予定勤務形態（契約時間）をもとに勤務時間を算出します。打刻が契約開始より早い場合は契約開始時刻から計算（早出ボタン押下時はその時刻から）。',
+      free:'<b>フリー型 → 給与計算への反映:</b> 打刻時刻をそのまま勤務時間として集計します。予定勤務形態は契約書記載用の参考情報です。',
+      free1:'<b>フリー①型 → 給与計算への反映:</b> 打刻をXX:'+( (document.getElementById('ff1min')&&document.getElementById('ff1min').value)||'45')+'分基準で自動切り上げして集計します。予定勤務形態は契約書記載用の参考情報です。',
+      annual:'<b>年俸型 → 給与計算への反映:</b> 給与は年俸固定で勤務時間に連動しません（総勤務時間のみ集計）。予定勤務形態は契約書記載用です。'
+    };
+    noteEl.innerHTML=notes[t]||'';
+  }
+  // 予定勤務形態（曜日別シフト）は全勤務タイプで表示・記録できる
+  const isAnnual=false;
   const setHide=(el,hide)=>{if(!el)return;if(hide){el.setAttribute('data-hidden','1');el.style.setProperty('display','none','important');}else{el.removeAttribute('data-hidden');el.style.removeProperty('display');}};
   // シフト関連の親カード（曜日別シフト設定全体）
   // 「曜日別シフト設定」のラベルを含む親要素を探す
@@ -4976,7 +5184,8 @@ const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)
   const hireDate=document.getElementById('f-hire')?document.getElementById('f-hire').value:'';
   const paidMode=document.getElementById('f-pmode')?document.getElementById('f-pmode').value:'manual';
   const weeklyDays=document.getElementById('f-wdays')?parseInt(document.getElementById('f-wdays').value):4;
-  let ds=null;if(type==='contract'){ds={mon:readRows('sh-mon'),tue:readRows('sh-tue'),wed:readRows('sh-wed'),thu:readRows('sh-thu'),fri:readRows('sh-fri'),sat:{1:readRows('sh-sat1'),2:readRows('sh-sat2'),3:readRows('sh-sat3'),4:readRows('sh-sat4'),5:readRows('sh-sat5')},sun:readRows('sh-sun')};}// 管理権限の処理
+  // 予定勤務形態（曜日別シフト）は全勤務タイプで記録する
+  let ds={mon:readRows('sh-mon'),tue:readRows('sh-tue'),wed:readRows('sh-wed'),thu:readRows('sh-thu'),fri:readRows('sh-fri'),sat:{1:readRows('sh-sat1'),2:readRows('sh-sat2'),3:readRows('sh-sat3'),4:readRows('sh-sat4'),5:readRows('sh-sat5')},sun:readRows('sh-sun')};// 管理権限の処理
   const arVal=document.getElementById('ar')?document.getElementById('ar').value:'';
   let adminRole=null,adminPerm=null;
   if(arVal==='super_both'){adminRole='super';adminPerm='both';}
@@ -6212,14 +6421,8 @@ function applyAdminPermissions(admin){
     currentCoTab = admin.company;
     setCoTab(admin.company);
   }
-  // 管理画面のタイトルに権限表示
-  const el=document.getElementById('admin-co-label');
-  if(el){
-    let roleName='管理者';
-    if(isSuperAdmin)roleName='総合上級管理者';
-    else if(admin.role==='senior')roleName='上級管理者';
-    el.textContent=admin.name+'（'+roleName+'）';
-  }
+  // 管理画面のタイトルに権限・会社表示（CO同期）
+  if(typeof updateCompanyHeader==='function')updateCompanyHeader();
   // レポート出力を会社でフィルタ
   window.adminCompanyFilter = (isSuperAdmin || admin.company === 'both') ? null : admin.company;
   // PW管理タブは管理者なら全員表示（中身でフィルタ）
@@ -6923,6 +7126,7 @@ lDB();autoStart();setInterval(tick,30000);tick();
       <button class="ptab" id="me-tab-lics" onclick="setMeTab('lics')">資格</button>
       <button class="ptab" id="me-tab-wp" onclick="setMeTab('wp')">就業場所</button>
       <button class="ptab" id="me-tab-duty" onclick="setMeTab('duty')">業務内容</button>
+      <button class="ptab" id="me-tab-doc" onclick="setMeTab('doc')">契約書共通記載事項</button>
     </div>
     <div id="me-view-jobs">
       <div class="frw">
@@ -6951,6 +7155,15 @@ lDB();autoStart();setInterval(tick,30000);tick();
         <button class="bg" onclick="addDuty()">+ 追加</button>
       </div>
       <div id="me-duty-list" style="max-height:300px;overflow-y:auto;"></div>
+    </div>
+    <div id="me-view-doc" style="display:none;">
+      <div style="font-size:10px;color:var(--t2);margin-bottom:8px;line-height:1.6;">会社共通で全ての雇用契約書に記載する条項を登録します。「あり」にした項目が契約書出力時に自動で追記されます。</div>
+      <div style="margin-bottom:8px;">
+        <input class="fi" type="text" id="me-doc-title" placeholder="項目名（例: 就業規則の遵守）" style="margin-bottom:5px;">
+        <textarea id="me-doc-body" rows="2" placeholder="本文（例: 従業員は就業規則を遵守すること）" style="width:100%;padding:7px;border:1px solid var(--br);border-radius:7px;font-size:11px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+        <button class="bg" onclick="addDocClause()" style="margin-top:5px;width:100%;">+ 記載事項を追加</button>
+      </div>
+      <div id="me-doc-list" style="max-height:280px;overflow-y:auto;"></div>
     </div>
     <button class="bn" onclick="closeMasterEditModal()" style="width:100%;margin-top:10px;">閉じる</button>
   </div>
