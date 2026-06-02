@@ -197,7 +197,7 @@ console.log('Firebase initialized (compat)');
 <div id="ms">
   <div class="hd">
     <div><div class="hco" id="hco-label">勤怠タッチ Pro</div><div class="ht" id="hco-name">-</div></div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">build-20260602i</div></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">build-20260602j</div></div>
   </div>
   <div class="bnav">
     <button class="nb" id="bn-punch" onclick="showPg('punch')"><span class="ni">📷</span>打刻</button>
@@ -952,6 +952,12 @@ console.log('Firebase initialized (compat)');
       <div class="sat-panel" id="sp-5"></div>
     </div>
     <div class="dow-panel" id="dp-sun"></div>
+    <!-- 休日・休暇（契約書に反映） -->
+    <div style="margin-top:10px;padding:10px;background:#FFF8E1;border-radius:8px;border:1px solid #FFE082;">
+      <div style="font-size:11px;font-weight:700;color:#F57F17;margin-bottom:6px;">📆 休日・休暇（契約書に反映）</div>
+      <div class="frw"><label class="fl">休日</label><input class="fi" id="f-holiday" type="text" placeholder="例: 火金午前、土(第3土曜以外)、日、祝日"></div>
+      <div class="frw"><label class="fl">休暇</label><input class="fi" id="f-vacation" type="text" placeholder="例: 夏季休暇、年末年始休暇"></div>
+    </div>
     <div class="frw" style="margin-top:10px;"><label class="fl">休憩時間（分）<span style="color:var(--t2);font-size:9px;font-weight:400;">　打刻管理の場合は0</span></label><input class="fi" id="fbk" type="number" value="0"></div>
     <div style="margin-top:8px;padding:10px;background:var(--bll);border-radius:8px;">
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
@@ -1100,6 +1106,7 @@ console.log('Firebase initialized (compat)');
         <div class="frw"><label class="fl">業務内容</label>
           <select class="fsl" id="f-duty"></select>
         </div>
+        <div class="frw"><label class="fl">固定残業時間（時間/月）</label><input class="fi" id="f-fixed-ot" type="number" min="0" placeholder="例: 20"></div>
       </div>
     </div>
   </div>
@@ -1125,11 +1132,11 @@ console.log('Firebase initialized (compat)');
       </div>
       <div style="margin:10px 0;padding:11px;background:#FFF8E1;border-radius:8px;border:1px solid #FFE082;">
         <div style="font-size:11px;font-weight:700;color:#F57F17;margin-bottom:8px;">💴 手当（名称はプルダウン選択・新規入力可）</div>
-        <div style="margin-bottom:6px;"><div style="font-size:10px;color:var(--t2);margin-bottom:2px;">手当①</div><div style="display:flex;gap:5px;"><input class="fi" id="f-allow1-name" list="dl-allowance" placeholder="名称（選択/入力）" style="flex:1.3;"><input class="fi" id="f-allow1" type="number" placeholder="金額" style="flex:1;"><select class="fsl" id="f-allow1-period" style="flex:0.7;"><option value="month">月額</option><option value="year">年額</option></select></div></div>
-        <div style="margin-bottom:6px;"><div style="font-size:10px;color:var(--t2);margin-bottom:2px;">手当②</div><div style="display:flex;gap:5px;"><input class="fi" id="f-allow2-name" list="dl-allowance" placeholder="名称（選択/入力）" style="flex:1.3;"><input class="fi" id="f-allow2" type="number" placeholder="金額" style="flex:1;"><select class="fsl" id="f-allow2-period" style="flex:0.7;"><option value="month">月額</option><option value="year">年額</option></select></div></div>
-        <div style="margin-bottom:6px;"><div style="font-size:10px;color:var(--t2);margin-bottom:2px;">手当③</div><div style="display:flex;gap:5px;"><input class="fi" id="f-allow3-name" list="dl-allowance" placeholder="名称（選択/入力）" style="flex:1.3;"><input class="fi" id="f-allow3" type="number" placeholder="金額" style="flex:1;"><select class="fsl" id="f-allow3-period" style="flex:0.7;"><option value="month">月額</option><option value="year">年額</option></select></div></div>
-        <div style="margin-bottom:6px;"><div style="font-size:10px;color:var(--t2);margin-bottom:2px;">手当④</div><div style="display:flex;gap:5px;"><input class="fi" id="f-allow4-name" list="dl-allowance" placeholder="名称（選択/入力）" style="flex:1.3;"><input class="fi" id="f-allow4" type="number" placeholder="金額" style="flex:1;"><select class="fsl" id="f-allow4-period" style="flex:0.7;"><option value="month">月額</option><option value="year">年額</option></select></div></div>
-        <div style="margin-bottom:0;"><div style="font-size:10px;color:var(--t2);margin-bottom:2px;">手当⑤</div><div style="display:flex;gap:5px;"><input class="fi" id="f-allow5-name" list="dl-allowance" placeholder="名称（選択/入力）" style="flex:1.3;"><input class="fi" id="f-allow5" type="number" placeholder="金額" style="flex:1;"><select class="fsl" id="f-allow5-period" style="flex:0.7;"><option value="month">月額</option><option value="year">年額</option></select></div></div>
+        <div style="margin-bottom:6px;"><div style="font-size:10px;color:var(--t2);margin-bottom:2px;">手当①</div><div style="display:flex;gap:5px;"><input class="fi" id="f-allow1-name" list="dl-allowance" placeholder="名称（選択/入力）" style="flex:1.3;"><input class="fi" id="f-allow1" type="number" placeholder="金額" style="flex:1;"><select class="fsl" id="f-allow1-period" style="flex:0.7;"><option value="month">月額</option><option value="year">年額</option></select></div><input class="fi" id="f-allow1-note" placeholder="メモ（例: 月20時間分の残業手当として支給）" style="margin-top:3px;width:100%;box-sizing:border-box;font-size:10px;"></div>
+        <div style="margin-bottom:6px;"><div style="font-size:10px;color:var(--t2);margin-bottom:2px;">手当②</div><div style="display:flex;gap:5px;"><input class="fi" id="f-allow2-name" list="dl-allowance" placeholder="名称（選択/入力）" style="flex:1.3;"><input class="fi" id="f-allow2" type="number" placeholder="金額" style="flex:1;"><select class="fsl" id="f-allow2-period" style="flex:0.7;"><option value="month">月額</option><option value="year">年額</option></select></div><input class="fi" id="f-allow2-note" placeholder="メモ（任意）" style="margin-top:3px;width:100%;box-sizing:border-box;font-size:10px;"></div>
+        <div style="margin-bottom:6px;"><div style="font-size:10px;color:var(--t2);margin-bottom:2px;">手当③</div><div style="display:flex;gap:5px;"><input class="fi" id="f-allow3-name" list="dl-allowance" placeholder="名称（選択/入力）" style="flex:1.3;"><input class="fi" id="f-allow3" type="number" placeholder="金額" style="flex:1;"><select class="fsl" id="f-allow3-period" style="flex:0.7;"><option value="month">月額</option><option value="year">年額</option></select></div><input class="fi" id="f-allow3-note" placeholder="メモ（任意）" style="margin-top:3px;width:100%;box-sizing:border-box;font-size:10px;"></div>
+        <div style="margin-bottom:6px;"><div style="font-size:10px;color:var(--t2);margin-bottom:2px;">手当④</div><div style="display:flex;gap:5px;"><input class="fi" id="f-allow4-name" list="dl-allowance" placeholder="名称（選択/入力）" style="flex:1.3;"><input class="fi" id="f-allow4" type="number" placeholder="金額" style="flex:1;"><select class="fsl" id="f-allow4-period" style="flex:0.7;"><option value="month">月額</option><option value="year">年額</option></select></div><input class="fi" id="f-allow4-note" placeholder="メモ（任意）" style="margin-top:3px;width:100%;box-sizing:border-box;font-size:10px;"></div>
+        <div style="margin-bottom:0;"><div style="font-size:10px;color:var(--t2);margin-bottom:2px;">手当⑤</div><div style="display:flex;gap:5px;"><input class="fi" id="f-allow5-name" list="dl-allowance" placeholder="名称（選択/入力）" style="flex:1.3;"><input class="fi" id="f-allow5" type="number" placeholder="金額" style="flex:1;"><select class="fsl" id="f-allow5-period" style="flex:0.7;"><option value="month">月額</option><option value="year">年額</option></select></div><input class="fi" id="f-allow5-note" placeholder="メモ（任意）" style="margin-top:3px;width:100%;box-sizing:border-box;font-size:10px;"></div>
       </div>
       <div style="margin:10px 0;padding:11px;background:#FCE4EC;border-radius:8px;border:1px solid #F48FB1;">
         <div style="font-size:11px;font-weight:700;color:#880E4F;margin-bottom:8px;">🎁 通常賞与</div>
@@ -2956,11 +2963,15 @@ function loadMasterFields(s){
     'f-checkup':s.checkupDate||'',
     'f-annual-wage':fmtComma(s.annualWage),
     'f-monthly-wage':fmtComma(s.monthlyWage),
-    'f-allow1-name':s.allowance1Name||'','f-allow1':s.allowance1||'','f-allow1-period':s.allowance1Period||'month',
-    'f-allow2-name':s.allowance2Name||'','f-allow2':s.allowance2||'','f-allow2-period':s.allowance2Period||'month',
-    'f-allow3-name':s.allowance3Name||'','f-allow3':s.allowance3||'','f-allow3-period':s.allowance3Period||'month',
-    'f-allow4-name':s.allowance4Name||'','f-allow4':s.allowance4||'','f-allow4-period':s.allowance4Period||'month',
-    'f-allow5-name':s.allowance5Name||'','f-allow5':s.allowance5||'','f-allow5-period':s.allowance5Period||'month',
+    'f-allow1-name':s.allowance1Name||'','f-allow1':s.allowance1||'','f-allow1-period':s.allowance1Period||'month','f-allow1-note':s.allowance1Note||'',
+    'f-allow2-name':s.allowance2Name||'','f-allow2':s.allowance2||'','f-allow2-period':s.allowance2Period||'month','f-allow2-note':s.allowance2Note||'',
+    'f-allow3-name':s.allowance3Name||'','f-allow3':s.allowance3||'','f-allow3-period':s.allowance3Period||'month','f-allow3-note':s.allowance3Note||'',
+    'f-allow4-name':s.allowance4Name||'','f-allow4':s.allowance4||'','f-allow4-period':s.allowance4Period||'month','f-allow4-note':s.allowance4Note||'',
+    'f-allow5-name':s.allowance5Name||'','f-allow5':s.allowance5||'','f-allow5-period':s.allowance5Period||'month','f-allow5-note':s.allowance5Note||'',
+    // ▼ 契約書用 新規
+    'f-holiday':s.holiday||'',
+    'f-vacation':s.vacation||'夏季休暇、年末年始休暇',
+    'f-fixed-ot':s.fixedOtHours||'',
   };
   Object.entries(fields).forEach(([id,v])=>{
     const el=document.getElementById(id);
@@ -3050,11 +3061,14 @@ function collectMasterFields(){
     monthlyWage:parseNum(g('f-monthly-wage')),
     hourlyPatterns:(typeof collectHourlyPatterns==='function')?collectHourlyPatterns():[],
     hourlyPattern:(typeof collectHourlyPatterns==='function')?hourlyPatternsSummary(collectHourlyPatterns()):'',
-    allowance1Name:g('f-allow1-name'),allowance1:g('f-allow1'),allowance1Period:g('f-allow1-period'),
-    allowance2Name:g('f-allow2-name'),allowance2:g('f-allow2'),allowance2Period:g('f-allow2-period'),
-    allowance3Name:g('f-allow3-name'),allowance3:g('f-allow3'),allowance3Period:g('f-allow3-period'),
-    allowance4Name:g('f-allow4-name'),allowance4:g('f-allow4'),allowance4Period:g('f-allow4-period'),
-    allowance5Name:g('f-allow5-name'),allowance5:g('f-allow5'),allowance5Period:g('f-allow5-period'),
+    allowance1Name:g('f-allow1-name'),allowance1:g('f-allow1'),allowance1Period:g('f-allow1-period'),allowance1Note:g('f-allow1-note'),
+    allowance2Name:g('f-allow2-name'),allowance2:g('f-allow2'),allowance2Period:g('f-allow2-period'),allowance2Note:g('f-allow2-note'),
+    allowance3Name:g('f-allow3-name'),allowance3:g('f-allow3'),allowance3Period:g('f-allow3-period'),allowance3Note:g('f-allow3-note'),
+    allowance4Name:g('f-allow4-name'),allowance4:g('f-allow4'),allowance4Period:g('f-allow4-period'),allowance4Note:g('f-allow4-note'),
+    allowance5Name:g('f-allow5-name'),allowance5:g('f-allow5'),allowance5Period:g('f-allow5-period'),allowance5Note:g('f-allow5-note'),
+    holiday:g('f-holiday'),
+    vacation:g('f-vacation'),
+    fixedOtHours:g('f-fixed-ot'),
     dependents:(typeof collectDependents==='function')?collectDependents():[],
     licDetails:(typeof collectLicDetails==='function')?collectLicDetails():{},
   };
@@ -3333,7 +3347,7 @@ function exportContract(){
   const cb=on=>on?'☑':'□';
   // 会社情報
   const corp = CO==='fulllife'
-    ? {name:'株式会社フルラフ', repTitle:'代表取締役', repName:'', addr:'', shortName:'フルラフ'}
+    ? {name:'株式会社フルラフ', repTitle:'代表取締役', repName:'三上 純', addr:'大阪府寝屋川市成田西町1-29', shortName:'会社'}
     : {name:'医療法人香庸会', repTitle:'理事長', repName:'川口 琢也', addr:'大阪府枚方市香里園町9-25-202', shortName:'クリニック'};
   // 勤務タイプ
   const wtype=g('ft');
@@ -3348,18 +3362,23 @@ function exportContract(){
   [1,2,3,4,5].forEach(n=>{const t=dayLine('第'+n+'土曜',rr('sh-sat'+n));if(t)shiftLines.push(t);});
   {const t=dayLine('日・祝',rr('sh-sun'));if(t)shiftLines.push(t);}
   const shiftHtml=shiftLines.length?shiftLines.join('<br>'):'（別途定める）';
-  // 休日（シフトの無い曜日＝休日）
-  const offJ={mon:'月',tue:'火',wed:'水',thu:'木',fri:'金',sun:'日'};
-  const off=[];
-  ['mon','tue','wed','thu','fri'].forEach(d=>{if(rr('sh-'+d).length===0)off.push(offJ[d]);});
-  if([1,2,3,4,5].every(n=>rr('sh-sat'+n).length===0))off.push('土');
-  if(rr('sh-sun').length===0)off.push('日');
-  const holiday=(off.length?off.join('、')+'、':'')+'祝日';
+  // 休日：入力があればそれを使用。無ければシフトの無い曜日から自動算出。
+  let holiday=m.holiday;
+  if(!holiday){
+    const offJ={mon:'月',tue:'火',wed:'水',thu:'木',fri:'金'};
+    const off=[];
+    ['mon','tue','wed','thu','fri'].forEach(d=>{if(rr('sh-'+d).length===0)off.push(offJ[d]);});
+    if([1,2,3,4,5].every(n=>rr('sh-sat'+n).length===0))off.push('土');
+    if(rr('sh-sun').length===0)off.push('日');
+    holiday=(off.length?off.join('、')+'、':'')+'祝日';
+  }
+  holiday=esc(holiday);
+  const vacation=esc(m.vacation||'夏季休暇、年末年始休暇');
 
-  // 諸手当
+  // 諸手当（メモがあれば併記）
   const allowLines=[1,2,3,4,5].map(i=>{
-    const nm=m['allowance'+i+'Name'],amt=m['allowance'+i];
-    return (nm||amt)?('諸手当（'+esc(nm||('手当'+i))+' ／ '+(yen(amt)||'')+'）'):'';
+    const nm=m['allowance'+i+'Name'],amt=m['allowance'+i],note=m['allowance'+i+'Note'];
+    return (nm||amt)?('諸手当（'+esc(nm||('手当'+i))+' ／ '+(yen(amt)||'')+'）'+(note?('　'+esc(note)):'')):'';
   }).filter(Boolean).join('<br>');
 
   // 各種表示変換
@@ -3400,12 +3419,13 @@ function exportContract(){
     +'<br>　ロ 休日 a 法定（35％） b 法定外（25％）'
     +'<br>　ハ 深夜（25％）'
     +'<br>3 賃金締切日（'+(esc(m.cutoffDay)||'毎月15日')+'）　賃金支払日（'+(esc(m.payDay)||'毎月末日')+'）'
-    +'<br>4 昇給（'+(raiseText||'　')+'）'
+    +'<br>4 昇給（'+(raiseText||'　')+'）'+((m.raise==='yes'||m.raise==='discretion')?'→（原則として毎年度、業績により昇給の有無及び昇給額を決定し、年度ごとに更新する）':'')
     +'<br>5 賞与（'+(yn(m.bonusRegular)||'　')+'）'+(m.bonusTiming?('→（'+esc(m.bonusTiming)+'）'):'')
     +'<br>6 退職金（'+(yn(m.severance)||'無')+'）'+(m.severanceRule?('　'+esc(m.severanceRule)):'');
 
-  // 退職に関する事項
-  const retireHtml='1 定年：'+(esc(m.retireAge)||'60')+'歳（再雇用：65歳・70歳まで就業確保の努力義務）'
+  // 退職に関する事項（再雇用は高年齢者雇用安定法に則った表示）
+  const retireHtml='1 定年：'+(esc(m.retireAge)||'60')+'歳'
+    +'<br>　（高年齢者雇用安定法に基づき、希望者は65歳まで継続雇用する。あわせて70歳までの就業確保措置を講じるよう努める）'
     +'<br>2 自己都合退職の手続き：'+(m.retireFlow?esc(m.retireFlow):'退職する3カ月以上前に申し出ること')
     +'<br>3 解雇の手続き：'+dismissalText
     +(m.retireReason?('<br>退職事由：'+esc(m.retireReason)):'');
@@ -3432,7 +3452,7 @@ function exportContract(){
     +TR('仕事の内容','（雇い入れ直後）'+(esc(m.duty)||'')+'　（変更の範囲）法人内での全ての業務')
     +TR('勤務時間等','1 '+(m.irregular==='1month'?'週40時間以内の1カ月単位の変形労働時間制とする':(m.irregular==='1year'?'1年単位の変形労働時間制とする':'下記の通りとする'))+'<br>'+shiftHtml+'<br>2 所定時間外労働の有無（ '+(yn(m.overtime)||'　')+' ）')
     +TR('休日',holiday)
-    +TR('休暇','夏季休暇、年末年始休暇')
+    +TR('休暇',vacation)
     +TR('賃金',wageHtml)
     +TR('退職に関する事項',retireHtml)
     +TR('その他',otherHtml)
@@ -3449,17 +3469,21 @@ function exportContract(){
     const monthly=m.monthlyWage?parseNum(m.monthlyWage):(annual?String(Math.round(annual/14.5)):'');
     const fmt=v=>{const d=parseNum(v);return d?Number(d).toLocaleString('en-US'):'';};
     const otAllow=(function(){for(let i=1;i<=5;i++){const nm=m['allowance'+i+'Name']||'';if(/残業|時間外/.test(nm))return parseNum(m['allowance'+i]);}return '';})();
+    const otHours=parseNum(m.fixedOtHours)||'20';
+    // 年俸対象期間：4月1日から翌年3月31日まで（会計年度）
+    const fy=(function(){const ys=(m.empStart||'').split('-')[0];if(ys)return Number(ys);const ye=(m.empEnd||'').split('-')[0];if(ye)return Number(ye)-1;return null;})();
+    const annPeriod=fy?(fy+'年4月1日から'+(fy+1)+'年3月31日まで'):'____年4月1日から____年3月31日まで';
     page2='<div class="pagebreak"></div>'
       +'<h1>年俸制契約書</h1>'
       +'<p>'+esc(name)+'（以下甲という）と'+corp.name+'（以下乙という）は、下記の通り年俸契約を締結する。</p>'
-      +'<p>１．乙における年俸の対象となる勤務期間は、'+(fmtDate(m.empStart)||'____')+'から'+(fmtDate(m.empEnd)||'____')+'までとする。</p>'
+      +'<p>１．乙における年俸の対象となる勤務期間は、'+annPeriod+'とする。</p>'
       +'<p>２．第1項の期間の勤務に対応する賃金は年額 '+(fmt(annual)||'________')+' 円とし、以下の通り支払う。<br>'
       +'　月額給与：年額の14.5分の1相当額（月額 '+(fmt(monthly)||'______')+' 円）を、各月末日に支払う。なお、各月の支払額は、前月16日から当月15日までの勤務に対するものとする。<br>'
       +'　賞与：年額の14.5分の1.25相当額を、7月および12月の支給日にそれぞれ支払う（賞与は査定により0.48〜1.32倍に変動する）。<br>'
       +'　ただし、入社前にかかる給与及び賞与は年俸額から除く。</p>'
       +'<p>３．第2項に定める月額給与の内訳は次の通りとする。<br>'
       +'　１．所定労働に対応する金額（月額）　'+(fmt(m.baseWage)||'______')+' 円<br>'
-      +'　２．1カ月の時間外労働時間　20h／時間外労働に対応する金額（月額）　'+(fmt(otAllow)||'______')+' 円<br>'
+      +'　２．1カ月の時間外労働時間　'+otHours+'h／時間外労働に対応する金額（月額）　'+(fmt(otAllow)||'______')+' 円<br>'
       +'　３．前号の時間外労働時間数よりも実際の時間外労働時間数が多いときは、その超えた分について別途清算する。</p>'
       +'<p>４．欠勤、遅刻、早退等の不就労部分の賃金については、月額より控除する。</p>'
       +'<p>５．第1項の定める期間中に中途で退職する場合は、退職日以降の賃金は支給しない。</p>'
