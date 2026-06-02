@@ -197,7 +197,7 @@ console.log('Firebase initialized (compat)');
 <div id="ms">
   <div class="hd">
     <div><div class="hco" id="hco-label">勤怠タッチ Pro</div><div class="ht" id="hco-name">-</div></div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">build-20260602h</div></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">build-20260602i</div></div>
   </div>
   <div class="bnav">
     <button class="nb" id="bn-punch" onclick="showPg('punch')"><span class="ni">📷</span>打刻</button>
@@ -3322,32 +3322,170 @@ function docClausesHtml(esc){
     +list.map(c=>'<tr><th>'+esc(c.title||'')+'</th><td>'+esc(c.body||'')+'</td></tr>').join('')
     +'</table>';
 }
-// 契約書出力（65歳継続雇用・70歳努力義務を自動追記）
+// 契約書出力（雛形「雇用契約書」＋年俸型は「年俸制契約書」を出力）
 function exportContract(){
   const g=id=>{const el=document.getElementById(id);return el?el.value:'';};
   const m=(typeof collectMasterFields==='function')?collectMasterFields():{};
-  const name=g('fn'), eid=g('feid');
-  const empTypeSel=document.getElementById('f-emp-type');
-  const empType=empTypeSel?(empTypeSel.options[empTypeSel.selectedIndex]||{}).text||'':'';
+  const name=g('fn');
   const esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const period=m.empPeriod==='fixed'?('有期（'+(m.empStart||'')+' 〜 '+(m.empEnd||'')+'）'):'無期';
-  const allowRows=[1,2,3,4,5].map(i=>{
-    const nm=m['allowance'+i+'Name'],amt=m['allowance'+i],per=m['allowance'+i+'Period']==='year'?'年額':'月額';
-    return (nm||amt)?('<tr><td>'+esc(nm||('手当'+i))+'</td><td>'+esc(amt)+' 円（'+per+'）</td></tr>'):'';
-  }).join('');
-  const row=(k,v)=>'<tr><th>'+k+'</th><td>'+esc(v)+'</td></tr>';
+  const yen=v=>{const d=parseNum(v);return d?Number(d).toLocaleString('en-US')+'円':'';};
+  const fmtDate=iso=>{if(!iso)return'';const p=String(iso).split('-');return p.length===3?(p[0]+'年'+Number(p[1])+'月'+Number(p[2])+'日'):iso;};
+  const cb=on=>on?'☑':'□';
+  // 会社情報
+  const corp = CO==='fulllife'
+    ? {name:'株式会社フルラフ', repTitle:'代表取締役', repName:'', addr:'', shortName:'フルラフ'}
+    : {name:'医療法人香庸会', repTitle:'理事長', repName:'川口 琢也', addr:'大阪府枚方市香里園町9-25-202', shortName:'クリニック'};
+  // 勤務タイプ
+  const wtype=g('ft');
+  const isAnnual = (wtype==='annual') || !!parseNum(m.annualWage);
+
+  // 曜日別シフト（フォームから取得）
+  const dayJ={mon:'月',tue:'火',wed:'水',thu:'木',fri:'金',sun:'日・祝'};
+  const rr=cid=>{try{return (typeof readRows==='function')?readRows(cid):[];}catch(e){return [];}};
+  const dayLine=(label,rows)=>rows.length?(label+'　'+rows.map(r=>'始業 '+esc(r.s)+'　終業 '+esc(r.e)).join('　')):'';
+  const shiftLines=[];
+  ['mon','tue','wed','thu','fri'].forEach(d=>{const t=dayLine(dayJ[d],rr('sh-'+d));if(t)shiftLines.push(t);});
+  [1,2,3,4,5].forEach(n=>{const t=dayLine('第'+n+'土曜',rr('sh-sat'+n));if(t)shiftLines.push(t);});
+  {const t=dayLine('日・祝',rr('sh-sun'));if(t)shiftLines.push(t);}
+  const shiftHtml=shiftLines.length?shiftLines.join('<br>'):'（別途定める）';
+  // 休日（シフトの無い曜日＝休日）
+  const offJ={mon:'月',tue:'火',wed:'水',thu:'木',fri:'金',sun:'日'};
+  const off=[];
+  ['mon','tue','wed','thu','fri'].forEach(d=>{if(rr('sh-'+d).length===0)off.push(offJ[d]);});
+  if([1,2,3,4,5].every(n=>rr('sh-sat'+n).length===0))off.push('土');
+  if(rr('sh-sun').length===0)off.push('日');
+  const holiday=(off.length?off.join('、')+'、':'')+'祝日';
+
+  // 諸手当
+  const allowLines=[1,2,3,4,5].map(i=>{
+    const nm=m['allowance'+i+'Name'],amt=m['allowance'+i];
+    return (nm||amt)?('諸手当（'+esc(nm||('手当'+i))+' ／ '+(yen(amt)||'')+'）'):'';
+  }).filter(Boolean).join('<br>');
+
+  // 各種表示変換
+  const yn=v=>v==='yes'?'有':(v==='no'?'無':'');
+  const raiseText=m.raise==='yes'?'有':(m.raise==='discretion'?'有（業績による）':(m.raise==='no'?'無':''));
+  const insArr=[];
+  if(m.insWork==='yes')insArr.push('労災保険');
+  if(m.insEmp==='yes')insArr.push('雇用保険');
+  if(m.insHealth==='yes')insArr.push('健康保険');
+  if(m.insPension==='yes')insArr.push('厚生年金');
+  const insText=insArr.length?insArr.join('・'):'労災保険・雇用保険・健康保険・厚生年金';
+
+  // 雇用期間
+  const indef=m.empPeriod!=='fixed';
+  const periodHtml='1 '+cb(indef)+' 期間の定めなし<br>'
+    +'2 '+cb(!indef)+' '+(fmtDate(m.empStart)||'____年__月__日')+'から'+(fmtDate(m.empEnd)||'____年__月__日')+'まで';
+  // 更新の有無
+  const rnw=m.renewal||'';
+  const isAuto=/自動/.test(rnw), isNo=/しない|無/.test(rnw), isMay=!isAuto&&!isNo;
+  const renewHtml='更新の有無（ '+cb(isAuto)+'自動更新・'+cb(isMay)+'更新することがある・'+cb(isNo)+'更新しない ）<br>'
+    +'<span style="font-size:11px;">契約更新については、契約終了日1カ月前までに両者のどちらかが申し出る。下記の更新不許可事由に該当せず、かつ更新後の雇用条件について双方の意思が合致した場合に更新する。<br>'
+    +'・業務量の減少、経営の悪化等、事業の運営上やむを得ない事情のあるとき<br>'
+    +'・健康上の理由により業務に耐えられないと認められたとき<br>'
+    +'・勤務成績および勤務態度が不良であると認められたとき<br>'
+    +'・その他、前各号に準ずるやむを得ない事由があるとき</span>'
+    +(rnw?('<br><span style="font-size:11px;">'+esc(rnw)+'</span>'):'');
+
+  // 解雇事由
+  const dismissalText=m.dismissal?esc(m.dismissal).replace(/\n/g,'<br>')
+    :'次に該当する場合解雇する<br>・勤務成績が不良で改善の見込みがないと認めたとき<br>・身体、精神の障害により、業務に耐えられないと認めたとき<br>・服務規律を乱し、または業務上の指示命令に従わないとき<br>・経営上の理由によりやむを得ないとき<br>・業務上の傷病以外の理由で欠勤が10日に及んだとき<br>・その他雇用の継続が不可能となる事由があるとき';
+
+  // 賃金セクション
+  const wageHtml='1 基本給（基本給 ／ '+(yen(m.baseWage)||'____円')+'）'
+    +(allowLines?('<br>'+allowLines):'')
+    +'<br>諸手当（通勤手当 ／ 実費）'
+    +'<br>2 所定外労働等に対する割増率'
+    +'<br>　イ 所定外 a 法定内（0％） b 60時間以下 法定超（25％） c 60時間超 法定超（50％）'
+    +'<br>　ロ 休日 a 法定（35％） b 法定外（25％）'
+    +'<br>　ハ 深夜（25％）'
+    +'<br>3 賃金締切日（'+(esc(m.cutoffDay)||'毎月15日')+'）　賃金支払日（'+(esc(m.payDay)||'毎月末日')+'）'
+    +'<br>4 昇給（'+(raiseText||'　')+'）'
+    +'<br>5 賞与（'+(yn(m.bonusRegular)||'　')+'）'+(m.bonusTiming?('→（'+esc(m.bonusTiming)+'）'):'')
+    +'<br>6 退職金（'+(yn(m.severance)||'無')+'）'+(m.severanceRule?('　'+esc(m.severanceRule)):'');
+
+  // 退職に関する事項
+  const retireHtml='1 定年：'+(esc(m.retireAge)||'60')+'歳（再雇用：65歳・70歳まで就業確保の努力義務）'
+    +'<br>2 自己都合退職の手続き：'+(m.retireFlow?esc(m.retireFlow):'退職する3カ月以上前に申し出ること')
+    +'<br>3 解雇の手続き：'+dismissalText
+    +(m.retireReason?('<br>退職事由：'+esc(m.retireReason)):'');
+
+  // その他
+  const otherHtml=(m.probation==='exists'?('1 使用期間 '+(esc(m.probationMonths)||'3')+'カ月<br>'):'')
+    +'2 保険の加入状況（'+insText+'）'
+    +'<br>3 この契約書に定めのない事項については、話し合いの上決定する';
+
+  // 共通記載事項
+  const clauses=(DB.contractClauses||[]).filter(c=>c.enabled!==false);
+  const clausesHtml=clauses.length?('<tr><th>契約書共通<br>記載事項</th><td>'+clauses.map(c=>'・'+esc(c.title)+(c.body?('：'+esc(c.body)):'')).join('<br>')+'</td></tr>'):'';
+
+  const TR=(label,content)=>'<tr><th>'+label+'</th><td>'+content+'</td></tr>';
+  const signDate=fmtDate(m.empStart)||'____年__月__日';
+
+  // ===== 1ページ目: 雇用契約書 =====
+  let page1='<h1>雇用契約書</h1>'
+    +'<div class="head">'+esc(name)+'　殿</div>'
+    +'<div class="head2">'+corp.name+'との雇用条件を次の通り通知します</div>'
+    +'<table>'
+    +TR('雇用期間',periodHtml+'<br>'+renewHtml)
+    +TR('勤務場所','（雇い入れ直後）'+(esc(m.workplace)||'')+'　（変更の範囲）法人の定める場所')
+    +TR('仕事の内容','（雇い入れ直後）'+(esc(m.duty)||'')+'　（変更の範囲）法人内での全ての業務')
+    +TR('勤務時間等','1 '+(m.irregular==='1month'?'週40時間以内の1カ月単位の変形労働時間制とする':(m.irregular==='1year'?'1年単位の変形労働時間制とする':'下記の通りとする'))+'<br>'+shiftHtml+'<br>2 所定時間外労働の有無（ '+(yn(m.overtime)||'　')+' ）')
+    +TR('休日',holiday)
+    +TR('休暇','夏季休暇、年末年始休暇')
+    +TR('賃金',wageHtml)
+    +TR('退職に関する事項',retireHtml)
+    +TR('その他',otherHtml)
+    +clausesHtml
+    +'</table>'
+    +'<div class="date">'+signDate+'</div>'
+    +'<div class="sign">（'+corp.shortName+'）'+corp.name+'<br>　　'+corp.repTitle+'　'+esc(corp.repName)+'　　㊞</div>'
+    +'<div class="sign">（本　人）住所　'+(esc(m.address)||'')+'<br>　　氏名　'+esc(name)+'　　㊞</div>';
+
+  // ===== 2ページ目: 年俸制契約書（年俸型のみ）=====
+  let page2='';
+  if(isAnnual){
+    const annual=parseNum(m.annualWage);
+    const monthly=m.monthlyWage?parseNum(m.monthlyWage):(annual?String(Math.round(annual/14.5)):'');
+    const fmt=v=>{const d=parseNum(v);return d?Number(d).toLocaleString('en-US'):'';};
+    const otAllow=(function(){for(let i=1;i<=5;i++){const nm=m['allowance'+i+'Name']||'';if(/残業|時間外/.test(nm))return parseNum(m['allowance'+i]);}return '';})();
+    page2='<div class="pagebreak"></div>'
+      +'<h1>年俸制契約書</h1>'
+      +'<p>'+esc(name)+'（以下甲という）と'+corp.name+'（以下乙という）は、下記の通り年俸契約を締結する。</p>'
+      +'<p>１．乙における年俸の対象となる勤務期間は、'+(fmtDate(m.empStart)||'____')+'から'+(fmtDate(m.empEnd)||'____')+'までとする。</p>'
+      +'<p>２．第1項の期間の勤務に対応する賃金は年額 '+(fmt(annual)||'________')+' 円とし、以下の通り支払う。<br>'
+      +'　月額給与：年額の14.5分の1相当額（月額 '+(fmt(monthly)||'______')+' 円）を、各月末日に支払う。なお、各月の支払額は、前月16日から当月15日までの勤務に対するものとする。<br>'
+      +'　賞与：年額の14.5分の1.25相当額を、7月および12月の支給日にそれぞれ支払う（賞与は査定により0.48〜1.32倍に変動する）。<br>'
+      +'　ただし、入社前にかかる給与及び賞与は年俸額から除く。</p>'
+      +'<p>３．第2項に定める月額給与の内訳は次の通りとする。<br>'
+      +'　１．所定労働に対応する金額（月額）　'+(fmt(m.baseWage)||'______')+' 円<br>'
+      +'　２．1カ月の時間外労働時間　20h／時間外労働に対応する金額（月額）　'+(fmt(otAllow)||'______')+' 円<br>'
+      +'　３．前号の時間外労働時間数よりも実際の時間外労働時間数が多いときは、その超えた分について別途清算する。</p>'
+      +'<p>４．欠勤、遅刻、早退等の不就労部分の賃金については、月額より控除する。</p>'
+      +'<p>５．第1項の定める期間中に中途で退職する場合は、退職日以降の賃金は支給しない。</p>'
+      +'<p>６．通勤に要する実費については、6カ月定期券代を支払う。</p>'
+      +'<p>７．その他この契約書に記載の無い事項については、法令又は甲乙話し合いによる。</p>'
+      +'<p>本契約の証として本書を二通作成し、甲、乙捺印の上、甲、乙各々1通保持する。</p>'
+      +'<div class="date">'+signDate+'</div>'
+      +'<div class="sign">（甲）住所　'+(esc(m.address)||'')+'<br>　　氏名　'+esc(name)+'　　印</div>'
+      +'<div class="sign">（乙）'+(corp.addr?esc(corp.addr)+'<br>　　':'')+corp.name+'<br>　　'+corp.repTitle+'　'+esc(corp.repName)+'</div>';
+  }
+
   const html='<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>雇用契約書 '+esc(name)+'</title>'
-    +'<style>body{font-family:sans-serif;padding:30px;color:#222;font-size:13px;line-height:1.7;}h1{font-size:20px;text-align:center;margin-bottom:24px;}h2{font-size:14px;border-left:4px solid #1B5E20;padding-left:8px;margin:20px 0 8px;}table{border-collapse:collapse;width:100%;margin-bottom:10px;}th,td{border:1px solid #bbb;padding:6px 9px;text-align:left;vertical-align:top;}th{background:#f3f3f3;width:32%;white-space:nowrap;}.note{margin-top:24px;padding:12px;background:#E8F5E9;border:1px solid #A5D6A7;border-radius:6px;font-weight:600;}@media print{button{display:none;}}</style></head><body>'
-    +'<h1>雇用契約書</h1>'
-    +'<h2>基本情報</h2><table>'+row('氏名',name)+row('社員番号',eid)+row('住所',m.address)+row('生年月日',m.birthDate)+'</table>'
-    +'<h2>雇用契約条件</h2><table>'+row('雇用形態',empType)+row('雇用期間',period)+row('試用期間',m.probation==='exists'?((m.probationMonths||'')+'ヶ月'):'なし')+row('就業場所',m.workplace)+row('業務内容',m.duty)+row('更新条件',m.renewal)+'</table>'
-    +'<h2>賃金</h2><table>'+row('年俸額',fmtComma(m.annualWage)?fmtComma(m.annualWage)+' 円':'')+row('月給',fmtComma(m.monthlyWage)?fmtComma(m.monthlyWage)+' 円':'')+row('時給パターン',m.hourlyPattern)+row('基本給',m.baseWage)+'</table>'
-    +(allowRows?('<h2>手当</h2><table><tr><th>名称</th><td>金額</td></tr>'+allowRows+'</table>'):'')
-    +'<h2>賞与</h2><table>'+row('通常賞与 支給時期',m.bonusTiming)+row('臨時賞与 条件',m.bonusExtraCond||'業績による')+'</table>'
-    +'<h2>退職に関する事項</h2><table>'+row('定年',((m.retireAge||'60'))+'歳')+row('退職事由',m.retireReason)+row('退職金規定',m.severanceRule)+'</table>'
-    +'<h2>その他</h2><table>'+row('秘密保持',m.confidentiality==='yes'?'あり':(m.confidentiality==='no'?'なし':''))+row('競業避止',(m.nonCompete==='yes'?'あり':(m.nonCompete==='no'?'なし':''))+(m.nonCompetePeriod?('（'+m.nonCompetePeriod+'）'):''))+'</table>'
-    +docClausesHtml(esc)
-    +'<div class="note">※ 定年後は65歳まで継続雇用、70歳まで就業確保の努力義務とする。</div>'
+    +'<style>body{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;padding:24px 28px;color:#111;font-size:12px;line-height:1.6;}'
+    +'h1{font-size:18px;text-align:center;margin:0 0 14px;}'
+    +'.head{font-size:13px;border-bottom:1px solid #333;display:inline-block;padding:0 6px 1px;margin-bottom:4px;}'
+    +'.head2{font-size:12px;margin-bottom:8px;}'
+    +'table{border-collapse:collapse;width:100%;margin-bottom:12px;}'
+    +'th,td{border:1px solid #555;padding:5px 8px;text-align:left;vertical-align:top;font-weight:normal;}'
+    +'th{background:#f2f2f2;width:18%;white-space:nowrap;text-align:center;}'
+    +'p{margin:0 0 10px;}'
+    +'.date{margin:16px 0 6px;}'
+    +'.sign{margin:6px 0;line-height:1.9;}'
+    +'.pagebreak{page-break-before:always;}'
+    +'@media print{button{display:none;}body{padding:10px;}}'
+    +'</style></head><body>'
+    +page1+page2
     +'<div style="text-align:center;margin-top:24px;"><button onclick="window.print()" style="padding:9px 18px;border:none;border-radius:6px;background:#1B5E20;color:#fff;font-weight:700;cursor:pointer;">印刷 / PDF保存</button></div>'
     +'</body></html>';
   const w=window.open('','_blank');
