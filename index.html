@@ -197,7 +197,7 @@ console.log('Firebase initialized (compat)');
 <div id="ms">
   <div class="hd">
     <div><div class="hco" id="hco-label">勤怠タッチ Pro</div><div class="ht" id="hco-name">-</div></div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">build-20260602e</div></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">build-20260602f</div></div>
   </div>
   <div class="bnav">
     <button class="nb" id="bn-punch" onclick="showPg('punch')"><span class="ni">📷</span>打刻</button>
@@ -843,7 +843,7 @@ console.log('Firebase initialized (compat)');
   <div class="mt" id="stm-t">スタッフを追加</div>
   <!-- 常時表示ヘッダー: 氏名・フリガナ・社員番号 -->
   <div class="frw"><label class="fl">氏名</label><input class="fi" id="fn" placeholder="例: 山田 太郎（姓と名の間に1マス空けてください）"></div>
-  <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-furigana-basic" type="text" oninput="kanaOnly(this,event)" oncompositionstart="kanaCompStart(this)" oncompositionend="kanaCompEnd(this)" placeholder="例: ヤマダ タロウ（姓と名の間に1マス空けてください）"></div>
+  <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-furigana-basic" type="text" oninput="kanaOnly(this,event)" oncompositionend="kanaCompEnd(this)" onblur="kanaCompEnd(this)" placeholder="例: ヤマダ タロウ（姓と名の間に1マス空けてください）"></div>
   <div class="frw"><label class="fl">社員番号</label><input class="fi" id="feid" type="number" placeholder="例: 2"></div>
   <input type="hidden" id="fstd" value="480">
   <!-- マスタ管理タブナビ（8タブ・後半4つは上級以上のみ🔒） -->
@@ -871,7 +871,7 @@ console.log('Firebase initialized (compat)');
     <div style="margin:10px 0;padding:11px;background:#FFF3E0;border-radius:8px;border:1px solid #FFCC80;">
       <div style="font-size:11px;font-weight:700;color:#E65100;margin-bottom:8px;">👤 保証人（緊急連絡先）</div>
       <div class="frw"><label class="fl">氏名</label><input class="fi" id="f-emerg-name" type="text" placeholder="例: 山田 花子（姓と名の間に1マス）"></div>
-      <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-emerg-furigana" type="text" oninput="kanaOnly(this,event)" oncompositionstart="kanaCompStart(this)" oncompositionend="kanaCompEnd(this)" placeholder="例: ヤマダ ハナコ"></div>
+      <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-emerg-furigana" type="text" oninput="kanaOnly(this,event)" oncompositionend="kanaCompEnd(this)" onblur="kanaCompEnd(this)" placeholder="例: ヤマダ ハナコ"></div>
       <div class="frw"><label class="fl">続柄</label><input class="fi" id="f-emerg-rel" type="text" placeholder="配偶者など"></div>
       <div class="frw"><label class="fl">電話</label><input class="fi" id="f-emerg-phone" type="tel"></div>
     </div>
@@ -1111,8 +1111,8 @@ console.log('Firebase initialized (compat)');
       <datalist id="dl-allowance"></datalist>
       <div style="margin:10px 0;padding:11px;background:#FFF3E0;border-radius:8px;border:1px solid #FFB74D;">
         <div style="font-size:11px;font-weight:700;color:#E65100;margin-bottom:8px;">💰 賃金</div>
-        <div class="frw"><label class="fl">年俸額（円）</label><input class="fi" id="f-annual-wage" type="text" inputmode="numeric" oninput="numComma(this,event)" oncompositionstart="kanaCompStart(this)" oncompositionend="numCompEnd(this)" placeholder="例: 4,800,000"></div>
-        <div class="frw"><label class="fl">月給（円）</label><input class="fi" id="f-monthly-wage" type="text" inputmode="numeric" oninput="numComma(this,event)" oncompositionstart="kanaCompStart(this)" oncompositionend="numCompEnd(this)" placeholder="例: 250,000"></div>
+        <div class="frw"><label class="fl">年俸額（円）</label><input class="fi" id="f-annual-wage" type="text" inputmode="numeric" oninput="numComma(this,event)" oncompositionend="numCompEnd(this)" onblur="numCompEnd(this)" placeholder="例: 4,800,000"></div>
+        <div class="frw"><label class="fl">月給（円）</label><input class="fi" id="f-monthly-wage" type="text" inputmode="numeric" oninput="numComma(this,event)" oncompositionend="numCompEnd(this)" onblur="numCompEnd(this)" placeholder="例: 250,000"></div>
         <div style="margin-top:8px;">
           <div style="font-size:10px;color:var(--t2);margin-bottom:4px;">時給パターン（最大5件・金額／曜日／時間帯。給与計算CSVに連動）</div>
           <div id="f-hourly-patterns"></div>
@@ -1161,7 +1161,7 @@ console.log('Firebase initialized (compat)');
           <select class="fsl" id="f-bank-type"><option value="">未設定</option><option value="普通">普通</option><option value="当座">当座</option></select>
         </div>
         <div class="frw"><label class="fl">口座番号</label><input class="fi" id="f-bank-no" type="text"></div>
-        <div class="frw"><label class="fl">口座名義（カナ）</label><input class="fi" id="f-bank-kana" type="text" oninput="kanaOnly(this,event)" oncompositionstart="kanaCompStart(this)" oncompositionend="kanaCompEnd(this)"></div>
+        <div class="frw"><label class="fl">口座名義（カナ）</label><input class="fi" id="f-bank-kana" type="text" oninput="kanaOnly(this,event)" oncompositionstart="kanaCompStart(this)" oncompositionend="kanaCompEnd(this)" onblur="kanaCompEnd(this)"></div>
       </div>
       <div style="margin:10px 0;padding:11px;background:#FFFDE7;border-radius:8px;border:1px solid #FFE082;">
         <div style="font-size:11px;font-weight:700;color:#F57F17;margin-bottom:8px;">📝 副業・特約事項</div>
@@ -3066,10 +3066,8 @@ function collectMasterFields(){
 //       変換確定後(compositionend / 非composition input)のみ整形する。
 function kanaOnly(el, ev){
   if(!el)return;
-  // IME変換中の input イベントでは何もしない
-  if(ev && ev.type==='input' && ev.isComposing) return;
-  // フラグでも二重ガード（compositionstartで立て、compositionendで処理）
-  if(el.dataset && el.dataset.composing==='1' && (!ev || ev.type!=='compositionend')) return;
+  // IME変換中(input中)は触らない（暴走防止）。確定後・blur時のみ整形。
+  if(ev && ev.isComposing) return;
   let v=el.value
     // ひらがな→カタカナ
     .replace(/[ぁ-ゖ]/g,c=>String.fromCharCode(c.charCodeAt(0)+0x60))
@@ -3079,15 +3077,14 @@ function kanaOnly(el, ev){
   v=v.replace(/[^゠-ヿㇰ-ㇿー\s]/g,'');
   if(el.value!==v)el.value=v;
 }
-// IME変換の開始/終了を記録（kanaOnlyの暴走防止）
-function kanaCompStart(el){ if(el&&el.dataset)el.dataset.composing='1'; }
-function kanaCompEnd(el){ if(el&&el.dataset)el.dataset.composing='0'; kanaOnly(el,{type:'compositionend',isComposing:false}); }
+// composition開始/終了。フラグは持たず、終了/blur時に整形する（固まり防止）。
+function kanaCompStart(el){ /* no-op: フラグ方式は固まるため廃止 */ }
+function kanaCompEnd(el){ kanaOnly(el); }
 // 数値を3桁カンマ区切り表示（入力中）
 // 数値カンマ整形。IME変換中は触らない（暴走防止）。全角数字は半角化。
 function numComma(el, ev){
   if(!el)return;
-  if(ev && ev.type==='input' && ev.isComposing) return;
-  if(el.dataset && el.dataset.composing==='1' && (!ev || ev.type!=='compositionend')) return;
+  if(ev && ev.isComposing) return; // IME変換中は触らない
   const start=el.selectionStart;
   const before=el.value;
   // 全角数字→半角数字
@@ -3099,8 +3096,8 @@ function numComma(el, ev){
   const diff=formatted.length-before.length;
   if(start!=null){try{el.setSelectionRange(start+diff,start+diff);}catch(e){}}
 }
-// IME変換確定後に数値整形（暴走防止）
-function numCompEnd(el){ if(el&&el.dataset)el.dataset.composing='0'; numComma(el,{type:'compositionend',isComposing:false}); }
+// IME変換確定後/blur時に数値整形（暴走防止）
+function numCompEnd(el){ numComma(el); }
 // カンマ付き文字列→数値文字列（保存用・全角数字も対応）
 function parseNum(v){return String(v==null?'':v).replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[^0-9]/g,'');}
 // 数値→カンマ表示（読込用）
@@ -3127,7 +3124,7 @@ function addDependentRow(d){
     +'<button onclick="this.closest(\'.dep-row\').remove()" style="flex-shrink:0;padding:5px 9px;border:1px solid #C62828;border-radius:6px;background:#fff;color:#C62828;font-size:11px;cursor:pointer;font-family:inherit;">×</button>'
     +'</div>'
     +'<div style="display:flex;gap:5px;align-items:center;">'
-    +'<input class="fi dep-furigana" type="text" oninput="kanaOnly(this,event)" oncompositionstart="kanaCompStart(this)" oncompositionend="kanaCompEnd(this)" placeholder="フリガナ" style="flex:1.2;" value="'+(d.furigana||'').replace(/"/g,'&quot;')+'">'
+    +'<input class="fi dep-furigana" type="text" oninput="kanaOnly(this,event)" oncompositionend="kanaCompEnd(this)" onblur="kanaCompEnd(this)" placeholder="フリガナ" style="flex:1.2;" value="'+(d.furigana||'').replace(/"/g,'&quot;')+'">'
     +'<input class="fi dep-birth" type="date" style="flex:1.2;" value="'+(d.birthDate||'')+'">'
     +'</div>';
   wrap.appendChild(row);
@@ -3162,7 +3159,7 @@ function renderHourlyPatterns(){
     const apOpts=HP_AMPM.map(([v,l])=>'<option value="'+v+'"'+((p.ampm||'all')===v?' selected':'')+'>'+l+'</option>').join('');
     return '<div class="hp-row" style="display:flex;gap:4px;margin-bottom:4px;align-items:center;">'
       +'<span style="font-size:10px;color:var(--t2);width:14px;flex-shrink:0;">'+(i+1)+'</span>'
-      +'<input class="fi hp-amt" type="text" inputmode="numeric" oninput="numComma(this,event)" oncompositionstart="kanaCompStart(this)" oncompositionend="numCompEnd(this)" placeholder="時給(円)" style="flex:1.1;" value="'+fmtComma(p.amount)+'">'
+      +'<input class="fi hp-amt" type="text" inputmode="numeric" oninput="numComma(this,event)" oncompositionend="numCompEnd(this)" onblur="numCompEnd(this)" placeholder="時給(円)" style="flex:1.1;" value="'+fmtComma(p.amount)+'">'
       +'<select class="fsl hp-dow" style="flex:0.9;">'+dowOpts+'</select>'
       +'<select class="fsl hp-ampm" style="flex:0.8;">'+apOpts+'</select>'
       +'<button onclick="delHourlyPattern('+i+')" style="flex-shrink:0;padding:5px 8px;border:1px solid #C62828;border-radius:6px;background:#fff;color:#C62828;font-size:11px;cursor:pointer;font-family:inherit;">×</button>'
