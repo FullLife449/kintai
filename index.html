@@ -167,6 +167,7 @@ window.fbRef = function(db, path){ return db.ref(path); };
 window.fbSet = function(ref, data){ return ref.set(data); };
 window.fbGet = function(ref){ return ref.get(); };
 window.fbOnValue = function(ref, cb){ ref.on('value', cb); };
+window.fbOff = function(ref){ try{ ref.off('value'); }catch(e){} };
 window.fbUpdate = function(ref, data){ return ref.update(data); };
 window.firebaseReady = true;
 console.log('Firebase initialized (compat)');
@@ -1423,6 +1424,9 @@ function selectCompany(co) {
 
 }
 
+// 現在アクティブな records リアルタイムリスナーの参照（会社切替時に解除する）
+let fbRecordsRefActive = null;
+
 // Firebase: データ読み込み＋リアルタイム監視
 function fbLoadAndSync(co) {
   if(!window.firebaseReady || !window.fbDB) {
@@ -1434,13 +1438,15 @@ function fbLoadAndSync(co) {
   const recordsRef = window.fbRef(window.fbDB, co + '/records');
   const settingsRef = window.fbRef(window.fbDB, co + '/settings');
 
+  // 前会社のリアルタイムリスナーを必ず解除（多重登録・データ上書き防止）
+  if(fbRecordsRefActive && typeof window.fbOff==='function'){ window.fbOff(fbRecordsRefActive); }
+
+  const arr=v=>Array.isArray(v)?v:Object.values(v);
+
   // 初回読み込み
   window.fbGet(staffRef).then(snap => {
     if(snap.exists()) {
-      const data = snap.val();
-      // オブジェクト→配列変換
-      let loadedStaff = Array.isArray(data) ? data : Object.values(data);
-      // companyが未設定の場合は補完
+      let loadedStaff = arr(snap.val());
       loadedStaff = loadedStaff.map(s=>({...s, company: s.company||(co==='fulllife'?'fulllife':'koyokai')}));
       DB.staff = loadedStaff;
       console.log('Staff loaded:', DB.staff.length);
@@ -1449,36 +1455,54 @@ function fbLoadAndSync(co) {
       lDB();
       fbSaveStaff(co);
     }
+    if(typeof updateCompanyHeader==='function')updateCompanyHeader();
     renderSG();
   }).catch(e => { console.error(e); lDB(); renderSG(); });
 
+  // 打刻データ: 無ければ空にリセット（前会社の残存防止）
   window.fbGet(recordsRef).then(snap => {
-    if(snap.exists()) {
-      const data = snap.val();
-      DB.records = Array.isArray(data) ? data : Object.values(data);
-      renderLog();
-    }
+    DB.records = snap.exists()? arr(snap.val()) : [];
+    renderSG(); renderLog();
   }).catch(e => console.error(e));
 
+  // 会社別設定: 各項目を毎回リセットしてから読込（前会社の残存防止）
   window.fbGet(settingsRef).then(snap => {
-    if(snap.exists()) {
-      const s = snap.val();
-      if(s.dayShifts) DB.dayShifts = Array.isArray(s.dayShifts) ? s.dayShifts : Object.values(s.dayShifts);
-      if(s.specials) DB.specials = Array.isArray(s.specials) ? s.specials : Object.values(s.specials);
-      if(s.paid) DB.paid = Array.isArray(s.paid) ? s.paid : Object.values(s.paid);
-      if(s.fare) DB.fare = Array.isArray(s.fare) ? s.fare : Object.values(s.fare);
-      if(s.lunch) DB.lunch = Array.isArray(s.lunch) ? s.lunch : Object.values(s.lunch);
-      if(s.lunchEnabled) DB.lunchEnabled = Array.isArray(s.lunchEnabled) ? s.lunchEnabled : Object.values(s.lunchEnabled);
-      if(s.expenses) DB.expenses = Array.isArray(s.expenses) ? s.expenses : Object.values(s.expenses);
-      if(s.paidGrants) DB.paidGrants = Array.isArray(s.paidGrants) ? s.paidGrants : Object.values(s.paidGrants);
-      if(s.contractClauses) DB.contractClauses = Array.isArray(s.contractClauses) ? s.contractClauses : Object.values(s.contractClauses);
-      if(s.adminPw) DB.adminPw = s.adminPw;
-    }
+    const s = snap.exists()? snap.val() : {};
+    DB.dayShifts   = s.dayShifts   ? arr(s.dayShifts)   : [];
+    DB.specials    = s.specials    ? arr(s.specials)    : [];
+    DB.paid        = s.paid        ? arr(s.paid)        : [];
+    DB.fare        = s.fare        ? arr(s.fare)        : [];
+    DB.lunch       = s.lunch       ? arr(s.lunch)       : [];
+    DB.lunchEnabled= s.lunchEnabled? arr(s.lunchEnabled): [];
+    DB.expenses    = s.expenses    ? arr(s.expenses)    : [];
+    DB.paidGrants  = s.paidGrants  ? arr(s.paidGrants)  : [];
+    DB.paidGrantsV2= s.paidGrantsV2? arr(s.paidGrantsV2): [];
+    DB.paidHistory = s.paidHistory ? arr(s.paidHistory) : [];
+    DB.rehab       = s.rehab       ? arr(s.rehab)       : [];
+    DB.substitute  = s.substitute  ? arr(s.substitute)  : [];
+    DB.subOff      = s.subOff      ? arr(s.subOff)      : [];
+    DB.subGrants   = s.subGrants   ? arr(s.subGrants)   : [];
+    DB.workPatterns= s.workPatterns? arr(s.workPatterns): [];
+    DB.shiftCalendar=s.shiftCalendar?arr(s.shiftCalendar):[];
+    DB.groups      = s.groups      ? arr(s.groups)      : [];
+    DB.staffGroup  = s.staffGroup  ? arr(s.staffGroup)  : [];
+    DB.otRequests  = s.otRequests  ? arr(s.otRequests)  : [];
+    DB.dayDefaults = s.dayDefaults ? arr(s.dayDefaults) : [];
+    // 職種/資格/就業場所/業務内容/契約書共通記載事項は「会社共通マスタ」のため
+    // 会社別には上書きせず、localStorage(lDB)の共有値を維持する（後方互換）
+    DB.adminPw = s.adminPw || null;
     sDB();
+    // 設定反映後に各画面を再描画
+    if(typeof renderSG==='function')renderSG();
+    if(typeof renderAL==='function')renderAL();
+    if(typeof renderDSL==='function')renderDSL();
+    if(typeof renderSPL==='function')renderSPL();
+    if(typeof updateCompanyHeader==='function')updateCompanyHeader();
     setSyncStatus('✓ ' + new Date().toLocaleTimeString('ja'), 'var(--gd)');
   }).catch(e => console.error(e));
 
-  // リアルタイム監視: 他端末の打刻を即時反映
+  // リアルタイム監視: 他端末の打刻を即時反映（今会社のrefのみ）
+  fbRecordsRefActive = recordsRef;
   window.fbOnValue(recordsRef, snap => {
     if(snap.exists()) {
       const data = snap.val();
