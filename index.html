@@ -1412,9 +1412,13 @@ function selectCompany(co) {
   setTimeout(()=>{
     const activeTab=document.querySelector('.asc.active');
     if(activeTab){
-      const sub=activeTab.id.replace('asc-','');
+      let sub=activeTab.id.replace('asc-','');
+      // 香庸会ではフルラフ専用タブを開かない（会社の内容混在を防止）
+      if(co!=='fulllife'&&typeof FL_ONLY_SUBS!=='undefined'&&FL_ONLY_SUBS.includes(sub))sub='staff';
       if(typeof showAS==='function')showAS(sub);
     }
+    // ヘッダー（上部バー・現在の会社）を最終的にCOへ再同期
+    if(typeof updateCompanyHeader==='function')updateCompanyHeader();
   },400);
 
 }
@@ -4495,11 +4499,20 @@ function revertOT(id){
 }
 
 
+// フルラフ専用の管理サブタブ
+const FL_ONLY_SUBS=['pattern','shiftcal','allshift','group','ot'];
 function applyFulllifeTabsVisibility(){
   const isFulllife=(CO==='fulllife');
   document.querySelectorAll('.fl-only').forEach(el=>{
     el.style.display=isFulllife?'':'none';
   });
+  // 香庸会ではフルラフ専用サブタブの内容が混在しないよう、開いていればマスタ管理へ戻す
+  if(!isFulllife){
+    const active=document.querySelector('.asc.active');
+    if(active&&FL_ONLY_SUBS.includes(active.id.replace('asc-',''))){
+      if(typeof showAS==='function')showAS('staff');
+    }
+  }
 }
 
 
