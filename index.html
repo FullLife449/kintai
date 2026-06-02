@@ -197,7 +197,7 @@ console.log('Firebase initialized (compat)');
 <div id="ms">
   <div class="hd">
     <div><div class="hco" id="hco-label">勤怠タッチ Pro</div><div class="ht" id="hco-name">-</div></div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">build-20260602f</div></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">build-20260602g</div></div>
   </div>
   <div class="bnav">
     <button class="nb" id="bn-punch" onclick="showPg('punch')"><span class="ni">📷</span>打刻</button>
@@ -3066,19 +3066,24 @@ function collectMasterFields(){
 //       変換確定後(compositionend / 非composition input)のみ整形する。
 function kanaOnly(el, ev){
   if(!el)return;
-  // IME変換中(input中)は触らない（暴走防止）。確定後・blur時のみ整形。
-  if(ev && ev.isComposing) return;
+  const composing = !!(ev && ev.isComposing);
+  // ひらがな→カタカナ（同数変換）。全角スペースは半角に。←変換中でも即時実行
   let v=el.value
-    // ひらがな→カタカナ
     .replace(/[ぁ-ゖ]/g,c=>String.fromCharCode(c.charCodeAt(0)+0x60))
-    // 全角スペースは半角に
     .replace(/　/g,' ');
-  // カタカナ・長音符・スペース以外を除去
-  v=v.replace(/[^゠-ヿㇰ-ㇿー\s]/g,'');
-  if(el.value!==v)el.value=v;
+  // カタカナ以外の除去は文字数が変わりIMEが崩れるため、変換確定後(非composing)のみ実行
+  if(!composing){
+    v=v.replace(/[^゠-ヿㇰ-ㇿー\s]/g,'');
+  }
+  if(el.value!==v){
+    const pos=(el.selectionStart!=null)?el.selectionStart:null;
+    const diff=v.length-el.value.length;
+    el.value=v;
+    if(pos!=null){try{el.setSelectionRange(pos+diff,pos+diff);}catch(e){}}
+  }
 }
-// composition開始/終了。フラグは持たず、終了/blur時に整形する（固まり防止）。
-function kanaCompStart(el){ /* no-op: フラグ方式は固まるため廃止 */ }
+// composition開始/終了。終了/blur時に最終整形（カタカナ以外を除去）。
+function kanaCompStart(el){ /* no-op */ }
 function kanaCompEnd(el){ kanaOnly(el); }
 // 数値を3桁カンマ区切り表示（入力中）
 // 数値カンマ整形。IME変換中は触らない（暴走防止）。全角数字は半角化。
