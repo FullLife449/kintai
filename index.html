@@ -197,7 +197,7 @@ console.log('Firebase initialized (compat)');
 <div id="ms">
   <div class="hd">
     <div><div class="hco" id="hco-label">勤怠タッチ Pro</div><div class="ht" id="hco-name">-</div></div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">build-20260602d</div></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">build-20260602e</div></div>
   </div>
   <div class="bnav">
     <button class="nb" id="bn-punch" onclick="showPg('punch')"><span class="ni">📷</span>打刻</button>
@@ -1111,8 +1111,8 @@ console.log('Firebase initialized (compat)');
       <datalist id="dl-allowance"></datalist>
       <div style="margin:10px 0;padding:11px;background:#FFF3E0;border-radius:8px;border:1px solid #FFB74D;">
         <div style="font-size:11px;font-weight:700;color:#E65100;margin-bottom:8px;">💰 賃金</div>
-        <div class="frw"><label class="fl">年俸額（円）</label><input class="fi" id="f-annual-wage" type="text" inputmode="numeric" oninput="numComma(this)" placeholder="例: 4,800,000"></div>
-        <div class="frw"><label class="fl">月給（円）</label><input class="fi" id="f-monthly-wage" type="text" inputmode="numeric" oninput="numComma(this)" placeholder="例: 250,000"></div>
+        <div class="frw"><label class="fl">年俸額（円）</label><input class="fi" id="f-annual-wage" type="text" inputmode="numeric" oninput="numComma(this,event)" oncompositionstart="kanaCompStart(this)" oncompositionend="numCompEnd(this)" placeholder="例: 4,800,000"></div>
+        <div class="frw"><label class="fl">月給（円）</label><input class="fi" id="f-monthly-wage" type="text" inputmode="numeric" oninput="numComma(this,event)" oncompositionstart="kanaCompStart(this)" oncompositionend="numCompEnd(this)" placeholder="例: 250,000"></div>
         <div style="margin-top:8px;">
           <div style="font-size:10px;color:var(--t2);margin-bottom:4px;">時給パターン（最大5件・金額／曜日／時間帯。給与計算CSVに連動）</div>
           <div id="f-hourly-patterns"></div>
@@ -3083,19 +3083,26 @@ function kanaOnly(el, ev){
 function kanaCompStart(el){ if(el&&el.dataset)el.dataset.composing='1'; }
 function kanaCompEnd(el){ if(el&&el.dataset)el.dataset.composing='0'; kanaOnly(el,{type:'compositionend',isComposing:false}); }
 // 数値を3桁カンマ区切り表示（入力中）
-function numComma(el){
+// 数値カンマ整形。IME変換中は触らない（暴走防止）。全角数字は半角化。
+function numComma(el, ev){
   if(!el)return;
+  if(ev && ev.type==='input' && ev.isComposing) return;
+  if(el.dataset && el.dataset.composing==='1' && (!ev || ev.type!=='compositionend')) return;
   const start=el.selectionStart;
   const before=el.value;
-  const digits=before.replace(/[^0-9]/g,'');
+  // 全角数字→半角数字
+  const half=before.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0));
+  const digits=half.replace(/[^0-9]/g,'');
   const formatted=digits?Number(digits).toLocaleString('en-US'):'';
   el.value=formatted;
   // カーソル位置を概ね維持
   const diff=formatted.length-before.length;
   if(start!=null){try{el.setSelectionRange(start+diff,start+diff);}catch(e){}}
 }
-// カンマ付き文字列→数値文字列（保存用）
-function parseNum(v){return String(v==null?'':v).replace(/[^0-9]/g,'');}
+// IME変換確定後に数値整形（暴走防止）
+function numCompEnd(el){ if(el&&el.dataset)el.dataset.composing='0'; numComma(el,{type:'compositionend',isComposing:false}); }
+// カンマ付き文字列→数値文字列（保存用・全角数字も対応）
+function parseNum(v){return String(v==null?'':v).replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[^0-9]/g,'');}
 // 数値→カンマ表示（読込用）
 function fmtComma(v){const d=parseNum(v);return d?Number(d).toLocaleString('en-US'):'';}
 
@@ -3155,7 +3162,7 @@ function renderHourlyPatterns(){
     const apOpts=HP_AMPM.map(([v,l])=>'<option value="'+v+'"'+((p.ampm||'all')===v?' selected':'')+'>'+l+'</option>').join('');
     return '<div class="hp-row" style="display:flex;gap:4px;margin-bottom:4px;align-items:center;">'
       +'<span style="font-size:10px;color:var(--t2);width:14px;flex-shrink:0;">'+(i+1)+'</span>'
-      +'<input class="fi hp-amt" type="text" inputmode="numeric" oninput="numComma(this)" placeholder="時給(円)" style="flex:1.1;" value="'+fmtComma(p.amount)+'">'
+      +'<input class="fi hp-amt" type="text" inputmode="numeric" oninput="numComma(this,event)" oncompositionstart="kanaCompStart(this)" oncompositionend="numCompEnd(this)" placeholder="時給(円)" style="flex:1.1;" value="'+fmtComma(p.amount)+'">'
       +'<select class="fsl hp-dow" style="flex:0.9;">'+dowOpts+'</select>'
       +'<select class="fsl hp-ampm" style="flex:0.8;">'+apOpts+'</select>'
       +'<button onclick="delHourlyPattern('+i+')" style="flex-shrink:0;padding:5px 8px;border:1px solid #C62828;border-radius:6px;background:#fff;color:#C62828;font-size:11px;cursor:pointer;font-family:inherit;">×</button>'
