@@ -197,7 +197,7 @@ console.log('Firebase initialized (compat)');
 <div id="ms">
   <div class="hd">
     <div><div class="hco" id="hco-label">勤怠タッチ Pro</div><div class="ht" id="hco-name">-</div></div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">build-20260602b</div></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">build-20260602c</div></div>
   </div>
   <div class="bnav">
     <button class="nb" id="bn-punch" onclick="showPg('punch')"><span class="ni">📷</span>打刻</button>
@@ -1396,6 +1396,8 @@ function selectCompany(co) {
   localStorage.setItem('kintai_company', co);
   // ヘッダー更新（上部バー・管理画面の会社表示をCOに同期）
   updateCompanyHeader();
+  // フルラフ専用タブの表示制御（fbLoadAndSyncより前に確実に実行）
+  if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
   // 起動画面を隠してメイン表示
   document.getElementById('cs').style.display = 'none';
   document.getElementById('ms').style.display = 'flex';
@@ -4530,24 +4532,37 @@ function revertOT(id){
 const FL_ONLY_SUBS=['pattern','shiftcal','allshift','group','ot'];
 function applyFulllifeTabsVisibility(){
   const isFulllife=(CO==='fulllife');
+  // フルラフ専用タブのボタン表示/非表示
   document.querySelectorAll('.fl-only').forEach(el=>{
     el.style.display=isFulllife?'':'none';
+    // !important指定や他CSSに負けないよう明示
+    if(isFulllife)el.style.removeProperty('display');
+    else el.style.setProperty('display','none','important');
   });
-  // 香庸会ではフルラフ専用サブタブの内容が混在しないよう、開いていればマスタ管理へ戻す
+  // 香庸会でフルラフ専用サブタブが開いていたらマスタ管理へ戻す（混在防止・showASは呼ばず直接切替で再帰回避）
   if(!isFulllife){
     const active=document.querySelector('.asc.active');
     if(active&&FL_ONLY_SUBS.includes(active.id.replace('asc-',''))){
-      if(typeof showAS==='function')showAS('staff');
+      FL_ONLY_SUBS.forEach(s=>{
+        const card=document.getElementById('asc-'+s);if(card)card.classList.remove('active');
+        const tab=document.getElementById('atab-'+s);if(tab)tab.classList.remove('active');
+      });
+      const sc=document.getElementById('asc-staff');if(sc)sc.classList.add('active');
+      const st=document.getElementById('atab-staff');if(st)st.classList.add('active');
     }
   }
 }
 
 
 function showAS(sub){
+  // 香庸会ではフルラフ専用タブを開かせない（混在防止）
+  if(CO!=='fulllife'&&typeof FL_ONLY_SUBS!=='undefined'&&FL_ONLY_SUBS.includes(sub))sub='staff';
   // 警告も再描画
   if(typeof renderPunchWarnings==='function')renderPunchWarnings();
   // 管理画面の会社名更新（CO同期）
   if(typeof updateCompanyHeader==='function')updateCompanyHeader();
+  // フルラフ専用タブの表示/非表示をCOに同期（毎回再適用）
+  if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
   ['staff','shift','rec','paid','special','log','report','data','pw','devset','pattern','shiftcal','allshift','group','ot'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
   if(sub==='pw')initPwmStaffSelect();
   if(sub==='devset')initDevset();
