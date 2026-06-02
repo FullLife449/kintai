@@ -197,7 +197,7 @@ console.log('Firebase initialized (compat)');
 <div id="ms">
   <div class="hd">
     <div><div class="hco" id="hco-label">勤怠タッチ Pro</div><div class="ht" id="hco-name">-</div></div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">build-20260602c</div></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">build-20260602d</div></div>
   </div>
   <div class="bnav">
     <button class="nb" id="bn-punch" onclick="showPg('punch')"><span class="ni">📷</span>打刻</button>
@@ -843,7 +843,7 @@ console.log('Firebase initialized (compat)');
   <div class="mt" id="stm-t">スタッフを追加</div>
   <!-- 常時表示ヘッダー: 氏名・フリガナ・社員番号 -->
   <div class="frw"><label class="fl">氏名</label><input class="fi" id="fn" placeholder="例: 山田 太郎（姓と名の間に1マス空けてください）"></div>
-  <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-furigana-basic" type="text" oninput="kanaOnly(this)" placeholder="例: ヤマダ タロウ（姓と名の間に1マス空けてください）"></div>
+  <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-furigana-basic" type="text" oninput="kanaOnly(this,event)" oncompositionstart="kanaCompStart(this)" oncompositionend="kanaCompEnd(this)" placeholder="例: ヤマダ タロウ（姓と名の間に1マス空けてください）"></div>
   <div class="frw"><label class="fl">社員番号</label><input class="fi" id="feid" type="number" placeholder="例: 2"></div>
   <input type="hidden" id="fstd" value="480">
   <!-- マスタ管理タブナビ（8タブ・後半4つは上級以上のみ🔒） -->
@@ -871,7 +871,7 @@ console.log('Firebase initialized (compat)');
     <div style="margin:10px 0;padding:11px;background:#FFF3E0;border-radius:8px;border:1px solid #FFCC80;">
       <div style="font-size:11px;font-weight:700;color:#E65100;margin-bottom:8px;">👤 保証人（緊急連絡先）</div>
       <div class="frw"><label class="fl">氏名</label><input class="fi" id="f-emerg-name" type="text" placeholder="例: 山田 花子（姓と名の間に1マス）"></div>
-      <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-emerg-furigana" type="text" oninput="kanaOnly(this)" placeholder="例: ヤマダ ハナコ"></div>
+      <div class="frw"><label class="fl">フリガナ</label><input class="fi" id="f-emerg-furigana" type="text" oninput="kanaOnly(this,event)" oncompositionstart="kanaCompStart(this)" oncompositionend="kanaCompEnd(this)" placeholder="例: ヤマダ ハナコ"></div>
       <div class="frw"><label class="fl">続柄</label><input class="fi" id="f-emerg-rel" type="text" placeholder="配偶者など"></div>
       <div class="frw"><label class="fl">電話</label><input class="fi" id="f-emerg-phone" type="tel"></div>
     </div>
@@ -1161,7 +1161,7 @@ console.log('Firebase initialized (compat)');
           <select class="fsl" id="f-bank-type"><option value="">未設定</option><option value="普通">普通</option><option value="当座">当座</option></select>
         </div>
         <div class="frw"><label class="fl">口座番号</label><input class="fi" id="f-bank-no" type="text"></div>
-        <div class="frw"><label class="fl">口座名義（カナ）</label><input class="fi" id="f-bank-kana" type="text" oninput="kanaOnly(this)"></div>
+        <div class="frw"><label class="fl">口座名義（カナ）</label><input class="fi" id="f-bank-kana" type="text" oninput="kanaOnly(this,event)" oncompositionstart="kanaCompStart(this)" oncompositionend="kanaCompEnd(this)"></div>
       </div>
       <div style="margin:10px 0;padding:11px;background:#FFFDE7;border-radius:8px;border:1px solid #FFE082;">
         <div style="font-size:11px;font-weight:700;color:#F57F17;margin-bottom:8px;">📝 副業・特約事項</div>
@@ -3062,8 +3062,14 @@ function collectMasterFields(){
 
 // ═══ 入力ヘルパー（カタカナ制限・数値カンマ）═══
 // カタカナのみ許可（ひらがなは自動変換、それ以外は除去）
-function kanaOnly(el){
+// 重要: 日本語IMEの変換中(composition中)は値を書き換えない（暴走・重複防止）。
+//       変換確定後(compositionend / 非composition input)のみ整形する。
+function kanaOnly(el, ev){
   if(!el)return;
+  // IME変換中の input イベントでは何もしない
+  if(ev && ev.type==='input' && ev.isComposing) return;
+  // フラグでも二重ガード（compositionstartで立て、compositionendで処理）
+  if(el.dataset && el.dataset.composing==='1' && (!ev || ev.type!=='compositionend')) return;
   let v=el.value
     // ひらがな→カタカナ
     .replace(/[ぁ-ゖ]/g,c=>String.fromCharCode(c.charCodeAt(0)+0x60))
@@ -3073,6 +3079,9 @@ function kanaOnly(el){
   v=v.replace(/[^゠-ヿㇰ-ㇿー\s]/g,'');
   if(el.value!==v)el.value=v;
 }
+// IME変換の開始/終了を記録（kanaOnlyの暴走防止）
+function kanaCompStart(el){ if(el&&el.dataset)el.dataset.composing='1'; }
+function kanaCompEnd(el){ if(el&&el.dataset)el.dataset.composing='0'; kanaOnly(el,{type:'compositionend',isComposing:false}); }
 // 数値を3桁カンマ区切り表示（入力中）
 function numComma(el){
   if(!el)return;
@@ -3111,7 +3120,7 @@ function addDependentRow(d){
     +'<button onclick="this.closest(\'.dep-row\').remove()" style="flex-shrink:0;padding:5px 9px;border:1px solid #C62828;border-radius:6px;background:#fff;color:#C62828;font-size:11px;cursor:pointer;font-family:inherit;">×</button>'
     +'</div>'
     +'<div style="display:flex;gap:5px;align-items:center;">'
-    +'<input class="fi dep-furigana" type="text" oninput="kanaOnly(this)" placeholder="フリガナ" style="flex:1.2;" value="'+(d.furigana||'').replace(/"/g,'&quot;')+'">'
+    +'<input class="fi dep-furigana" type="text" oninput="kanaOnly(this,event)" oncompositionstart="kanaCompStart(this)" oncompositionend="kanaCompEnd(this)" placeholder="フリガナ" style="flex:1.2;" value="'+(d.furigana||'').replace(/"/g,'&quot;')+'">'
     +'<input class="fi dep-birth" type="date" style="flex:1.2;" value="'+(d.birthDate||'')+'">'
     +'</div>';
   wrap.appendChild(row);
