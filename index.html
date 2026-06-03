@@ -571,8 +571,9 @@ console.log('Firebase initialized (compat)');
       <!-- CSV出力エリア -->
       <div style="margin-top:9px;padding:11px;background:linear-gradient(135deg,#E8EAF6,#C5CAE9);border-radius:9px;border:1px solid #9FA8DA;">
         <button onclick="exportAllCSV()" style="width:100%;padding:13px;border:none;border-radius:8px;background:#1a1a2e;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">📊 一括CSV出力（全データ）</button>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:7px;">
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:7px;">
           <button onclick="exportSingleCSV('pay')" style="padding:7px 4px;border:1px solid var(--br);border-radius:6px;background:#fff;font-size:9.5px;cursor:pointer;font-family:inherit;">給与取込</button>
+          <button onclick="exportSingleCSV('pay2')" style="padding:7px 4px;border:1px solid var(--br);border-radius:6px;background:#fff;font-size:9.5px;cursor:pointer;font-family:inherit;">給与取込2</button>
           <button onclick="exportSingleCSV('fare')" style="padding:7px 4px;border:1px solid var(--br);border-radius:6px;background:#fff;font-size:9.5px;cursor:pointer;font-family:inherit;">交通費</button>
           <button onclick="exportSingleCSV('expense')" style="padding:7px 4px;border:1px solid var(--br);border-radius:6px;background:#fff;font-size:9.5px;cursor:pointer;font-family:inherit;">経費精算</button>
           <button onclick="exportSingleCSV('paid')" style="padding:7px 4px;border:1px solid var(--br);border-radius:6px;background:#fff;font-size:9.5px;cursor:pointer;font-family:inherit;">有給</button>
@@ -811,8 +812,9 @@ console.log('Firebase initialized (compat)');
       <!-- CSV出力エリア -->
       <div style="margin-top:9px;padding:11px;background:linear-gradient(135deg,#E8EAF6,#C5CAE9);border-radius:9px;border:1px solid #9FA8DA;">
         <button onclick="exportAllCSV()" style="width:100%;padding:13px;border:none;border-radius:8px;background:#1a1a2e;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">📊 一括CSV出力（全データ）</button>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:7px;">
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:7px;">
           <button onclick="exportSingleCSV('pay')" style="padding:7px 4px;border:1px solid var(--br);border-radius:6px;background:#fff;font-size:9.5px;cursor:pointer;font-family:inherit;">給与取込</button>
+          <button onclick="exportSingleCSV('pay2')" style="padding:7px 4px;border:1px solid var(--br);border-radius:6px;background:#fff;font-size:9.5px;cursor:pointer;font-family:inherit;">給与取込2</button>
           <button onclick="exportSingleCSV('fare')" style="padding:7px 4px;border:1px solid var(--br);border-radius:6px;background:#fff;font-size:9.5px;cursor:pointer;font-family:inherit;">交通費</button>
           <button onclick="exportSingleCSV('expense')" style="padding:7px 4px;border:1px solid var(--br);border-radius:6px;background:#fff;font-size:9.5px;cursor:pointer;font-family:inherit;">経費精算</button>
           <button onclick="exportSingleCSV('paid')" style="padding:7px 4px;border:1px solid var(--br);border-radius:6px;background:#fff;font-size:9.5px;cursor:pointer;font-family:inherit;">有給</button>
@@ -5097,11 +5099,24 @@ function loadXLSX(cb){if(window.XLSX){cb();return;}const sc=document.createEleme
 function msToHHMM(ms){if(!ms||ms<=0)return'';const m=Math.floor(ms/60000);return Math.floor(m/60)+':'+pad(m%60);}
 function minToHHMM(min){if(!min||min<=0)return'';return Math.floor(min/60)+':'+pad(min%60);}
 
-const PAY_HDR=['社員番号','社員氏名','平日出勤','休日出勤','出勤時間','遅刻','早退','有休日数','その他休日','生理休暇','休職日数','欠勤日数','控除日数','控除時間','時間外手当時間A','時間外手当時間B','時間外手当時間C','時間外手当時間D','時間外手当時間E','回数手当1','回数手当2','回数手当3','支給項目1','支給項目2','支給項目3','支給項目4','非課税支給20','控除項目1','代理出勤日数','代休消化日数','代休残数'];
+// 給与取込ヘッダ（給与システム取込用・28列固定／添付フォーマット厳守）
+const PAY_HDR=['社員番号','社員氏名','平日出勤','休日出勤','出勤時間','遅刻','早退','有休日数','その他休日','生理休暇','休職日数','欠勤日数','控除日数','控除時間','時間外手当時間A','時間外手当時間B','時間外手当時間C','時間外手当時間D','時間外手当時間E','回数手当1','回数手当2','回数手当3','支給項目1','支給項目2','支給項目3','支給項目4','非課税支給20','控除項目1'];
+// 給与取込2ヘッダ（代理出勤・代休 集計／別CSV）
+const PAY_HDR2=['社員番号','社員氏名','代理出勤日数','代休消化日数','代休残数'];
 
+// 給与取込（28列固定／添付フォーマット厳守。余分な列は付けない）
 function makePayRow(s,m,lunchCount){
   const otE=Math.max(0,(m.otB+m.otC)-60*3600000);
-  // 代理出勤・代休 月内集計
+  return[s.employeeId||s.id,s.name,m.weekdays,m.holdays,msToHHMM(m.totalMs),
+    minToHHMM(m.totalLateMin),minToHHMM(m.totalEarlyMin),
+    m.paidDays||'','','','','','','',
+    msToHHMM(m.otA),msToHHMM(m.otB),msToHHMM(m.otC),msToHHMM(m.otD),msToHHMM(otE),
+    '','','',
+    msToHHMM(m.p1Ms),msToHHMM(m.p2Ms),msToHHMM(m.p3Ms),msToHHMM(m.p4Ms),
+    m.fareCount||'',lunchCount||''];
+}
+// 給与取込2（代理出勤・代休 集計。給与取込本体には含めず別CSVに出力）
+function makePayRow2(s,m){
   const ym=m.ym||'';
   const subCount=m.subDays||0;
   const offCount=m.subOffDays||0;
@@ -5110,14 +5125,7 @@ function makePayRow(s,m,lunchCount){
   const allSubs=(DB.substitute||[]).filter(x=>x.staffId===s.id&&x.date<=ym+'-31').reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
   const allOffs=(DB.subOff||[]).filter(x=>x.staffId===s.id&&x.date<=ym+'-31').reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
   const remain=grants+allSubs-allOffs;
-  return[s.employeeId||s.id,s.name,m.weekdays,m.holdays,msToHHMM(m.totalMs),
-    minToHHMM(m.totalLateMin),minToHHMM(m.totalEarlyMin),
-    m.paidDays||'','','','','','','',
-    msToHHMM(m.otA),msToHHMM(m.otB),msToHHMM(m.otC),msToHHMM(m.otD),msToHHMM(otE),
-    '','','',
-    msToHHMM(m.p1Ms),msToHHMM(m.p2Ms),msToHHMM(m.p3Ms),msToHHMM(m.p4Ms),
-    m.fareCount||'',lunchCount||'',
-    subCount.toFixed(1),offCount.toFixed(1),remain.toFixed(1)];
+  return[s.employeeId||s.id,s.name,subCount.toFixed(1),offCount.toFixed(1),remain.toFixed(1)];
 }
 
 function exportXLSX(){const ym=document.getElementById('rm').value;if(!ym){showToast('月を選択してください');return;}showToast('XLSXを生成中...');loadXLSX(()=>doExportMonthly(ym));}
@@ -5138,6 +5146,12 @@ function doExportMonthly(ym){
   const ws1=XLSX.utils.aoa_to_sheet(payAoa);
   ws1['!cols']=PAY_HDR.map((_,i)=>({wch:i<2?14:10}));
   XLSX.utils.book_append_sheet(wb,ws1,'給与取り込み');
+  // 給与取込2シート（代理出勤・代休）
+  const pay2Aoa=[PAY_HDR2];
+  list.forEach(s=>{pay2Aoa.push(makePayRow2(s,calcMonthSummary(s.id,ym)));});
+  const ws1b=XLSX.utils.aoa_to_sheet(pay2Aoa);
+  ws1b['!cols']=PAY_HDR2.map((_,i)=>({wch:i<2?14:10}));
+  XLSX.utils.book_append_sheet(wb,ws1b,'給与取込2');
   // 時給パターン連動シート（金額・曜日・時間帯）
   const dowL={all:'全曜日',mon:'月',tue:'火',wed:'水',thu:'木',fri:'金',sat:'土',sun:'日・祝'};
   const apL={all:'終日',am:'午前',pm:'午後'};
@@ -5212,13 +5226,16 @@ function doExportInd(sid,ym){
   XLSX.utils.book_append_sheet(wb,ws1,'個人明細');
   // 給与取り込みシート（28列固定）
   const m=calcMonthSummary(sid,ym);
-  const lunchCount=lunchCntInd;
   const fareCount=DB.fare.filter(f=>f.staffId===sid&&termDates.includes(f.date)).length;
-  const lunchCntInd=DB.lunch.filter(l=>l.staffId===sid&&termDates.includes(l.date)&&l.company===CO).length;
+  const lunchCount=DB.lunch.filter(l=>l.staffId===sid&&termDates.includes(l.date)&&l.company===CO).length;
   const mForRow={...m,fareCount};
   const ws2=XLSX.utils.aoa_to_sheet([PAY_HDR,makePayRow(staff,mForRow,lunchCount)]);
   ws2['!cols']=PAY_HDR.map((_,i)=>({wch:i<2?14:10}));
   XLSX.utils.book_append_sheet(wb,ws2,'給与取り込み');
+  // 給与取込2シート（代理出勤・代休）
+  const ws2b=XLSX.utils.aoa_to_sheet([PAY_HDR2,makePayRow2(staff,m)]);
+  ws2b['!cols']=PAY_HDR2.map((_,i)=>({wch:i<2?14:10}));
+  XLSX.utils.book_append_sheet(wb,ws2b,'給与取込2');
   XLSX.writeFile(wb,staff.name+'_'+ym+'.xlsx');showToast(staff.name+'の個人XLSXをダウンロードしました');
 }
 
@@ -5923,6 +5940,11 @@ function exportSingleCSV(type){
     });
     downloadCSV(coLabel+'_給与取込_'+ym+'.csv',payRows);
     showToast('給与取込CSVをダウンロード ✓');
+  }else if(type==='pay2'){
+    const pay2Rows=[PAY_HDR2];
+    list.forEach(s=>{pay2Rows.push(makePayRow2(s,calcMonthSummary(s.id,ym)));});
+    downloadCSV(coLabel+'_給与取込2_'+ym+'.csv',pay2Rows);
+    showToast('給与取込2CSVをダウンロード ✓');
   }else if(type==='fare'){
     const rows=[['社員番号','名前','日付','金額','内容']];
     const fareList=DB.fare.filter(f=>termM.dates.includes(f.date)&&list.find(s=>s.id===f.staffId));
@@ -6067,7 +6089,12 @@ function doExportMonthlyCSV(ym){
     payRows.push(makePayRow(s,mForRow,0));
   });
   downloadCSV(coLabel+'_給与取込_'+ym+'.csv',payRows);
-  
+
+  // 給与取込2CSV（代理出勤・代休）
+  const pay2Rows=[PAY_HDR2];
+  list.forEach(s=>{pay2Rows.push(makePayRow2(s,calcMonthSummary(s.id,ym)));});
+  downloadCSV(coLabel+'_給与取込2_'+ym+'.csv',pay2Rows);
+
   // 交通費CSV
   const fareList=DB.fare.filter(f=>termM.dates.includes(f.date)&&list.find(s=>s.id===f.staffId));
   if(fareList.length){
