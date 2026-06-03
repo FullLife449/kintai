@@ -336,35 +336,21 @@ console.log('Firebase initialized (compat)');
     </div>
     
     <div class="asc" id="asc-special">
-      <div class="card"><div class="cl">特別枠（バイト枠）登録</div>
-        <div class="fs2">年俸型スタッフが年俸枠外で勤務する場合に登録します</div>
-        <div class="frw"><label class="fl">スタッフ</label><select class="fsl" id="sp-s"></select></div>
-        <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="sp-d"></div>
-        <div class="frw"><label class="fl">時刻ルール</label>
-          <select class="fi" id="sp-rule" onchange="onSpRule()">
-            <option value="free1">フリー①型（XX:45 自動切り上げ）</option>
-            <option value="free">フリー型（登録時刻優先）</option>
-          </select>
-        </div>
-        <div class="frw" id="sp-st-wrap" style="display:none;">
-          <label class="fl">勤務開始</label>
-          <input class="fi" type="time" id="sp-st" step="900">
-        </div>
-        <div style="margin:8px 0;padding:9px 11px;background:var(--bll);border:1px solid var(--bl);border-radius:8px;display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="toggleSpFreeEnd()">
-          <div id="sp-fe-box" style="width:22px;height:22px;border-radius:5px;border:2px solid var(--br);background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"></div>
-          <div>
-            <div style="font-weight:600;font-size:12px;">終了時刻フリー</div>
-            <div style="font-size:10px;color:var(--t2);">退勤打刻通り（早退判定なし）</div>
-          </div>
-        </div>
-        <div class="frw" id="sp-et-wrap">
-          <label class="fl">勤務終了</label>
-          <input class="fi" type="time" id="sp-et" step="900">
-        </div>
-        <div class="frw"><label class="fl">メモ（任意）</label><input class="fi" id="sp-m" placeholder="例: 土曜バイト"></div>
-        <button class="fb" style="width:100%;" onclick="saveSP()">登録する</button>
+      <div class="card"><div class="cl">リハ臨勤 登録・編集</div>
+        <div class="fs2">スタッフごとに月日と枠数を登録します（同じ日は上書き）</div>
+        <div class="frw"><label class="fl">スタッフ</label><select class="fsl" id="rsl-s"></select></div>
+        <div class="frw"><label class="fl">月日</label><input class="fi" type="date" id="rsl-d"></div>
+        <div class="frw"><label class="fl">枠数</label><input class="fi" type="number" id="rsl-n" min="1" step="1" placeholder="例: 3"></div>
+        <button class="fb" style="width:100%;" onclick="saveRehabSlot()">登録する</button>
       </div>
-      <div class="card"><div class="cl">バイト枠一覧</div><div id="spl"><div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div></div></div>
+      <div class="card">
+        <div class="cl" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <span>リハ臨勤 一覧</span>
+          <select id="rsl-month" onchange="renderRehabSlotAdmin()" style="padding:5px 7px;border:1px solid var(--br);border-radius:7px;font-size:11px;font-family:inherit;"></select>
+        </div>
+        <div id="rsl-summary" style="padding:8px;background:#E3F2FD;border-radius:7px;font-size:11px;margin:8px 0;"></div>
+        <div id="rsl-list"><div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div></div>
+      </div>
     </div>
     <div class="asc" id="asc-data">
       <div class="card" style="border:2px solid #4CAF50;background:#E8F5E9;">
@@ -630,6 +616,7 @@ console.log('Firebase initialized (compat)');
         <button class="ptab" id="pi-tab-sub" onclick="showPITab('sub')">代休</button>
         <button class="ptab pi-fl-only" id="pi-tab-ot" onclick="showPITab('ot')">時間外</button>
         <button class="ptab pi-rehab-only" id="pi-tab-rehab" onclick="showPITab('rehab')">リハビリ</button>
+        <button class="ptab" id="pi-tab-rehab2" onclick="showPITab('rehab2')">リハ臨勤</button>
         <button class="ptab" id="pi-tab-fare" onclick="showPITab('fare')">交通費</button>
         <button class="ptab" id="pi-tab-expense" onclick="showPITab('expense')">経費精算</button>
         <button class="ptab" id="pi-tab-pw" onclick="showPITab('pw')">PW変更</button>
@@ -779,6 +766,18 @@ console.log('Firebase initialized (compat)');
         <div style="margin-top:14px;border-top:1px solid var(--br);padding-top:10px;">
           <div style="font-size:11px;font-weight:700;margin-bottom:6px;">記録履歴</div>
           <div id="pi-rh-list" style="max-height:280px;overflow-y:auto;"></div>
+        </div>
+      </div>
+      <!-- リハ臨勤（月日＋枠数） -->
+      <div id="pi-view-rehab2" class="card" style="display:none;">
+        <div class="cl">リハ臨勤</div>
+        <div class="fs2">月日と枠数を記録します（同じ日は上書き）</div>
+        <div class="frw"><label class="fl">月日</label><input class="fi" type="date" id="pi-rs-date"></div>
+        <div class="frw"><label class="fl">枠数</label><input class="fi" type="number" id="pi-rs-slots" min="1" step="1" placeholder="例: 3"></div>
+        <button class="fb" style="width:100%;margin-top:7px;" onclick="submitPIRehabSlot()">記録する</button>
+        <div style="margin-top:14px;border-top:1px solid var(--br);padding-top:10px;">
+          <div style="font-size:11px;font-weight:700;margin-bottom:6px;">記録履歴</div>
+          <div id="pi-rs-list" style="max-height:280px;overflow-y:auto;"></div>
         </div>
       </div>
       <!-- PW変更 -->
@@ -1498,7 +1497,7 @@ function fbLoadAndSync(co) {
   window.fbGet(settingsRef).then(snap => {
     const s = snap.exists()? snap.val() : {};
     DB.dayShifts   = s.dayShifts   ? arr(s.dayShifts)   : [];
-    DB.specials    = s.specials    ? arr(s.specials)    : [];
+    DB.specials    = []; // バイト枠は廃止・過去データも読み込まない（リハ臨勤へ移行）
     DB.paid        = s.paid        ? arr(s.paid)        : [];
     DB.fare        = s.fare        ? arr(s.fare)        : [];
     DB.lunch       = s.lunch       ? arr(s.lunch)       : [];
@@ -1508,6 +1507,7 @@ function fbLoadAndSync(co) {
     DB.paidGrantsV2= s.paidGrantsV2? arr(s.paidGrantsV2): [];
     DB.paidHistory = s.paidHistory ? arr(s.paidHistory) : [];
     DB.rehab       = s.rehab       ? arr(s.rehab)       : [];
+    DB.rehabSlots  = s.rehabSlots  ? arr(s.rehabSlots)  : [];
     DB.substitute  = s.substitute  ? arr(s.substitute)  : [];
     DB.subOff      = s.subOff      ? arr(s.subOff)      : [];
     DB.subGrants   = s.subGrants   ? arr(s.subGrants)   : [];
@@ -1566,7 +1566,6 @@ function fbSaveSettings() {
   const settingsRef = window.fbRef(window.fbDB, currentCompany + '/settings');
   window.fbSet(settingsRef, {
     dayShifts: DB.dayShifts,
-    specials: DB.specials,
     paid: DB.paid,
     fare: DB.fare,
     lunch: DB.lunch,
@@ -1578,6 +1577,7 @@ function fbSaveSettings() {
     jobs: DB.jobs||[],
     licenses: DB.licenses||[],
     rehab: DB.rehab||[],
+    rehabSlots: DB.rehabSlots||[],
     workplaces: DB.workplaces||[],
     duties: DB.duties||[],
     contractClauses: DB.contractClauses||[],
@@ -1598,7 +1598,7 @@ function fbSaveSettings() {
 
 const TL={in:'出勤',out:'退勤',break:'休憩開始',resume:'勤務再開',early:'早出',fare:'交通費',paid:'有給',lunch:'ランチデリ'};
 
-let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],workplaces:[],duties:[],contractClauses:[]};
+let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],workplaces:[],duties:[],contractClauses:[]};
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 
@@ -1619,6 +1619,7 @@ function initJobLicenseMasters(){
     });
   }
   if(!DB.rehab)DB.rehab=[];
+  if(!DB.rehabSlots)DB.rehabSlots=[];
   // 就業場所
   if(!DB.workplaces)DB.workplaces=[];
   if(DB.workplaces.length===0){
@@ -1640,8 +1641,10 @@ const STAFF_VER='v2001'; // 19:30変更バージョン
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
-    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],workplaces:[],duties:[]},d);
+    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],workplaces:[],duties:[]},d);
   }catch(e){}
+  DB.specials=[]; // バイト枠は廃止：過去データも保持しない（リハ臨勤へ移行）
+  if(!DB.rehabSlots)DB.rehabSlots=[];
   // スタッフデータのバージョンが古い（17:45が含まれる）場合はスタッフのみリセット
   const staffVer=localStorage.getItem('kintai_staff_ver');
   if(staffVer!==STAFF_VER){
@@ -3852,6 +3855,145 @@ function delPiRehab(id){
   showToast('削除しました');
 }
 
+// ═══ リハ臨勤（月日＋枠数）═══
+// 個人画面：記録の送信（同じ日は上書き）
+function submitPIRehabSlot(){
+  if(!piStaff){showToast('ログインしてください');return;}
+  const date=document.getElementById('pi-rs-date').value;
+  const slots=parseInt(document.getElementById('pi-rs-slots').value);
+  if(!date){showToast('月日を入力してください');return;}
+  if(!slots||slots<1){showToast('枠数を入力してください');return;}
+  if(!DB.rehabSlots)DB.rehabSlots=[];
+  const existing=DB.rehabSlots.find(r=>r.staffId===piStaff.id&&r.date===date);
+  if(existing){
+    if(!confirm(date+'は既に記録済みです（'+existing.slots+'枠）。\n上書きしますか？'))return;
+    existing.slots=slots;
+    existing.updatedAt=new Date().toISOString();
+  }else{
+    DB.rehabSlots.push({
+      id:Date.now()+Math.random(),
+      staffId:piStaff.id,
+      staffName:piStaff.name,
+      company:piStaff.company,
+      date,
+      slots,
+      createdAt:new Date().toISOString()
+    });
+  }
+  sDB();fbSaveSettings();
+  renderPiRehabSlotList();
+  document.getElementById('pi-rs-slots').value='';
+  showToast('記録しました ✓');
+}
+
+function renderPiRehabSlotList(){
+  if(!piStaff)return;
+  const el=document.getElementById('pi-rs-list');
+  if(!el)return;
+  const list=(DB.rehabSlots||[]).filter(r=>r.staffId===piStaff.id).sort((a,b)=>a.date<b.date?1:-1);
+  if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:11px;text-align:center;padding:14px;">記録なし</div>';return;}
+  el.innerHTML=list.map(r=>{
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #f0f0f0;font-size:11px;">
+      <span>${r.date}</span>
+      <span style="font-weight:700;color:#1B5E20;">${r.slots}枠</span>
+      <button class="fd" onclick="delPiRehabSlot('${r.id}')" style="font-size:10px;padding:3px 8px;">削除</button>
+    </div>`;
+  }).join('');
+}
+
+function delPiRehabSlot(id){
+  if(!confirm('この記録を削除しますか？'))return;
+  DB.rehabSlots=(DB.rehabSlots||[]).filter(r=>String(r.id)!==String(id));
+  sDB();fbSaveSettings();
+  renderPiRehabSlotList();
+  showToast('削除しました');
+}
+
+// 管理画面：リハ臨勤 登録（同じスタッフ＋月日は上書き）
+function saveRehabSlot(){
+  const sid=parseInt(document.getElementById('rsl-s').value);
+  const date=document.getElementById('rsl-d').value;
+  const slots=parseInt(document.getElementById('rsl-n').value);
+  if(!sid||!date){showToast('スタッフと月日を選択してください');return;}
+  if(!slots||slots<1){showToast('枠数を入力してください');return;}
+  const st=DB.staff.find(x=>x.id===sid);
+  if(!DB.rehabSlots)DB.rehabSlots=[];
+  const existing=DB.rehabSlots.find(r=>r.staffId===sid&&r.date===date);
+  if(existing){
+    existing.slots=slots;
+    existing.updatedAt=new Date().toISOString();
+  }else{
+    DB.rehabSlots.push({
+      id:Date.now()+Math.random(),
+      staffId:sid,
+      staffName:st?st.name:'',
+      company:st?st.company:CO,
+      date,
+      slots,
+      createdAt:new Date().toISOString()
+    });
+  }
+  sDB();fbSaveSettings();
+  document.getElementById('rsl-n').value='';
+  renderRehabSlotAdmin();
+  showToast('登録しました ✓');
+}
+
+function renderRehabSlotAdmin(){
+  const ms=document.getElementById('rsl-month');
+  if(ms&&!ms.options.length){
+    const now=new Date();
+    for(let i=-6;i<=6;i++){
+      const dt=new Date(now.getFullYear(),now.getMonth()+i,1);
+      const v=dt.getFullYear()+'-'+pad(dt.getMonth()+1);
+      const o=document.createElement('option');o.value=v;
+      o.textContent=dt.getFullYear()+'年'+(dt.getMonth()+1)+'月';
+      if(i===0)o.selected=true;
+      ms.appendChild(o);
+    }
+  }
+  const ym=ms?ms.value:null;
+  let list=(DB.rehabSlots||[]).filter(r=>{const st=DB.staff.find(x=>x.id===r.staffId);return st&&st.company===CO;});
+  if(ym)list=list.filter(r=>r.date&&r.date.startsWith(ym));
+  list.sort((a,b)=>a.date<b.date?1:-1);
+  // サマリー：スタッフ別合計枠数
+  const summary={};
+  list.forEach(r=>{
+    if(!summary[r.staffId])summary[r.staffId]={name:r.staffName,total:0,days:0};
+    summary[r.staffId].total+=Number(r.slots)||0;
+    summary[r.staffId].days++;
+  });
+  const sumEl=document.getElementById('rsl-summary');
+  if(sumEl){
+    const arr=Object.values(summary).map(s=>`${s.name}: ${s.total}枠 (${s.days}日)`);
+    sumEl.innerHTML=arr.length?'<b>スタッフ別合計：</b> '+arr.join(' / '):'<span style="color:var(--t2);">該当なし</span>';
+  }
+  const el=document.getElementById('rsl-list');
+  if(!el)return;
+  el.innerHTML=list.length?list.map(r=>{
+    const st=DB.staff.find(x=>x.id===r.staffId);
+    return `<div class="spit"><div class="sii"><b>${st?st.name:(r.staffName||'?')}</b> ${r.date} — <span style="color:#1B5E20;font-weight:700;">${r.slots}枠</span></div><div style="display:flex;gap:5px;"><button class="bg" style="font-size:10px;padding:3px 8px;" onclick="editRehabSlot('${r.id}')">編集</button><button class="fd" onclick="delRehabSlotAdmin('${r.id}')">削除</button></div></div>`;
+  }).join(''):'<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div>';
+}
+
+function editRehabSlot(id){
+  const r=(DB.rehabSlots||[]).find(x=>String(x.id)===String(id));
+  if(!r)return;
+  document.getElementById('rsl-s').value=r.staffId;
+  document.getElementById('rsl-d').value=r.date;
+  document.getElementById('rsl-n').value=r.slots;
+  document.getElementById('rsl-n').focus();
+  showToast('内容を読み込みました。修正して「登録する」で上書きします');
+}
+
+function delRehabSlotAdmin(id){
+  if(!confirm('この記録を削除しますか？'))return;
+  DB.rehabSlots=(DB.rehabSlots||[]).filter(r=>String(r.id)!==String(id));
+  sDB();fbSaveSettings();
+  renderRehabSlotAdmin();
+  showToast('削除しました');
+}
+
 // ═══ 管理画面：リハビリ管理 ═══
 function initRehabAdmin(){
   const ms=document.getElementById('rha-month');
@@ -4768,7 +4910,7 @@ function showAS(sub){
   // 打刻修正・日次シフト・特別枠のスタッフ選択肢を会社別に更新
   if(sub==='rec'||sub==='shift'||sub==='special'){if(typeof loadAS==='function')loadAS();}
   if(sub==='shift'&&typeof renderDSL==='function')renderDSL();
-  if(sub==='special'&&typeof renderSPL==='function')renderSPL();
+  if(sub==='special'&&typeof renderRehabSlotAdmin==='function')renderRehabSlotAdmin();
   if(sub==='staff'&&typeof renderAL==='function')renderAL();
 }
 
@@ -5131,7 +5273,7 @@ function minToHHMM(min){if(!min||min<=0)return'';return Math.floor(min/60)+':'+p
 // 給与取込ヘッダ（給与システム取込用・28列固定／添付フォーマット厳守）
 const PAY_HDR=['社員番号','社員氏名','平日出勤','休日出勤','出勤時間','遅刻','早退','有休日数','その他休日','生理休暇','休職日数','欠勤日数','控除日数','控除時間','時間外手当時間A','時間外手当時間B','時間外手当時間C','時間外手当時間D','時間外手当時間E','回数手当1','回数手当2','回数手当3','支給項目1','支給項目2','支給項目3','支給項目4','非課税支給20','控除項目1'];
 // 給与取込2ヘッダ（代理出勤・代休 集計／別CSV）
-const PAY_HDR2=['社員番号','社員氏名','代理出勤日数','代休消化日数','代休残数'];
+const PAY_HDR2=['社員番号','社員氏名','代理出勤日数','代休消化日数','代休残数','リハ臨勤枠数','リハ臨勤日数'];
 
 // 給与取込（28列固定／添付フォーマット厳守。余分な列は付けない）
 function makePayRow(s,m,lunchCount){
@@ -5154,7 +5296,22 @@ function makePayRow2(s,m){
   const allSubs=(DB.substitute||[]).filter(x=>x.staffId===s.id&&x.date<=ym+'-31').reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
   const allOffs=(DB.subOff||[]).filter(x=>x.staffId===s.id&&x.date<=ym+'-31').reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
   const remain=grants+allSubs-allOffs;
-  return[s.employeeId||s.id,s.name,subCount.toFixed(1),offCount.toFixed(1),remain.toFixed(1)];
+  // リハ臨勤（月日＋枠数）当月集計
+  const slotRecs=(DB.rehabSlots||[]).filter(r=>r.staffId===s.id&&r.date&&r.date.startsWith(ym));
+  const slotTotal=slotRecs.reduce((a,b)=>a+(Number(b.slots)||0),0);
+  const slotDays=slotRecs.length;
+  return[s.employeeId||s.id,s.name,subCount.toFixed(1),offCount.toFixed(1),remain.toFixed(1),slotTotal||'',slotDays||''];
+}
+
+// リハ臨勤 月日明細行（給与取込2の明細用）
+function rehabSlotDetailRows(list,ym){
+  const rows=[];
+  list.forEach(s=>{
+    (DB.rehabSlots||[]).filter(r=>r.staffId===s.id&&r.date&&r.date.startsWith(ym))
+      .sort((a,b)=>a.date<b.date?-1:1)
+      .forEach(r=>rows.push([s.employeeId||s.id,s.name,r.date,Number(r.slots)||0]));
+  });
+  return rows;
 }
 
 function exportXLSX(){const ym=document.getElementById('rm').value;if(!ym){showToast('月を選択してください');return;}showToast('XLSXを生成中...');loadXLSX(()=>doExportMonthly(ym));}
@@ -5181,6 +5338,13 @@ function doExportMonthly(ym){
   const ws1b=XLSX.utils.aoa_to_sheet(pay2Aoa);
   ws1b['!cols']=PAY_HDR2.map((_,i)=>({wch:i<2?14:10}));
   XLSX.utils.book_append_sheet(wb,ws1b,'給与取込2');
+  // リハ臨勤 月日明細シート
+  const rsDetail=rehabSlotDetailRows(list,ym);
+  if(rsDetail.length){
+    const ws1c=XLSX.utils.aoa_to_sheet([['社員番号','氏名','月日','枠数'],...rsDetail]);
+    ws1c['!cols']=[{wch:12},{wch:14},{wch:12},{wch:8}];
+    XLSX.utils.book_append_sheet(wb,ws1c,'リハ臨勤明細');
+  }
   // 時給パターン連動シート（金額・曜日・時間帯）
   const dowL={all:'全曜日',mon:'月',tue:'火',wed:'水',thu:'木',fri:'金',sat:'土',sun:'日・祝'};
   const apL={all:'終日',am:'午前',pm:'午後'};
@@ -5547,7 +5711,7 @@ const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)
 function delSt(id){const s=DB.staff.find(x=>x.id===id);if(!s||!confirm(s.name+'を削除しますか？'))return;DB.staff=DB.staff.filter(x=>x.id!==id);sDB();showToast(s.name+'を削除しました');renderAL();renderSG();}
 
 // ═══ 日次シフト ═══
-function loadAS(){const list=DB.staff.filter(s=>s.company===CO);['ds-s','sp-s','rs-s'].forEach(id=>{const sel=document.getElementById(id);sel.innerHTML='<option value="">スタッフを選択</option>';list.forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}</option>`);});document.getElementById('ds-d').value=todayStr();document.getElementById('sp-d').value=todayStr();document.getElementById('rs-d').value=todayStr();}
+function loadAS(){const list=DB.staff.filter(s=>s.company===CO);['ds-s','rsl-s','rs-s'].forEach(id=>{const sel=document.getElementById(id);if(!sel)return;sel.innerHTML='<option value="">スタッフを選択</option>';list.forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}</option>`);});const dd=document.getElementById('ds-d');if(dd)dd.value=todayStr();const rsld=document.getElementById('rsl-d');if(rsld)rsld.value=todayStr();const rsd=document.getElementById('rs-d');if(rsd)rsd.value=todayStr();}
 function addDSRow(data){dsCnt++;const id='dsr'+dsCnt;const c=document.getElementById('ds-sh');const row=document.createElement('div');row.className='shift-row';row.id=id;row.innerHTML=`<div><label class="fl">開始</label><select class="tsel">${makeTimeOpts(data?data.s:'')}</select></div><div><label class="fl">終了</label><select class="tsel">${makeTimeOpts(data?data.e:'')}</select></div><button class="del-btn" onclick="document.getElementById('${id}').remove()">削除</button>`;c.appendChild(row);}
 function saveDS(){const sid=parseInt(document.getElementById('ds-s').value);const date=document.getElementById('ds-d').value;if(!sid||!date){showToast('スタッフと日付を選択してください');return;}const shifts=readRows('ds-sh');DB.dayShifts=DB.dayShifts.filter(d=>!(d.staffId===sid&&d.date===date));const dsType=document.getElementById('ds-type').value;
   DB.dayShifts.push({id:Date.now(),staffId:sid,date,shifts,type:dsType||null});sDB();showToast('日次シフトを登録しました');dsCnt=0;document.getElementById('ds-sh').innerHTML='';renderDSL();}
@@ -5879,7 +6043,8 @@ function saveSP(){
 }
 function renderSPL(){
   const el=document.getElementById('spl');
-  const list=DB.specials.filter(s=>{const st=DB.staff.find(x=>x.id===s.staffId);return st&&st.company===CO;}).sort((a,b)=>a.date<b.date?1:-1);
+  if(!el)return; // バイト枠UIは廃止（リハ臨勤へ移行）
+  const list=(DB.specials||[]).filter(s=>{const st=DB.staff.find(x=>x.id===s.staffId);return st&&st.company===CO;}).sort((a,b)=>a.date<b.date?1:-1);
   el.innerHTML=list.length?list.map(s=>{
     const st=DB.staff.find(x=>x.id===s.staffId);
     const ruleLabel=s.rule==='free'?'フリー型':'フリー①型';
@@ -5983,6 +6148,8 @@ function exportSingleCSV(type){
         pay2Rows.push([s.employeeId||s.id,s.name||''].concat(Array(Math.max(0,PAY_HDR2.length-2)).fill('')));
       }
     });
+    const rsDetail2=rehabSlotDetailRows(list,ym);
+    if(rsDetail2.length){pay2Rows.push([]);pay2Rows.push(['【リハ臨勤 月日明細】']);pay2Rows.push(['社員番号','氏名','月日','枠数']);rsDetail2.forEach(r=>pay2Rows.push(r));}
     showCSVPreview('給与取込2 ('+coLabel+' '+ym+')',pay2Rows,coLabel+'_給与取込2_'+ym+'.csv');
   }else if(type==='fare'){
     const rows=[['社員番号','名前','日付','金額','内容']];
@@ -6140,6 +6307,8 @@ function doExportMonthlyCSV(ym){
       pay2Rows.push([s.employeeId||s.id,s.name||''].concat(Array(Math.max(0,PAY_HDR2.length-2)).fill('')));
     }
   });
+  const rsDetailAll=rehabSlotDetailRows(list,ym);
+  if(rsDetailAll.length){pay2Rows.push([]);pay2Rows.push(['【リハ臨勤 月日明細】']);pay2Rows.push(['社員番号','氏名','月日','枠数']);rsDetailAll.forEach(r=>pay2Rows.push(r));}
   downloadCSV(coLabel+'_給与取込2_'+ym+'.csv',pay2Rows);
 
   // 交通費CSV
@@ -6925,7 +7094,7 @@ function logoutPersonalInline(){
 }
 
 function showPITab(tab){
-  ['log','paid','sub','ot','rehab','fare','expense','pw'].forEach(t=>{
+  ['log','paid','sub','ot','rehab','rehab2','fare','expense','pw'].forEach(t=>{
     const v=document.getElementById('pi-view-'+t);
     const b=document.getElementById('pi-tab-'+t);
     if(v)v.style.display=t===tab?'block':'none';
@@ -6939,6 +7108,7 @@ function showPITab(tab){
   if(tab==='sub'){renderPiSubRemain();renderPiSubList();setPiSubMode('substitute');}
   if(tab==='ot'){renderPiOTList();const dEl=document.getElementById('pi-ot-date');if(dEl&&!dEl.value)dEl.value=todayStr();}
   if(tab==='rehab'){renderPiRehabList();const dEl2=document.getElementById('pi-rh-date');if(dEl2&&!dEl2.value)dEl2.value=todayStr();}
+  if(tab==='rehab2'){renderPiRehabSlotList();const dEl4=document.getElementById('pi-rs-date');if(dEl4&&!dEl4.value)dEl4.value=todayStr();}
   if(tab==='fare'){renderPiFareList();const dEl3=document.getElementById('pi-fare-date');if(dEl3&&!dEl3.value)dEl3.value=todayStr();}
 }
 
