@@ -1243,6 +1243,18 @@ console.log('Firebase initialized (compat)');
   <div class="rw" id="indm-body"></div>
   <div style="margin-top:10px;font-size:10px;color:var(--t2);">個人XLSXには「個人明細」（合計行あり）＋「給与取り込み」（28列）の2シートが含まれます</div>
 </div></div>
+<!-- CSVプレビューモーダル -->
+<div class="ov hidden" id="csvm" onclick="closeCsvM(event)"><div class="mo" onclick="event.stopPropagation()" style="max-height:93vh;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">
+    <div class="mt" id="csvm-title" style="margin-bottom:0;font-size:13px;">CSVプレビュー</div>
+    <div style="display:flex;gap:5px;">
+      <button onclick="dlCsvPreview()" style="padding:5px 11px;border:none;border-radius:7px;background:var(--gn);color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;">⬇ CSVダウンロード</button>
+      <button onclick="closeCsvM()" style="padding:5px 11px;border:1px solid var(--br);border-radius:7px;background:#fff;font-size:12px;cursor:pointer;font-family:inherit;">✕</button>
+    </div>
+  </div>
+  <div id="csvm-count" style="font-size:10px;color:var(--t2);margin-bottom:6px;"></div>
+  <div id="csvm-body" style="overflow:auto;max-height:72vh;"></div>
+</div></div>
 <!-- 管理PW認証モーダル -->
 <div class="ov hidden" id="pwm" onclick="closePWM(event)"><div class="mo" onclick="event.stopPropagation()" style="max-height:90vh;overflow-y:auto;">
   <div class="mt">管理画面</div>
@@ -5095,6 +5107,23 @@ function renderIndPreview(){
 }
 function closeIndM(e){if(!e||e.target===document.getElementById('indm'))document.getElementById('indm').classList.add('hidden');}
 
+// CSVプレビュー（画面で確認＋モーダル内からダウンロード）
+let _csvPreview={filename:'',rows:[]};
+function showCSVPreview(title,rows,filename){
+  _csvPreview={filename,rows:rows||[]};
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const head=(rows&&rows[0])||[];
+  const body=(rows||[]).slice(1);
+  const th=head.map(h=>`<th style="background:var(--gy);color:var(--t2);padding:5px 7px;border:1px solid var(--br);font-size:9px;font-weight:600;white-space:nowrap;position:sticky;top:0;">${esc(h)}</th>`).join('');
+  const tr=body.length?body.map(r=>`<tr>${head.map((_,i)=>`<td style="padding:3px 7px;border:1px solid var(--br);font-size:9px;white-space:nowrap;text-align:center;">${esc(r[i])}</td>`).join('')}</tr>`).join(''):`<tr><td colspan="${head.length||1}" style="padding:14px;text-align:center;color:var(--t2);font-size:11px;">データがありません</td></tr>`;
+  document.getElementById('csvm-title').textContent=title;
+  document.getElementById('csvm-count').textContent=body.length+'件';
+  document.getElementById('csvm-body').innerHTML=`<table style="border-collapse:collapse;min-width:100%;"><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
+  document.getElementById('csvm').classList.remove('hidden');
+}
+function dlCsvPreview(){if(_csvPreview.rows&&_csvPreview.rows.length){downloadCSV(_csvPreview.filename,_csvPreview.rows);showToast('CSVをダウンロード ✓');}}
+function closeCsvM(e){if(!e||e.target===document.getElementById('csvm'))document.getElementById('csvm').classList.add('hidden');}
+
 function loadXLSX(cb){if(window.XLSX){cb();return;}const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';sc.onload=cb;document.head.appendChild(sc);}
 function msToHHMM(ms){if(!ms||ms<=0)return'';const m=Math.floor(ms/60000);return Math.floor(m/60)+':'+pad(m%60);}
 function minToHHMM(min){if(!min||min<=0)return'';return Math.floor(min/60)+':'+pad(min%60);}
@@ -5934,17 +5963,27 @@ function exportSingleCSV(type){
   if(type==='pay'){
     const payRows=[PAY_HDR];
     list.forEach(s=>{
-      const m=calcMonthSummary(s.id,ym);
-      const fareCount=DB.fare.filter(f=>f.staffId===s.id&&termM.dates.includes(f.date)).length;
-      payRows.push(makePayRow(s,{...m,fareCount},0));
+      try{
+        const m=calcMonthSummary(s.id,ym);
+        const fareCount=DB.fare.filter(f=>f.staffId===s.id&&termM.dates.includes(f.date)).length;
+        payRows.push(makePayRow(s,{...m,fareCount},0));
+      }catch(err){
+        console.error('給与取込 集計エラー:',s&&s.name,err);
+        payRows.push([s.employeeId||s.id,s.name||''].concat(Array(Math.max(0,PAY_HDR.length-2)).fill('')));
+      }
     });
-    downloadCSV(coLabel+'_給与取込_'+ym+'.csv',payRows);
-    showToast('給与取込CSVをダウンロード ✓');
+    showCSVPreview('給与取込 ('+coLabel+' '+ym+')',payRows,coLabel+'_給与取込_'+ym+'.csv');
   }else if(type==='pay2'){
     const pay2Rows=[PAY_HDR2];
-    list.forEach(s=>{pay2Rows.push(makePayRow2(s,calcMonthSummary(s.id,ym)));});
-    downloadCSV(coLabel+'_給与取込2_'+ym+'.csv',pay2Rows);
-    showToast('給与取込2CSVをダウンロード ✓');
+    list.forEach(s=>{
+      try{
+        pay2Rows.push(makePayRow2(s,calcMonthSummary(s.id,ym)));
+      }catch(err){
+        console.error('給与取込2 集計エラー:',s&&s.name,err);
+        pay2Rows.push([s.employeeId||s.id,s.name||''].concat(Array(Math.max(0,PAY_HDR2.length-2)).fill('')));
+      }
+    });
+    showCSVPreview('給与取込2 ('+coLabel+' '+ym+')',pay2Rows,coLabel+'_給与取込2_'+ym+'.csv');
   }else if(type==='fare'){
     const rows=[['社員番号','名前','日付','金額','内容']];
     const fareList=DB.fare.filter(f=>termM.dates.includes(f.date)&&list.find(s=>s.id===f.staffId));
@@ -5952,8 +5991,7 @@ function exportSingleCSV(type){
       const s=DB.staff.find(x=>x.id===f.staffId);
       rows.push([f.staffId,s?s.name:'',f.date,f.amount,f.memo||'']);
     });
-    downloadCSV(coLabel+'_交通費_'+ym+'.csv',rows);
-    showToast('交通費CSVをダウンロード ✓');
+    showCSVPreview('交通費 ('+coLabel+' '+ym+')',rows,coLabel+'_交通費_'+ym+'.csv');
   }else if(type==='ot'){
     const date=document.getElementById('pi-ot-date').value;
     const start=document.getElementById('pi-ot-start').value;
@@ -6016,8 +6054,7 @@ function exportSingleCSV(type){
       const s=DB.staff.find(x=>x.id===e.staffId);
       rows.push([e.staffId,s?s.name:'',e.date,e.amount,e.memo||'']);
     });
-    downloadCSV(coLabel+'_経費精算_'+ym+'.csv',rows);
-    showToast('経費精算CSVをダウンロード ✓');
+    showCSVPreview('経費精算 ('+coLabel+' '+ym+')',rows,coLabel+'_経費精算_'+ym+'.csv');
   }else if(type==='paid'){
     const rows=[['社員番号','名前','日付','種別']];
     const paidList=DB.paid.filter(p=>termM.dates.includes(p.date)&&list.find(s=>s.id===p.staffId));
@@ -6026,8 +6063,7 @@ function exportSingleCSV(type){
       const typeLabel={full:'全日',half:'半日',hour:'時間'}[p.type]||p.type;
       rows.push([p.staffId,s?s.name:'',p.date,typeLabel]);
     });
-    downloadCSV(coLabel+'_有給_'+ym+'.csv',rows);
-    showToast('有給CSVをダウンロード ✓');
+    showCSVPreview('有給 ('+coLabel+' '+ym+')',rows,coLabel+'_有給_'+ym+'.csv');
   }else if(type==='rec'){
     const rows=[['社員番号','名前','日付','時刻','種別']];
     const recList=DB.records.filter(r=>termM.dates.includes(r.date)&&list.find(s=>s.id===r.staffId));
@@ -6036,8 +6072,7 @@ function exportSingleCSV(type){
       const s=DB.staff.find(x=>x.id===r.staffId);
       rows.push([r.staffId,s?s.name:'',r.date,r.ts,typeLbl[r.type]||r.type]);
     });
-    downloadCSV(coLabel+'_打刻ログ_'+ym+'.csv',rows);
-    showToast('打刻ログCSVをダウンロード ✓');
+    showCSVPreview('打刻ログ ('+coLabel+' '+ym+')',rows,coLabel+'_打刻ログ_'+ym+'.csv');
   }
 }
 
@@ -6083,16 +6118,28 @@ function doExportMonthlyCSV(ym){
   // 給与取り込みCSV
   const payRows=[PAY_HDR];
   list.forEach(s=>{
-    const m=calcMonthSummary(s.id,ym);
-    const fareCount=DB.fare.filter(f=>f.staffId===s.id&&termM.dates.includes(f.date)).length;
-    const mForRow={...m,fareCount};
-    payRows.push(makePayRow(s,mForRow,0));
+    try{
+      const m=calcMonthSummary(s.id,ym);
+      const fareCount=DB.fare.filter(f=>f.staffId===s.id&&termM.dates.includes(f.date)).length;
+      const mForRow={...m,fareCount};
+      payRows.push(makePayRow(s,mForRow,0));
+    }catch(err){
+      console.error('給与取込 集計エラー:',s&&s.name,err);
+      payRows.push([s.employeeId||s.id,s.name||''].concat(Array(Math.max(0,PAY_HDR.length-2)).fill('')));
+    }
   });
   downloadCSV(coLabel+'_給与取込_'+ym+'.csv',payRows);
 
   // 給与取込2CSV（代理出勤・代休）
   const pay2Rows=[PAY_HDR2];
-  list.forEach(s=>{pay2Rows.push(makePayRow2(s,calcMonthSummary(s.id,ym)));});
+  list.forEach(s=>{
+    try{
+      pay2Rows.push(makePayRow2(s,calcMonthSummary(s.id,ym)));
+    }catch(err){
+      console.error('給与取込2 集計エラー:',s&&s.name,err);
+      pay2Rows.push([s.employeeId||s.id,s.name||''].concat(Array(Math.max(0,PAY_HDR2.length-2)).fill('')));
+    }
+  });
   downloadCSV(coLabel+'_給与取込2_'+ym+'.csv',pay2Rows);
 
   // 交通費CSV
