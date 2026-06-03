@@ -112,6 +112,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 .shift-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px;background:var(--gy);border-radius:8px;padding:9px;}
 .del-btn{padding:6px 9px;border:1px solid #f09595;border-radius:6px;background:#fff;font-size:11px;cursor:pointer;color:#A32D2D;font-family:inherit;}
 .tsel{width:100%;padding:8px 10px;border:1px solid var(--br);border-radius:7px;font-size:13px;font-family:inherit;background:#fff;color:var(--tx);}
+.dow-total{font-size:12px;font-weight:700;color:#0C447C;background:#EAF2FE;border:1px solid #BBD6F7;border-radius:7px;padding:7px 11px;margin:2px 0 4px;text-align:right;}
+.dow-month{margin-left:auto;align-self:center;font-size:12px;font-weight:700;color:#A32D2D;background:#FDECEC;border:1px solid #F3C6C6;border-radius:7px;padding:5px 11px;white-space:nowrap;}
 .rt2{width:100%;border-collapse:collapse;font-size:11px;}
 .rt2 th{background:var(--gy);padding:6px 5px;text-align:left;font-size:10px;font-weight:600;color:var(--t2);border-bottom:1px solid var(--br);}
 .rt2 td{padding:6px 5px;border-bottom:1px solid var(--br);vertical-align:middle;}
@@ -931,6 +933,7 @@ console.log('Firebase initialized (compat)');
       <button class="dow-tab" onclick="selDow('fri',this)">金</button>
       <button class="dow-tab sat" onclick="selDow('sat',this)">土</button>
       <button class="dow-tab sun" onclick="selDow('sun',this)">日・祝</button>
+      <span class="dow-month" id="dow-month">月間: 0分</span>
     </div>
     <div class="dow-panel active" id="dp-mon"></div>
     <div class="dow-panel" id="dp-tue"></div>
@@ -5242,8 +5245,44 @@ function addShiftRow(cid,s='',e=''){
   const el=document.getElementById(cid);
   const row=document.createElement('div');
   row.className='shift-row';
-  row.innerHTML=`<div><label class="fl">開始</label><select class="tsel">${makeTimeOpts(s)}</select></div><div><label class="fl">終了</label><select class="tsel">${makeTimeOpts(e)}</select></div><button class="del-btn" onclick="this.parentElement.remove()">削除</button>`;
+  row.innerHTML=`<div><label class="fl">開始</label><select class="tsel" onchange="recalcDowTotals()">${makeTimeOpts(s)}</select></div><div><label class="fl">終了</label><select class="tsel" onchange="recalcDowTotals()">${makeTimeOpts(e)}</select></div><button class="del-btn" onclick="this.parentElement.remove();recalcDowTotals()">削除</button>`;
   el.appendChild(row);
+  recalcDowTotals();
+}
+// 予定勤務形態：1枠の開始-終了から実働分を求める
+function slotMin(cid){
+  let total=0;
+  document.querySelectorAll('#'+cid+' .shift-row').forEach(row=>{
+    const ss=row.querySelectorAll('.tsel');
+    const s=ss[0].value,e=ss[1].value;
+    if(s&&e&&s!=='-'&&e!=='-'){
+      const sp=s.split(':'),ep=e.split(':');
+      const d=(+ep[0]*60+ +ep[1])-(+sp[0]*60+ +sp[1]);
+      if(d>0)total+=d;
+    }
+  });
+  return total;
+}
+// 曜日毎の合計＋月間（月〜土の4週分＋第5土曜）を自動計算して表示
+function recalcDowTotals(){
+  let monthly=0;
+  ['mon','tue','wed','thu','fri'].forEach(d=>{
+    const m=slotMin('sh-'+d);
+    const el=document.getElementById('tot-'+d);
+    if(el)el.textContent='合計: '+(m>0?fmtMin(m):'0分');
+    monthly+=m*4; // 平日は4週分
+  });
+  for(let n=1;n<=5;n++){
+    const m=slotMin('sh-sat'+n);
+    const el=document.getElementById('tot-sat'+n);
+    if(el)el.textContent='合計: '+(m>0?fmtMin(m):'0分');
+    monthly+=m; // 第1〜第5土曜をそれぞれ1回分
+  }
+  const sun=slotMin('sh-sun');
+  const sEl=document.getElementById('tot-sun');
+  if(sEl)sEl.textContent='合計: '+(sun>0?fmtMin(sun):'0分');
+  const mEl=document.getElementById('dow-month');
+  if(mEl)mEl.textContent='月間: '+(monthly>0?fmtMin(monthly):'0分');
 }
 function readRows(cid){const rows=document.querySelectorAll('#'+cid+' .shift-row');const r=[];rows.forEach(row=>{const ss=row.querySelectorAll('.tsel');const s=ss[0].value,e=ss[1].value;if(s&&e&&s!=='-'&&e!=='-')r.push({s,e});});return r;}
 function initPanels(ds){
@@ -5252,14 +5291,14 @@ function initPanels(ds){
   const defaultPM={s:'15:45',e:'19:30'};
   ['mon','tue','wed','thu','fri'].forEach(d=>{
     const el=document.getElementById('dp-'+d);
-    el.innerHTML=`<div id="sh-${d}"></div><button class="fa" onclick="addShiftRow('sh-${d}')">＋ 時間枠を追加</button>`;
+    el.innerHTML=`<div id="sh-${d}"></div><button class="fa" onclick="addShiftRow('sh-${d}')">＋ 時間枠を追加</button><div class="dow-total" id="tot-${d}">合計: 0分</div>`;
     const shifts=ds&&ds[d]?ds[d]:[defaultAM,defaultPM];
     shifts.forEach(sh=>addShiftRow('sh-'+d,sh.s,sh.e));});for(let n=1;n<=5;n++){
     const el=document.getElementById('sp-'+n);
-    el.innerHTML=`<div id="sh-sat${n}"></div><button class="fa" onclick="addShiftRow('sh-sat${n}')">＋ 時間枠を追加</button>`;
+    el.innerHTML=`<div id="sh-sat${n}"></div><button class="fa" onclick="addShiftRow('sh-sat${n}')">＋ 時間枠を追加</button><div class="dow-total" id="tot-sat${n}">合計: 0分</div>`;
     const satShifts=ds&&ds.sat&&ds.sat[n]?ds.sat[n]:[];
     satShifts.forEach(sh=>addShiftRow('sh-sat'+n,sh.s,sh.e));
-  }const se=document.getElementById('dp-sun');se.innerHTML=`<div id="sh-sun"></div><button class="fa" onclick="addShiftRow('sh-sun')">＋ 時間枠を追加</button>`;(ds&&ds.sun||[]).forEach(sh=>addShiftRow('sh-sun',sh.s,sh.e));}
+  }const se=document.getElementById('dp-sun');se.innerHTML=`<div id="sh-sun"></div><button class="fa" onclick="addShiftRow('sh-sun')">＋ 時間枠を追加</button><div class="dow-total" id="tot-sun">合計: 0分</div>`;(ds&&ds.sun||[]).forEach(sh=>addShiftRow('sh-sun',sh.s,sh.e));recalcDowTotals();}
 function openAdd(){eSid=null;document.getElementById('stm-t').textContent='スタッフを追加';setFft(false);document.getElementById('fn').value='';document.getElementById('feid').value='';document.getElementById('ft').value='contract';document.getElementById('fstd').value='480';document.getElementById('fbk').value='0';document.getElementById('ff').value='0';onTC();initPanels(null);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));const f1el=document.getElementById('ff1min');
   if(f1el)f1el.value=45;
   const arEl=document.getElementById('ar');
