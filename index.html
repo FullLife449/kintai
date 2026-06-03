@@ -601,10 +601,10 @@ console.log('Firebase initialized (compat)');
       <div class="card">
         <div class="cl">個人ページ ログイン</div>
         <div class="frw"><label class="fl">社員番号</label>
-          <input class="fi" id="pi-id" type="text" placeholder="例: 3 または f1" inputmode="text">
+          <input class="fi" id="pi-id" type="text" placeholder="例: 3" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
         <div class="frw"><label class="fl">パスワード（初期: 0000）</label>
-          <input class="fi" id="pi-pw" type="password" maxlength="8" placeholder="パスワード">
+          <input class="fi" id="pi-pw" type="password" maxlength="8" placeholder="パスワード" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
         <div id="pi-err" style="color:var(--rd);font-size:11px;height:16px;margin-bottom:7px;"></div>
         <button class="fb" style="width:100%;" onclick="loginPersonalInline()">ログイン</button>
@@ -784,9 +784,9 @@ console.log('Firebase initialized (compat)');
       <!-- PW変更 -->
       <div id="pi-view-pw" class="card" style="display:none;">
         <div class="cl">パスワード変更</div>
-        <div class="frw"><label class="fl">現在のPW</label><input class="fi" type="password" id="pi-pw-old" maxlength="8"></div>
-        <div class="frw"><label class="fl">新しいPW</label><input class="fi" type="password" id="pi-pw-new" maxlength="8"></div>
-        <div class="frw"><label class="fl">確認</label><input class="fi" type="password" id="pi-pw-new2" maxlength="8"></div>
+        <div class="frw"><label class="fl">現在のPW</label><input class="fi" type="password" id="pi-pw-old" maxlength="8" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+        <div class="frw"><label class="fl">新しいPW</label><input class="fi" type="password" id="pi-pw-new" maxlength="8" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+        <div class="frw"><label class="fl">確認</label><input class="fi" type="password" id="pi-pw-new2" maxlength="8" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
         <button class="fb" style="width:100%;margin-top:7px;" onclick="changePIpw()">変更する</button>
       </div>
     </div>
@@ -1248,10 +1248,10 @@ console.log('Firebase initialized (compat)');
   <div class="mt">管理画面</div>
   
   <div class="frw"><label class="fl">社員番号</label>
-    <input class="fi" type="number" id="pw-id" inputmode="numeric" placeholder="例: 3" style="font-size:18px;text-align:center;">
+    <input class="fi" type="text" id="pw-id" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="例: 3" style="font-size:18px;text-align:center;">
   </div>
   <div class="frw"><label class="fl" id="pw-label">パスワード</label>
-    <input class="fi" type="password" id="pw-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="" style="font-size:24px;letter-spacing:8px;text-align:center;">
+    <input class="fi" type="password" id="pw-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="" style="font-size:24px;letter-spacing:8px;text-align:center;">
   </div>
   <div id="pw-error" style="color:var(--rd);font-size:11px;text-align:center;height:16px;margin-bottom:7px;"></div>
   <div class="btr">
@@ -1267,10 +1267,10 @@ console.log('Firebase initialized (compat)');
     <div id="personal-login-view">
       <div class="mt">個人ページ</div>
       <div class="frw"><label class="fl">社員番号</label>
-        <input class="fi" id="personal-id" type="text" placeholder="例: 3 または f1" inputmode="text">
+        <input class="fi" id="personal-id" type="text" placeholder="例: 3" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
       </div>
       <div class="frw"><label class="fl">パスワード（初期: 0000）</label>
-        <input class="fi" id="personal-pw" type="password" maxlength="8" placeholder="パスワード">
+        <input class="fi" id="personal-pw" type="password" maxlength="8" placeholder="パスワード" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
       </div>
       <div id="personal-err" style="color:var(--rd);font-size:11px;height:16px;margin-bottom:7px;"></div>
       <div class="btr">
@@ -1341,9 +1341,9 @@ console.log('Firebase initialized (compat)');
       <!-- PW変更 -->
       <div id="pview-pw" class="pview" style="display:none;">
         <div class="cl">パスワード変更</div>
-        <div class="frw"><label class="fl">現在のパスワード</label><input class="fi" type="password" id="p-pw-old" maxlength="8"></div>
-        <div class="frw"><label class="fl">新しいパスワード</label><input class="fi" type="password" id="p-pw-new" maxlength="8"></div>
-        <div class="frw"><label class="fl">確認</label><input class="fi" type="password" id="p-pw-new2" maxlength="8"></div>
+        <div class="frw"><label class="fl">現在のパスワード</label><input class="fi" type="password" id="p-pw-old" maxlength="8" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+        <div class="frw"><label class="fl">新しいパスワード</label><input class="fi" type="password" id="p-pw-new" maxlength="8" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+        <div class="frw"><label class="fl">確認</label><input class="fi" type="password" id="p-pw-new2" maxlength="8" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
         <button class="fb" style="width:100%;margin-top:7px;" onclick="changePersonalPw()">変更する</button>
       </div>
     </div>
