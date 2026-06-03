@@ -2927,10 +2927,10 @@ function loadMasterFields(s){
     'f-irregular':s.irregular||'',
     'f-wage-type':s.wageType||'',
     'f-base-wage':s.baseWage||'',
-    'f-cutoff-day':s.cutoffDay||'',
-    'f-pay-day':s.payDay||'',
+    'f-cutoff-day':s.cutoffDay||'毎月末日',
+    'f-pay-day':s.payDay||'翌月15日',
     'f-overtime-calc':s.overtimeCalc||'legal',
-    'f-raise':s.raise||'',
+    'f-raise':s.raise||'discretion',
     'f-bonus-regular':s.bonusRegular||'',
     'f-bonus-timing':s.bonusTiming||'12月から5月、6月から11月の成績に応じて年2回支払う',
     'f-bonus-extra':s.bonusExtra||'',
@@ -2972,7 +2972,7 @@ function loadMasterFields(s){
     'f-allow4-name':s.allowance4Name||'','f-allow4':s.allowance4||'','f-allow4-period':s.allowance4Period||'month','f-allow4-note':s.allowance4Note||'',
     'f-allow5-name':s.allowance5Name||'','f-allow5':s.allowance5||'','f-allow5-period':s.allowance5Period||'month','f-allow5-note':s.allowance5Note||'',
     // ▼ 契約書用 新規
-    'f-holiday':s.holiday||'',
+    'f-holiday':s.holiday||'日曜日、祝日',
     'f-vacation':s.vacation||'夏季休暇、年末年始休暇',
     'f-fixed-ot':s.fixedOtHours||'',
   };
@@ -3354,7 +3354,8 @@ function exportContract(){
     : {name:'医療法人香庸会', repTitle:'理事長', repName:'川口 琢也', addr:'大阪府枚方市香里園町9-25-202', shortName:'クリニック'};
   // 勤務タイプ
   const wtype=g('ft');
-  const isAnnual = (wtype==='annual') || !!parseNum(m.annualWage);
+  // 年俸制契約書は「年俸型」スタッフのみ発行（年俸額入力だけでは発行しない）
+  const isAnnual = (wtype==='annual');
 
   // 曜日別シフト（フォームから取得）
   const dayJ={mon:'月',tue:'火',wed:'水',thu:'木',fri:'金',sun:'日・祝'};
@@ -3421,7 +3422,7 @@ function exportContract(){
     +'<br>　イ 所定外 a 法定内（0％） b 60時間以下 法定超（25％） c 60時間超 法定超（50％）'
     +'<br>　ロ 休日 a 法定（35％） b 法定外（25％）'
     +'<br>　ハ 深夜（25％）'
-    +'<br>3 賃金締切日（'+(esc(m.cutoffDay)||'毎月15日')+'）　賃金支払日（'+(esc(m.payDay)||'毎月末日')+'）'
+    +'<br>3 賃金締切日（'+(esc(m.cutoffDay)||'毎月末日')+'）　賃金支払日（'+(esc(m.payDay)||'翌月15日')+'）'
     +'<br>4 昇給（'+(raiseText||'　')+'）'+((m.raise==='yes'||m.raise==='discretion')?'→（原則として毎年度、業績により昇給の有無及び昇給額を決定し、年度ごとに更新する）':'')
     +'<br>5 賞与（'+(yn(m.bonusRegular)||'　')+'）'+(m.bonusTiming?('→（'+esc(m.bonusTiming)+'）'):'')
     +'<br>6 退職金（'+(yn(m.severance)||'無')+'）'+(m.severanceRule?('　'+esc(m.severanceRule)):'');
