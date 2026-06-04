@@ -2630,8 +2630,8 @@ function renderPunchGrid(){
       displayStaff=displayStaff.filter(s=>s.company===CO);
     }
   }else{
-    // 未設定 → 現在選択中の会社のスタッフのみ
-    displayStaff=displayStaff.filter(s=>s.company===CO);
+    // 未設定 → 名前を出さない（端末表示設定で設定するまで空表示）
+    displayStaff=[];
   }
   // 社員番号順
   displayStaff.sort((a,b)=>a.id-b.id);
@@ -2659,6 +2659,10 @@ function renderPunchGrid(){
       ${stateLabel?`<div style="font-size:9px;font-weight:700;margin-top:2px;">${stateLabel}</div>`:''}
     </button>`;
   }).join('');
+  // 表示メンバー未設定（または未選択）の案内
+  if(!displayStaff.length){
+    grid.innerHTML='<div style="grid-column:1/-1;padding:24px 16px;text-align:center;color:var(--t2);font-size:12px;line-height:1.7;">この端末は表示メンバーが未設定です。<br>管理画面の「端末表示設定」で表示するスタッフを設定してください。</div>';
+  }
 }
 
 function punchStaff(sid){
