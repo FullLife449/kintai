@@ -522,6 +522,14 @@ console.log('Firebase initialized (compat)');
     <!-- 出張承認 -->
     <div class="asc" id="asc-biztrip">
       <div class="card">
+        <div class="cl">📋 出張旅費規程 金額設定</div>
+        <div class="fs2">規程の金額（後日設定分）を入力します。空欄は「＿＿＿」で表示されます。会社ごとに保存されます。</div>
+        <div class="frw"><label class="fl">宿泊費 上限/泊（円）</label><input class="fi" type="number" inputmode="numeric" id="btr-lodging" placeholder="例: 10000"></div>
+        <div class="frw"><label class="fl">日当 出張1日（円）</label><input class="fi" type="number" inputmode="numeric" id="btr-perdiem-day" placeholder="例: 3000"></div>
+        <div class="frw"><label class="fl">日当 日帰り（円）</label><input class="fi" type="number" inputmode="numeric" id="btr-perdiem-trip" placeholder="例: 1500"></div>
+        <button class="fb" style="width:100%;margin-top:6px;" onclick="saveBizTripRates()">金額を保存</button>
+      </div>
+      <div class="card">
         <div class="cl">🧳 出張承認</div>
         <div class="fs2" style="margin-bottom:9px;">提出された出張申請を承認・却下します（出発地：香里園駅）。承認・却下は両社共通です。</div>
         <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;">
@@ -684,6 +692,7 @@ console.log('Firebase initialized (compat)');
       <!-- 有給 -->
       <div id="pi-view-paid" class="card" style="display:none;">
         <div class="cl">有給申請</div>
+        <div class="fs2" style="color:#C62828;">⚠ 前月15日締め（例：7月の有給は6月15日まで）</div>
         <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="pi-paid-date"></div>
         <div class="frw"><label class="fl">種別</label>
           <select class="fsl" id="pi-paid-type"><option value="full">全日</option><option value="am">午前半日</option><option value="pm">午後半日</option></select>
@@ -761,6 +770,7 @@ console.log('Firebase initialized (compat)');
       <!-- 代休 -->
       <div id="pi-view-sub" class="card" style="display:none;">
         <div class="cl">代休管理</div>
+        <div class="fs2" style="color:#C62828;">⚠ 申請は当月分のみ可能です</div>
         <!-- 残数表示 -->
         <div style="background:linear-gradient(135deg,#FFF3E0,#FFE0B2);padding:11px;border-radius:9px;margin-bottom:10px;">
           <div style="font-size:10px;color:#5D4037;">代休残数</div>
@@ -1571,6 +1581,7 @@ function fbLoadAndSync(co) {
     DB.rehab       = s.rehab       ? arr(s.rehab)       : [];
     DB.rehabSlots  = s.rehabSlots  ? arr(s.rehabSlots)  : [];
     DB.bizTrips    = s.bizTrips    ? arr(s.bizTrips)    : [];
+    DB.bizTripRates= s.bizTripRates|| {};
     DB.substitute  = s.substitute  ? arr(s.substitute)  : [];
     DB.subOff      = s.subOff      ? arr(s.subOff)      : [];
     DB.subGrants   = s.subGrants   ? arr(s.subGrants)   : [];
@@ -1642,6 +1653,7 @@ function fbSaveSettings() {
     rehab: DB.rehab||[],
     rehabSlots: DB.rehabSlots||[],
     bizTrips: DB.bizTrips||[],
+    bizTripRates: DB.bizTripRates||{},
     workplaces: DB.workplaces||[],
     duties: DB.duties||[],
     contractClauses: DB.contractClauses||[],
@@ -1662,7 +1674,7 @@ function fbSaveSettings() {
 
 const TL={in:'出勤',out:'退勤',break:'休憩開始',resume:'勤務再開',early:'早出',fare:'交通費',paid:'有給',lunch:'ランチデリ'};
 
-let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],bizTrips:[],workplaces:[],duties:[],contractClauses:[]};
+let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],bizTrips:[],bizTripRates:{},workplaces:[],duties:[],contractClauses:[]};
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 
@@ -1705,11 +1717,12 @@ const STAFF_VER='v2001'; // 19:30変更バージョン
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
-    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],bizTrips:[],workplaces:[],duties:[]},d);
+    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],bizTrips:[],bizTripRates:{},workplaces:[],duties:[]},d);
   }catch(e){}
   DB.specials=[]; // バイト枠は廃止：過去データも保持しない（リハ臨勤へ移行）
   if(!DB.rehabSlots)DB.rehabSlots=[];
   if(!DB.bizTrips)DB.bizTrips=[];
+  if(!DB.bizTripRates)DB.bizTripRates={};
   // スタッフデータのバージョンが古い（17:45が含まれる）場合はスタッフのみリセット
   const staffVer=localStorage.getItem('kintai_staff_ver');
   if(staffVer!==STAFF_VER){
@@ -3977,23 +3990,28 @@ function delPiRehabSlot(id){
 // ═══ 出張申請 ═══
 // 宛先（帳票出力用）
 const BIZTRIP_ADDRESSEE='医療法人香庸会　川口脳神経外科リハビリクリニック　理事長　川口琢也　宛';
-// 出張旅費規程（雛形・金額は後日設定）
-const BIZ_TRIP_RULE=`<b>出張旅費規程</b><br>
+// 出張旅費規程（金額は管理画面で編集可。未設定は「＿＿＿」で表示）
+function btRateText(v){return (v===''||v==null||isNaN(Number(v)))?'＿＿＿':Number(v).toLocaleString();}
+function btRateUnset(v){return (v===''||v==null||isNaN(Number(v)));}
+function bizTripRuleHTML(){
+  const r=DB.bizTripRates||{};
+  const note='<span style="color:#C62828;">（※金額は後日設定）</span>';
+  return `<b>出張旅費規程</b><br>
 <b>第1条（目的）</b> この規程は、職員が業務のため出張する場合の旅費の支給基準および手続を定めることを目的とする。<br>
-<b>第2条（適用範囲）</b> この規程は、医療法人香庸会に勤務するすべての職員に適用する。<br>
+<b>第2条（適用範囲）</b> この規程は、当法人に勤務するすべての職員に適用する。<br>
 <b>第3条（出張の定義）</b> 出張とは、所属長の命により通常の勤務地を離れて用務を行うことをいう。出発地は原則として「香里園駅」とする。<br>
 &nbsp;&nbsp;2 日帰り出張：宿泊を伴わない出張をいう。<br>
 &nbsp;&nbsp;3 宿泊出張：宿泊を伴う出張をいう。<br>
 <b>第4条（旅費の種類）</b> 旅費は次の各号とする。①交通費 ②宿泊費 ③日当 ④学会等参加費<br>
 <b>第5条（交通費）</b> 最も経済的かつ合理的な経路・交通手段により実費を支給する。新幹線・特急・航空機等の利用は事前に承認を得るものとする。<br>
-<b>第6条（宿泊費）</b> 宿泊を伴う場合、1泊につき上限＿＿＿円を実費支給する。<span style="color:#C62828;">（※金額は後日設定）</span><br>
-<b>第7条（日当）</b> 出張1日につき＿＿＿円を支給する。日帰り出張は＿＿＿円とする。<span style="color:#C62828;">（※金額は後日設定）</span><br>
+<b>第6条（宿泊費）</b> 宿泊を伴う場合、1泊につき上限${btRateText(r.lodgingMax)}円を実費支給する。${btRateUnset(r.lodgingMax)?note:''}<br>
+<b>第7条（日当）</b> 出張1日につき${btRateText(r.perDiemDay)}円を支給する。日帰り出張は${btRateText(r.perDiemTrip)}円とする。${(btRateUnset(r.perDiemDay)||btRateUnset(r.perDiemTrip))?note:''}<br>
 <b>第8条（申請・承認）</b> 出張に先立ち「出張申請書」を提出し、所属長の承認を得るものとする。<br>
 <b>第9条（精算）</b> 出張終了後は速やかに、領収書を添付して旅費の精算を行う。<br>
 <b>第10条（その他）</b> 本規程に定めのない事項は、その都度理事長が定める。<br>
 <span style="color:var(--t2);">附則 この規程は＿＿＿＿年＿＿月＿＿日より施行する。</span>`;
-
-function renderBizTripRule(){const el=document.getElementById('bt-rule-body');if(el&&!el.dataset.loaded){el.innerHTML=BIZ_TRIP_RULE;el.dataset.loaded='1';}}
+}
+function renderBizTripRule(){const el=document.getElementById('bt-rule-body');if(el)el.innerHTML=bizTripRuleHTML();}
 function toggleBizTripRule(){const b=document.getElementById('bt-rule-body'),a=document.getElementById('bt-rule-arrow');if(!b)return;renderBizTripRule();const open=b.style.display==='none'||!b.style.display;b.style.display=open?'block':'none';if(a)a.textContent=open?'▲':'▼';}
 
 function btNum(id){return parseInt((document.getElementById(id)||{}).value)||0;}
@@ -5115,7 +5133,21 @@ function revertOT(id){
 }
 
 // ═══ 管理画面：出張承認 ═══
+function saveBizTripRates(){
+  if(!DB.bizTripRates)DB.bizTripRates={};
+  const g=id=>{const e=document.getElementById(id);const v=e?e.value.trim():'';return v===''?'':(parseInt(v)||0);};
+  DB.bizTripRates={lodgingMax:g('btr-lodging'),perDiemDay:g('btr-perdiem-day'),perDiemTrip:g('btr-perdiem-trip')};
+  sDB();fbSaveSettings();
+  if(typeof renderBizTripRule==='function')renderBizTripRule();
+  showToast('規程の金額を保存しました ✓');
+}
+function loadBizTripRates(){
+  const r=DB.bizTripRates||{};
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.value=(v===''||v==null)?'':v;};
+  set('btr-lodging',r.lodgingMax);set('btr-perdiem-day',r.perDiemDay);set('btr-perdiem-trip',r.perDiemTrip);
+}
 function initBizTripAdmin(){
+  loadBizTripRates();
   const ms=document.getElementById('bta-month');
   if(ms&&!ms.options.length){
     const now=new Date();
@@ -6537,9 +6569,9 @@ function exportSingleCSV(type){
     const replacer=type==='substitute'?document.getElementById('pi-sub-sub-replacer').value.trim():'';
     if(!date){showToast('日付を入力してください');return;}
     if(type==='substitute'&&!replacer){showToast('交代者の名前を入力してください');return;}
-    // 申請期限チェック
-    if(!isReqDateAllowed(date)){
-      showToast('申請可能期間外です: '+getReqRangeMessage());
+    // 代休は当月のみ申請可
+    if(!isCurrentMonthDate(date)){
+      showToast('代休の申請は当月（'+currentMonthLabel()+'）のみ可能です');
       return;
     }
     // 重複チェック
@@ -7602,9 +7634,9 @@ function renderPIList(type){
     const replacer=type==='substitute'?document.getElementById('pi-sub-sub-replacer').value.trim():'';
     if(!date){showToast('日付を入力してください');return;}
     if(type==='substitute'&&!replacer){showToast('交代者の名前を入力してください');return;}
-    // 申請期限チェック
-    if(!isReqDateAllowed(date)){
-      showToast('申請可能期間外です: '+getReqRangeMessage());
+    // 代休は当月のみ申請可
+    if(!isCurrentMonthDate(date)){
+      showToast('代休の申請は当月（'+currentMonthLabel()+'）のみ可能です');
       return;
     }
     // 重複チェック
@@ -7695,6 +7727,14 @@ function getReqRangeMessage(){
   return fmt(minDate)+' ～ '+fmt(maxDate);
 }
 
+// 代休は当月のみ申請可
+function isCurrentMonthDate(d){
+  const t=new Date();
+  const ym=t.getFullYear()+'-'+pad(t.getMonth()+1);
+  return (d||'').startsWith(ym);
+}
+function currentMonthLabel(){const t=new Date();return t.getFullYear()+'年'+(t.getMonth()+1)+'月';}
+
 // 代休残数計算
 function calcSubOffRemain(sid){
   // subGrants: 管理画面で付与された分（プラス）
@@ -7762,9 +7802,9 @@ function submitPIRequest(type){
     const replacer=type==='substitute'?document.getElementById('pi-sub-sub-replacer').value.trim():'';
     if(!date){showToast('日付を入力してください');return;}
     if(type==='substitute'&&!replacer){showToast('交代者の名前を入力してください');return;}
-    // 申請期限チェック
-    if(!isReqDateAllowed(date)){
-      showToast('申請可能期間外です: '+getReqRangeMessage());
+    // 代休は当月のみ申請可
+    if(!isCurrentMonthDate(date)){
+      showToast('代休の申請は当月（'+currentMonthLabel()+'）のみ可能です');
       return;
     }
     // 重複チェック
@@ -7826,6 +7866,11 @@ function submitPIRequest(type){
     const date=document.getElementById('pi-paid-date').value;
     const t=document.getElementById('pi-paid-type').value;
     if(!date)return;
+    // 有給は前月15日締め（例: 7月の有給は6月15日まで）
+    if(!isReqDateAllowed(date)){
+      showToast('有給は前月15日締めです（申請可能: '+getReqRangeMessage()+'）');
+      return;
+    }
     DB.paid=DB.paid.filter(p=>!(p.staffId===piStaff.id&&p.date===date));
     DB.paid.push({staffId:piStaff.id,date,type:t,staffName:piStaff.name,company:piStaff.company,id:Date.now()});
     sDB();
