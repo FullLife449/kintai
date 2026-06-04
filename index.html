@@ -618,6 +618,7 @@ console.log('Firebase initialized (compat)');
         <button class="ptab pi-ko-only" id="pi-tab-rehab2" onclick="showPITab('rehab2')" style="background:#E3F2FD;">リハ臨勤</button>
         <button class="ptab" id="pi-tab-fare" onclick="showPITab('fare')">交通費</button>
         <button class="ptab" id="pi-tab-expense" onclick="showPITab('expense')">経費精算</button>
+        <button class="ptab" id="pi-tab-biztrip" onclick="showPITab('biztrip')">出張申請</button>
         <button class="ptab" id="pi-tab-pw" onclick="showPITab('pw')">PW変更</button>
       </div>
       <!-- 打刻ログ -->
@@ -694,6 +695,33 @@ console.log('Firebase initialized (compat)');
         </div>
         <button class="fb" id="pi-exp-submit-btn" style="width:100%;margin-top:7px;opacity:0.4;cursor:not-allowed;" onclick="submitPIRequest('expense')" disabled>申請する</button>
         <div id="pi-expense-list" style="margin-top:11px;max-height:200px;overflow-y:auto;"></div>
+      </div>
+      <!-- 出張申請 -->
+      <div id="pi-view-biztrip" class="card" style="display:none;">
+        <div class="cl">出張申請書</div>
+        <div class="fs2">出張内容と費用を申請します。合計金額は経費精算CSVに反映されます。</div>
+        <div class="frw"><label class="fl">出張目的<br>（会合名等）</label><input class="fi" type="text" id="pi-bt-purpose" placeholder="例: 第81回学術総会"></div>
+        <div class="frw"><label class="fl">場所<br>（住所・施設名）</label><input class="fi" type="text" id="pi-bt-place" placeholder="例: パシフィコ横浜"></div>
+        <div class="frw"><label class="fl">最寄駅</label><input class="fi" type="text" id="pi-bt-station" placeholder="例: みなとみらい駅"></div>
+        <div class="frw"><label class="fl">出張期間 開始</label><input class="fi" type="date" id="pi-bt-start"></div>
+        <div class="frw"><label class="fl">出張期間 終了</label><input class="fi" type="date" id="pi-bt-end"></div>
+        <div class="frw"><label class="fl">交通手段</label><input class="fi" type="text" id="pi-bt-transport" placeholder="例: 新幹線・飛行機 等"></div>
+        <div class="frw"><label class="fl">宿泊先名<br>（無ければ空欄）</label><input class="fi" type="text" id="pi-bt-lodging" placeholder="例: ○○ホテル"></div>
+        <div class="frw"><label class="fl">同行者<br>（任意）</label><input class="fi" type="text" id="pi-bt-companion" placeholder="例: なし"></div>
+        <div style="margin:8px 0 4px;font-size:11px;font-weight:700;color:var(--tx);">費用（円）</div>
+        <div class="frw"><label class="fl">学会等の費用</label><input class="fi" type="number" inputmode="numeric" id="pi-bt-fee" placeholder="0" oninput="updateBizTripTotal()"></div>
+        <div class="frw"><label class="fl">交通費</label><input class="fi" type="number" inputmode="numeric" id="pi-bt-transfee" placeholder="0" oninput="updateBizTripTotal()"></div>
+        <div class="frw"><label class="fl">宿泊費</label><input class="fi" type="number" inputmode="numeric" id="pi-bt-lodgefee" placeholder="0" oninput="updateBizTripTotal()"></div>
+        <div style="margin:9px 0;padding:11px 13px;background:linear-gradient(135deg,#E8EAF6,#C5CAE9);border:1px solid #9FA8DA;border-radius:9px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:12px;font-weight:700;color:#283593;">金額合計</span>
+          <span id="pi-bt-total" style="font-size:20px;font-weight:800;color:#1a1a2e;">0 円</span>
+        </div>
+        <div class="frw"><label class="fl">備考<br>（任意）</label><input class="fi" type="text" id="pi-bt-memo" placeholder="補足があれば"></div>
+        <button class="fb" style="width:100%;margin-top:7px;" onclick="submitPIBizTrip()">申請する</button>
+        <div style="margin-top:14px;border-top:1px solid var(--br);padding-top:10px;">
+          <div style="font-size:11px;font-weight:700;margin-bottom:6px;">申請履歴</div>
+          <div id="pi-bt-list" style="max-height:260px;overflow-y:auto;"></div>
+        </div>
       </div>
       <!-- 代休 -->
       <div id="pi-view-sub" class="card" style="display:none;">
@@ -1507,6 +1535,7 @@ function fbLoadAndSync(co) {
     DB.paidHistory = s.paidHistory ? arr(s.paidHistory) : [];
     DB.rehab       = s.rehab       ? arr(s.rehab)       : [];
     DB.rehabSlots  = s.rehabSlots  ? arr(s.rehabSlots)  : [];
+    DB.bizTrips    = s.bizTrips    ? arr(s.bizTrips)    : [];
     DB.substitute  = s.substitute  ? arr(s.substitute)  : [];
     DB.subOff      = s.subOff      ? arr(s.subOff)      : [];
     DB.subGrants   = s.subGrants   ? arr(s.subGrants)   : [];
@@ -1577,6 +1606,7 @@ function fbSaveSettings() {
     licenses: DB.licenses||[],
     rehab: DB.rehab||[],
     rehabSlots: DB.rehabSlots||[],
+    bizTrips: DB.bizTrips||[],
     workplaces: DB.workplaces||[],
     duties: DB.duties||[],
     contractClauses: DB.contractClauses||[],
@@ -1597,7 +1627,7 @@ function fbSaveSettings() {
 
 const TL={in:'出勤',out:'退勤',break:'休憩開始',resume:'勤務再開',early:'早出',fare:'交通費',paid:'有給',lunch:'ランチデリ'};
 
-let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],workplaces:[],duties:[],contractClauses:[]};
+let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],bizTrips:[],workplaces:[],duties:[],contractClauses:[]};
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 
@@ -1640,10 +1670,11 @@ const STAFF_VER='v2001'; // 19:30変更バージョン
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
-    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],workplaces:[],duties:[]},d);
+    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],bizTrips:[],workplaces:[],duties:[]},d);
   }catch(e){}
   DB.specials=[]; // バイト枠は廃止：過去データも保持しない（リハ臨勤へ移行）
   if(!DB.rehabSlots)DB.rehabSlots=[];
+  if(!DB.bizTrips)DB.bizTrips=[];
   // スタッフデータのバージョンが古い（17:45が含まれる）場合はスタッフのみリセット
   const staffVer=localStorage.getItem('kintai_staff_ver');
   if(staffVer!==STAFF_VER){
@@ -3908,6 +3939,75 @@ function delPiRehabSlot(id){
   showToast('削除しました');
 }
 
+// ═══ 出張申請 ═══
+function btNum(id){return parseInt((document.getElementById(id)||{}).value)||0;}
+function updateBizTripTotal(){
+  const t=btNum('pi-bt-fee')+btNum('pi-bt-transfee')+btNum('pi-bt-lodgefee');
+  const el=document.getElementById('pi-bt-total');
+  if(el)el.textContent=t.toLocaleString()+' 円';
+  return t;
+}
+function submitPIBizTrip(){
+  if(!piStaff){showToast('ログインしてください');return;}
+  const purpose=(document.getElementById('pi-bt-purpose').value||'').trim();
+  const startDate=document.getElementById('pi-bt-start').value;
+  const endDate=document.getElementById('pi-bt-end').value||startDate;
+  if(!purpose){showToast('出張目的を入力してください');return;}
+  if(!startDate){showToast('出張期間（開始）を入力してください');return;}
+  const feeConf=btNum('pi-bt-fee'),feeTransport=btNum('pi-bt-transfee'),feeLodging=btNum('pi-bt-lodgefee');
+  const total=feeConf+feeTransport+feeLodging;
+  if(!DB.bizTrips)DB.bizTrips=[];
+  DB.bizTrips.push({
+    id:Date.now()+Math.random(),
+    staffId:piStaff.id,
+    staffName:piStaff.name,
+    company:piStaff.company,
+    purpose,
+    place:(document.getElementById('pi-bt-place').value||'').trim(),
+    station:(document.getElementById('pi-bt-station').value||'').trim(),
+    startDate,endDate,
+    transport:(document.getElementById('pi-bt-transport').value||'').trim(),
+    lodging:(document.getElementById('pi-bt-lodging').value||'').trim(),
+    companion:(document.getElementById('pi-bt-companion').value||'').trim(),
+    feeConf,feeTransport,feeLodging,total,
+    memo:(document.getElementById('pi-bt-memo').value||'').trim(),
+    createdAt:new Date().toISOString()
+  });
+  sDB();fbSaveSettings();
+  renderPiBizTripList();
+  // 入力欄クリア
+  ['pi-bt-purpose','pi-bt-place','pi-bt-station','pi-bt-transport','pi-bt-lodging','pi-bt-companion','pi-bt-fee','pi-bt-transfee','pi-bt-lodgefee','pi-bt-memo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('pi-bt-end').value='';
+  updateBizTripTotal();
+  showToast('出張申請しました ✓');
+}
+function renderPiBizTripList(){
+  if(!piStaff)return;
+  const el=document.getElementById('pi-bt-list');
+  if(!el)return;
+  const list=(DB.bizTrips||[]).filter(t=>t.staffId===piStaff.id).sort((a,b)=>a.startDate<b.startDate?1:-1);
+  if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:11px;text-align:center;padding:14px;">申請なし</div>';return;}
+  el.innerHTML=list.map(t=>{
+    const period=t.startDate+(t.endDate&&t.endDate!==t.startDate?(' 〜 '+t.endDate):'');
+    return `<div style="padding:8px 9px;border-bottom:1px solid #f0f0f0;font-size:11px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+        <span style="font-weight:700;">${period}</span>
+        <span style="font-weight:800;color:#283593;">${(t.total||0).toLocaleString()}円</span>
+        <button class="fd" onclick="delPiBizTrip('${t.id}')" style="font-size:10px;padding:3px 8px;">削除</button>
+      </div>
+      <div style="color:var(--t2);margin-top:3px;">${t.purpose||''}${t.place?'／'+t.place:''}</div>
+      <div style="color:var(--t2);margin-top:2px;">学会${(t.feeConf||0).toLocaleString()} / 交通${(t.feeTransport||0).toLocaleString()} / 宿泊${(t.feeLodging||0).toLocaleString()}</div>
+    </div>`;
+  }).join('');
+}
+function delPiBizTrip(id){
+  if(!confirm('この出張申請を削除しますか？'))return;
+  DB.bizTrips=(DB.bizTrips||[]).filter(t=>String(t.id)!==String(id));
+  sDB();fbSaveSettings();
+  renderPiBizTripList();
+  showToast('削除しました');
+}
+
 // 管理画面：リハ臨勤 登録（同じスタッフ＋月日は上書き）
 function saveRehabSlot(){
   const sid=parseInt(document.getElementById('rsl-s').value);
@@ -5330,6 +5430,18 @@ function makePayRow2(s,m){
   return base;
 }
 
+// 出張申請の合計金額を経費精算CSV用の1行に変換（出張開始日が対象期間内のもの）
+function bizTripExpenseRows(list,termM){
+  const rows=[];
+  (DB.bizTrips||[]).filter(t=>t.startDate&&termM.dates.includes(t.startDate)&&list.find(s=>s.id===t.staffId))
+    .sort((a,b)=>a.staffId-b.staffId||(a.startDate<b.startDate?-1:1))
+    .forEach(t=>{
+      const s=DB.staff.find(x=>x.id===t.staffId);
+      rows.push([t.staffId,s?s.name:(t.staffName||''),t.startDate,t.total||0,'出張: '+(t.purpose||'')]);
+    });
+  return rows;
+}
+
 // リハ臨勤 月日明細行（給与取込2の明細用）
 function rehabSlotDetailRows(list,ym){
   const rows=[];
@@ -6249,6 +6361,7 @@ function exportSingleCSV(type){
       const s=DB.staff.find(x=>x.id===e.staffId);
       rows.push([e.staffId,s?s.name:'',e.date,e.amount,e.memo||'']);
     });
+    bizTripExpenseRows(list,termM).forEach(r=>rows.push(r)); // 出張申請の合計を経費精算に合算
     showCSVPreview('経費精算 ('+coLabel+' '+ym+')',rows,coLabel+'_経費精算_'+ym+'.csv');
   }else if(type==='paid'){
     const rows=[['社員番号','名前','日付','種別']];
@@ -6350,14 +6463,16 @@ function doExportMonthlyCSV(ym){
     setTimeout(()=>downloadCSV(coLabel+'_交通費_'+ym+'.csv',fareRows),400);
   }
   
-  // 経費精算CSV
+  // 経費精算CSV（出張申請の合計も合算）
   const expList=(DB.expenses||[]).filter(e=>termM.dates.includes(e.date)&&list.find(s=>s.id===e.staffId));
-  if(expList.length){
+  const btRows=bizTripExpenseRows(list,termM);
+  if(expList.length||btRows.length){
     const expRows=[['社員番号','名前','日付','金額','内容']];
     expList.sort((a,b)=>a.staffId-b.staffId||(a.date<b.date?-1:1)).forEach(e=>{
       const s=DB.staff.find(x=>x.id===e.staffId);
       expRows.push([e.staffId,s?s.name:'',e.date,e.amount,e.memo||'']);
     });
+    btRows.forEach(r=>expRows.push(r));
     setTimeout(()=>downloadCSV(coLabel+'_経費精算_'+ym+'.csv',expRows),800);
   }
   
@@ -7122,7 +7237,7 @@ function logoutPersonalInline(){
 }
 
 function showPITab(tab){
-  ['log','paid','sub','ot','rehab','rehab2','fare','expense','pw'].forEach(t=>{
+  ['log','paid','sub','ot','rehab','rehab2','fare','expense','biztrip','pw'].forEach(t=>{
     const v=document.getElementById('pi-view-'+t);
     const b=document.getElementById('pi-tab-'+t);
     if(v)v.style.display=t===tab?'block':'none';
@@ -7137,6 +7252,7 @@ function showPITab(tab){
   if(tab==='ot'){renderPiOTList();const dEl=document.getElementById('pi-ot-date');if(dEl&&!dEl.value)dEl.value=todayStr();}
   if(tab==='rehab'){renderPiRehabList();const dEl2=document.getElementById('pi-rh-date');if(dEl2&&!dEl2.value)dEl2.value=todayStr();}
   if(tab==='rehab2'){renderPiRehabSlotList();const dEl4=document.getElementById('pi-rs-date');if(dEl4&&!dEl4.value)dEl4.value=todayStr();}
+  if(tab==='biztrip'){renderPiBizTripList();updateBizTripTotal();const dEl5=document.getElementById('pi-bt-start');if(dEl5&&!dEl5.value)dEl5.value=todayStr();}
   if(tab==='fare'){renderPiFareList();const dEl3=document.getElementById('pi-fare-date');if(dEl3&&!dEl3.value)dEl3.value=todayStr();}
 }
 
