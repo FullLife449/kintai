@@ -239,7 +239,6 @@ console.log('Firebase initialized (compat)');
       <button class="at fl-only" id="atab-allshift" onclick="showAS('allshift')" style="background:#FFF3E0;">全員シフト</button>
       <button class="at fl-only" id="atab-group" onclick="showAS('group')" style="background:#FFF3E0;">グループ管理</button>
       <button class="at fl-only" id="atab-ot" onclick="showAS('ot')" style="background:#FFF3E0;">時間外承認</button>
-      <button class="at fl-only" id="atab-rehab" onclick="showAS('rehab')" style="background:#FFF3E0;">リハビリ</button>
     </div>
     <div class="pad">
     <div class="card" style="margin-bottom:8px;background:var(--bll);border:1px solid var(--bl);">
@@ -4869,7 +4868,7 @@ function revertOT(id){
 
 
 // フルラフ専用の管理サブタブ
-const FL_ONLY_SUBS=['pattern','shiftcal','allshift','group','ot','rehab'];
+const FL_ONLY_SUBS=['pattern','shiftcal','allshift','group','ot'];
 function applyFulllifeTabsVisibility(){
   const isFulllife=(CO==='fulllife');
   // フルラフ専用タブのボタン表示/非表示
