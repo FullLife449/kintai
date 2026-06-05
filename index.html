@@ -531,6 +531,9 @@ console.log('Firebase initialized (compat)');
           <button class="op-ins" onclick="opInsert('有給AM')" style="color:#C62828;">有給AM</button>
           <button class="op-ins" onclick="opInsert('有給PM')" style="color:#C62828;">有給PM</button>
           <button class="op-ins" onclick="opInsert('代休')" style="color:#C62828;">代休</button>
+          <button class="op-ins" onclick="opInsert('欠勤')" style="color:#C62828;">欠勤</button>
+          <button class="op-ins" onclick="opInsert('欠勤AM')" style="color:#C62828;">欠勤AM</button>
+          <button class="op-ins" onclick="opInsert('欠勤PM')" style="color:#C62828;">欠勤PM</button>
           <button class="op-ins" onclick="opInsert('代理出勤')">代理出勤</button>
           <button class="op-ins" onclick="opInsert('')" style="color:#999;">クリア</button>
         </div>
@@ -5166,10 +5169,10 @@ function opCellKey(d,slot,type,ci){return d+'|'+slot+'|'+type+'|'+ci;}
 function opCell(d,slot,type,ci,mo,bg){
   const key=opCellKey(d,slot,type,ci);
   const v=(mo.cells||{})[key]||'';
-  const red=/有給|代休/.test(v)?'color:#C62828;font-weight:700;':'';
+  const red=/有給|代休|欠勤/.test(v)?'color:#C62828;font-weight:700;':'';
   return `<td style="${bg?'background:'+bg+';':''}"><input data-opkey="${key}" value="${esc(v)}" style="${red}" onfocus="opState.focusKey='${key}'" oninput="opRecolor(this)" onchange="opSet('${key}',this.value)"></td>`;
 }
-function opRecolor(el){el.style.color=/有給|代休/.test(el.value)?'#C62828':'';el.style.fontWeight=/有給|代休/.test(el.value)?'700':'';}
+function opRecolor(el){el.style.color=/有給|代休|欠勤/.test(el.value)?'#C62828':'';el.style.fontWeight=/有給|代休|欠勤/.test(el.value)?'700':'';}
 function opSet(key,val){
   const mo=opMonth(opState.ym);mo.cells=mo.cells||{};
   if(val.trim())mo.cells[key]=val;else delete mo.cells[key];
@@ -5244,7 +5247,7 @@ function printOutpat(){
         body+=`<td rowspan="3" class="${cls}">${days[dow]}</td>`;
       }
       body+='<td class="slot">'+sl[1]+'</td>';
-      const cell=(type,ci,extra)=>{const v=(mo.cells||{})[opCellKey(d,sl[0],type,ci)]||'';const r=/有給|代休/.test(v)?' red':'';return `<td class="${extra||''}${r}">${esc(v).replace(/\n/g,'<br>')}</td>`;};
+      const cell=(type,ci,extra)=>{const v=(mo.cells||{})[opCellKey(d,sl[0],type,ci)]||'';const r=/有給|代休|欠勤/.test(v)?' red':'';return `<td class="${extra||''}${r}">${esc(v).replace(/\n/g,'<br>')}</td>`;};
       sc.forEach((n,ci)=>body+=cell('s',ci,''));
       dc.forEach((n,ci)=>body+=cell('d',ci,'duty'));
       for(let b=0;b<bn;b++)body+=cell('b',b,'biz');
