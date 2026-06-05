@@ -1608,21 +1608,35 @@ function fbLoadAndSync(co) {
 
   const arr=v=>Array.isArray(v)?v:Object.values(v);
 
-  // 初回読み込み
-  window.fbGet(staffRef).then(snap => {
-    if(snap.exists()) {
-      let loadedStaff = arr(snap.val());
-      loadedStaff = loadedStaff.map(s=>({...s, company: s.company||(co==='fulllife'?'fulllife':'koyokai')}));
-      DB.staff = loadedStaff;
-      console.log('Staff loaded:', DB.staff.length);
-    } else {
-      // データなし→現在のlocalStorageのスタッフをアップロード
-      lDB();
-      fbSaveStaff(co);
-    }
+  // 名簿バージョン管理：STAFF_VERが上がったら最新の種(ハードコード名簿)をFirebaseへ強制反映し、旧データを上書きする
+  const fbStaffVer = localStorage.getItem('kintai_fbstaff_ver');
+  if(fbStaffVer !== STAFF_VER){
+    localStorage.removeItem('kintai_staff_ver'); // lDBで種を確実に再読込させる
+    lDB();                                        // DB.staff = 最新の種(53名) + 管理者復元
+    fbSaveStaff('koyokai');                       // 両社ノードへ反映（DB.staffは両社分を保持）
+    fbSaveStaff('fulllife');
+    localStorage.setItem('kintai_fbstaff_ver', STAFF_VER);
+    console.log('Staff seed pushed to Firebase:', DB.staff.length, STAFF_VER);
     if(typeof updateCompanyHeader==='function')updateCompanyHeader();
     renderSG();
-  }).catch(e => { console.error(e); lDB(); renderSG(); });
+  } else {
+    // 通常：Firebaseからstaff読込
+    window.fbGet(staffRef).then(snap => {
+      if(snap.exists()) {
+        let loadedStaff = arr(snap.val());
+        loadedStaff = loadedStaff.map(s=>({...s, company: s.company||(co==='fulllife'?'fulllife':'koyokai')}));
+        DB.staff = loadedStaff;
+        ensureSuperAdmins();
+        console.log('Staff loaded:', DB.staff.length);
+      } else {
+        // データなし→現在のlocalStorageのスタッフをアップロード
+        lDB();
+        fbSaveStaff(co);
+      }
+      if(typeof updateCompanyHeader==='function')updateCompanyHeader();
+      renderSG();
+    }).catch(e => { console.error(e); lDB(); renderSG(); });
+  }
 
   // 打刻データ: 無ければ空にリセット（前会社の残存防止）
   window.fbGet(recordsRef).then(snap => {
@@ -1781,7 +1795,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-05c 欠勤対応'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-05d 名簿FB反映'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
