@@ -255,6 +255,7 @@ console.log('Firebase initialized (compat)');
         <div>
           <div style="font-size:9px;color:var(--t2);">現在の会社</div>
           <div style="font-size:14px;font-weight:700;color:var(--nv);" id="admin-co-label">-</div>
+          <div style="font-size:9px;color:var(--t2);margin-top:2px;">アプリ版: <span id="app-ver-label">-</span></div>
         </div>
         <button onclick="switchCompany()" style="padding:8px 14px;border:1px solid var(--bl);border-radius:8px;background:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--bl);">会社を切替</button>
       </div>
@@ -301,6 +302,7 @@ console.log('Firebase initialized (compat)');
       <div style="display:flex;gap:4px;margin-bottom:9px;">
         <button class="ptab active" id="phc-tab-paid" onclick="setPhcTab('paid')">有給</button>
         <button class="ptab" id="phc-tab-sub" onclick="setPhcTab('sub')">代休</button>
+        <button class="ptab" id="phc-tab-kekkin" onclick="setPhcTab('kekkin')">欠勤</button>
       </div>
       
       <!-- 有給セクション -->
@@ -339,6 +341,19 @@ console.log('Firebase initialized (compat)');
           </div>
           <div style="overflow-x:auto;"><table class="rt2"><thead><tr><th>日付</th><th>名前</th><th>種別</th><th>単位</th><th>交代者</th><th>操作</th></tr></thead><tbody id="sh-tb"><tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">上で絞り込んで表示</td></tr></tbody></table></div>
           <div id="sh-sum" style="margin-top:9px;font-size:11px;color:var(--t2);"></div>
+        </div>
+      </div>
+
+      <!-- 欠勤セクション（有給と同じ作り） -->
+      <div id="phc-view-kekkin" style="display:none;">
+        <div class="card"><div class="cl">欠勤申請履歴</div>
+          <div class="fr" style="margin-bottom:10px;">
+            <select class="fsl" id="ke-s" onchange="renderKE()"><option value="">全スタッフ</option></select>
+            <select id="ke-m" onchange="renderKE()"></select>
+            <button class="bn" onclick="openAddKekkinModal()" style="background:#B71C1C;color:#fff;">＋ 追加</button>
+          </div>
+          <div style="overflow-x:auto;"><table class="rt2"><thead><tr><th>日付</th><th>曜</th><th>名前</th><th>種別</th><th>メモ</th><th>操作</th></tr></thead><tbody id="ke-tb"><tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">上で絞り込んで表示</td></tr></tbody></table></div>
+          <div id="ke-sum" style="margin-top:9px;font-size:11px;color:var(--t2);"></div>
         </div>
       </div>
     </div>
@@ -1517,6 +1532,8 @@ let currentCompany = localStorage.getItem('kintai_company') || '';
 // 会社表示（上部バー・管理画面「現在の会社」）をCOに同期する唯一の関数
 function updateCompanyHeader(){
   const info = COMPANIES[CO] || {};
+  const vEl = document.getElementById('app-ver-label');
+  if(vEl) vEl.textContent = APP_VER;
   const hcoLabel = document.getElementById('hco-label');
   const hcoName = document.getElementById('hco-name');
   if(hcoLabel) hcoLabel.textContent = info.label || '';
@@ -1619,6 +1636,7 @@ function fbLoadAndSync(co) {
     DB.dayShifts   = s.dayShifts   ? arr(s.dayShifts)   : [];
     DB.specials    = []; // バイト枠は廃止・過去データも読み込まない（リハ臨勤へ移行）
     DB.paid        = s.paid        ? arr(s.paid)        : [];
+    DB.absence     = s.absence     ? arr(s.absence)     : [];
     DB.fare        = s.fare        ? arr(s.fare)        : [];
     DB.lunch       = s.lunch       ? arr(s.lunch)       : [];
     DB.lunchEnabled= s.lunchEnabled? arr(s.lunchEnabled): [];
@@ -1689,6 +1707,7 @@ function fbSaveSettings() {
   window.fbSet(settingsRef, {
     dayShifts: DB.dayShifts,
     paid: DB.paid,
+    absence: DB.absence||[],
     fare: DB.fare,
     lunch: DB.lunch,
     lunchEnabled: DB.lunchEnabled,
@@ -1722,7 +1741,7 @@ function fbSaveSettings() {
 
 const TL={in:'出勤',out:'退勤',break:'休憩開始',resume:'勤務再開',early:'早出',fare:'交通費',paid:'有給',lunch:'ランチデリ'};
 
-let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],bizTrips:[],bizTripRates:{},workplaces:[],duties:[],contractClauses:[],outpatient:{}};
+let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],bizTrips:[],bizTripRates:{},workplaces:[],duties:[],contractClauses:[],outpatient:{},absence:[]};
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 
@@ -1762,10 +1781,12 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
+const APP_VER='2026-06-05c 欠勤対応'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
-    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],bizTrips:[],bizTripRates:{},workplaces:[],duties:[]},d);
+    if(d)DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],admins:[],expenses:[],paidGrants:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],bizTrips:[],bizTripRates:{},workplaces:[],duties:[],absence:[]},d);
+    if(!DB.absence)DB.absence=[];
   }catch(e){}
   DB.specials=[]; // バイト枠は廃止：過去データも保持しない（リハ臨勤へ移行）
   if(!DB.rehabSlots)DB.rehabSlots=[];
@@ -2174,9 +2195,12 @@ function initPaidGrantUI(){
 function setPhcTab(tab){
   document.getElementById('phc-tab-paid').classList.toggle('active',tab==='paid');
   document.getElementById('phc-tab-sub').classList.toggle('active',tab==='sub');
+  const kt=document.getElementById('phc-tab-kekkin');if(kt)kt.classList.toggle('active',tab==='kekkin');
   document.getElementById('phc-view-paid').style.display=tab==='paid'?'block':'none';
   document.getElementById('phc-view-sub').style.display=tab==='sub'?'block':'none';
+  const kv=document.getElementById('phc-view-kekkin');if(kv)kv.style.display=tab==='kekkin'?'block':'none';
   if(tab==='sub'){initSubAdmin();}
+  if(tab==='kekkin'){initKekkin();}
 }
 
 // 代休管理 初期化
@@ -2598,7 +2622,7 @@ function calcMonthSummary(sid,ym){
   // 集計期間: 前月16日〜当月15日
   const term=getTermDates(ym);
   const termDates=term.dates;
-  let weekdays=0,holdays=0,totalMs=0,paidDays=0,fareCount=0,lunchCount=0;
+  let weekdays=0,holdays=0,totalMs=0,paidDays=0,absenceDays=0,fareCount=0,lunchCount=0;
   let otA=0,otB=0,otC=0,otD=0,totalLateMin=0,totalEarlyMin=0;
   let p1Ms=0,p2Ms=0,p3Ms=0,p4Ms=0;const bd_total={};
 
@@ -2644,6 +2668,7 @@ function calcMonthSummary(sid,ym){
       p4Ms+=(r.breakdown['土曜午後']||r.breakdown['土曜勤務']||r.breakdown['バイト枠']||0); // 支給項目4=土曜PM/バイト枠
     }
     const pr=DB.paid.find(p=>p.staffId===sid&&p.date===date);if(pr)paidDays+=(pr.type==='full'?1:0.5);
+    const ar=(DB.absence||[]).find(p=>p.staffId===sid&&p.date===date);if(ar)absenceDays+=(ar.type==='full'?1:0.5);
     fareCount+=DB.fare.filter(f=>f.staffId===sid&&f.date===date).length;
     lunchCount+=DB.lunch.filter(l=>l.staffId===sid&&l.date===date&&l.company===CO).length;
   }
@@ -2651,7 +2676,7 @@ function calcMonthSummary(sid,ym){
   const subDays=(DB.substitute||[]).filter(x=>x.staffId===sid&&termDates.includes(x.date)).reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
   const subOffDays=(DB.subOff||[]).filter(x=>x.staffId===sid&&termDates.includes(x.date)).reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
   const otE=Math.max(0,(otB+otC)-60*3600000);
-  return{ym,weekdays,holdays,totalMs,paidDays,fareCount,lunchCount,otA,otB,otC,otD,otE,totalLateMin,totalEarlyMin,p1Ms,p2Ms,p3Ms,p4Ms,bd_total,subDays,subOffDays};
+  return{ym,weekdays,holdays,totalMs,paidDays,absenceDays,fareCount,lunchCount,otA,otB,otC,otD,otE,totalLateMin,totalEarlyMin,p1Ms,p2Ms,p3Ms,p4Ms,bd_total,subDays,subOffDays};
 }
 
 // ═══ ステータス ═══
@@ -5808,6 +5833,7 @@ function renderRep(){
     {k:'totalLateMin',lbl:'遅刻',   fmt:'min'},
     {k:'totalEarlyMin',lbl:'早退',  fmt:'min'},
     {k:'paidDays',   lbl:'有休日数',fmt:'d'},
+    {k:'absenceDays',lbl:'欠勤日数',fmt:'d'},
     {k:'otA',        lbl:'時間外A', fmt:'ms'},
     {k:'otB',        lbl:'時間外B', fmt:'ms'},
     {k:'otC',        lbl:'時間外C', fmt:'ms'},
@@ -5954,7 +5980,7 @@ function makePayRow(s,m,lunchCount){
   const otE=Math.max(0,(m.otB+m.otC)-60*3600000);
   return[s.employeeId||s.id,s.name,m.weekdays,m.holdays,msToHHMM(m.totalMs),
     minToHHMM(m.totalLateMin),minToHHMM(m.totalEarlyMin),
-    m.paidDays||'','','','','','','',
+    m.paidDays||'','','','',m.absenceDays||'','','',
     msToHHMM(m.otA),msToHHMM(m.otB),msToHHMM(m.otC),msToHHMM(m.otD),msToHHMM(otE),
     '','','',
     msToHHMM(m.p1Ms),msToHHMM(m.p2Ms),msToHHMM(m.p3Ms),msToHHMM(m.p4Ms),
@@ -6524,6 +6550,60 @@ function renderPH(){const sid=parseInt(document.getElementById('ph-s').value)||n
     list=list.filter(p=>{const st=DB.staff.find(s=>s.id===p.staffId);return st&&st.company===currentAdmin.company;});
   }if(sid)list=list.filter(p=>p.staffId===sid);if(ym)list=list.filter(p=>p.date.startsWith(ym));list.sort((a,b)=>a.date<b.date?-1:1);const tb=document.getElementById('ph-tb');if(!list.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">有給申請履歴がありません</td></tr>';document.getElementById('ph-sum').textContent='';return;}tb.innerHTML=list.map(p=>{const dt=new Date(p.date);const d=dw[dt.getDay()];const we=isLegalHoliday(p.date);return`<tr><td style="${we?'color:#E24B4A;font-weight:500;':''}">${p.date}</td><td style="${we?'color:#E24B4A;':''}">${d}</td><td>${p.staffName}</td><td><span class="badge b-paid">${tl[p.type]||p.type}</span></td><td style="color:var(--t2);font-size:10px;">${p.memo||''}</td><td><button class="fd" onclick="delPD(${p.id})">削除</button></td></tr>`;}).join('');let f=0,h=0;list.forEach(p=>{if(p.type==='full')f++;else h++;});document.getElementById('ph-sum').innerHTML=`全日: <b>${f}日</b>　半日: <b>${h}回</b>　合計: <b>${f+h*0.5}日</b>`;}
 function delPD(id){if(!confirm('この有給申請を削除しますか？'))return;DB.paid=DB.paid.filter(p=>p.id!==id);sDB();renderPH();if(typeof renderPaidGrants==='function')renderPaidGrants();showToast('削除しました');fbSaveSettings();}
+
+// ═══ 管理画面：欠勤（有給と同じ作り） ═══
+function initKekkin(){
+  if(!DB.absence)DB.absence=[];
+  const sel=document.getElementById('ke-s');if(!sel)return;
+  sel.innerHTML='<option value="">全スタッフ</option>';
+  let staffList=DB.staff.slice();
+  if(currentAdmin&&currentAdmin.role!=='super')staffList=staffList.filter(s=>s.company===currentAdmin.company);
+  staffList.sort((a,b)=>a.id-b.id).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.id} ${s.name}</option>`);
+  const ms=document.getElementById('ke-m');
+  if(ms&&ms.options.length===0){const n=new Date();for(let i=0;i<6;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);ms.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}}
+  renderKE();
+}
+function renderKE(){
+  if(!DB.absence)DB.absence=[];
+  const sid=parseInt(document.getElementById('ke-s').value)||null;
+  const ym=document.getElementById('ke-m').value;
+  const dw=['日','月','火','水','木','金','土'];const tl={full:'全日欠勤',half:'半日欠勤',am:'午前半日',pm:'午後半日'};
+  let list=DB.absence.slice();
+  if(currentAdmin&&currentAdmin.role!=='super'){list=list.filter(p=>{const st=DB.staff.find(s=>s.id===p.staffId);return st&&st.company===currentAdmin.company;});}
+  if(sid)list=list.filter(p=>p.staffId===sid);
+  if(ym)list=list.filter(p=>p.date.startsWith(ym));
+  list.sort((a,b)=>a.date<b.date?-1:1);
+  const tb=document.getElementById('ke-tb');
+  if(!list.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">欠勤履歴がありません</td></tr>';document.getElementById('ke-sum').textContent='';return;}
+  tb.innerHTML=list.map(p=>{const dt=new Date(p.date);const d=dw[dt.getDay()];const we=isLegalHoliday(p.date);return`<tr><td style="${we?'color:#E24B4A;font-weight:500;':''}">${p.date}</td><td style="${we?'color:#E24B4A;':''}">${d}</td><td>${p.staffName}</td><td><span class="badge" style="background:#FCE4EC;color:#B71C1C;">${tl[p.type]||p.type}</span></td><td style="color:var(--t2);font-size:10px;">${p.memo||''}</td><td><button class="fd" onclick="delKE(${p.id})">削除</button></td></tr>`;}).join('');
+  let f=0,h=0;list.forEach(p=>{if(p.type==='full')f++;else h++;});
+  document.getElementById('ke-sum').innerHTML=`全日: <b>${f}日</b>　半日: <b>${h}回</b>　合計: <b>${f+h*0.5}日</b>`;
+}
+function openAddKekkinModal(){
+  const sel=document.getElementById('ak-staff');sel.innerHTML='';
+  let list=DB.staff.slice();
+  if(currentAdmin&&currentAdmin.role!=='super')list=list.filter(s=>s.company===currentAdmin.company);
+  list.sort((a,b)=>a.id-b.id).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.id+' '+s.name;sel.appendChild(o);});
+  document.getElementById('ak-date').value=todayStr();
+  document.getElementById('ak-type').value='full';
+  document.getElementById('ak-memo').value='';
+  document.getElementById('add-kekkin-modal').style.display='flex';
+}
+function closeAddKekkinModal(){document.getElementById('add-kekkin-modal').style.display='none';}
+function submitAddKekkin(){
+  if(!DB.absence)DB.absence=[];
+  const sid=parseInt(document.getElementById('ak-staff').value);
+  const date=document.getElementById('ak-date').value;
+  const type=document.getElementById('ak-type').value;
+  const memo=document.getElementById('ak-memo').value.trim();
+  if(!sid||!date){showToast('スタッフと日付を選択してください');return;}
+  const s=DB.staff.find(x=>x.id===sid);if(!s)return;
+  const dup=DB.absence.find(p=>p.staffId===sid&&p.date===date);
+  if(dup){if(!confirm('この日は既に欠勤が登録されています。\n上書きしますか？'))return;DB.absence=DB.absence.filter(p=>!(p.staffId===sid&&p.date===date));}
+  DB.absence.push({staffId:sid,date,type,memo,staffName:s.name,company:s.company,id:Date.now()});
+  sDB();showToast(s.name+' に欠勤を追加しました ✓');closeAddKekkinModal();renderKE();fbSaveSettings();
+}
+function delKE(id){if(!confirm('この欠勤を削除しますか？'))return;DB.absence=DB.absence.filter(p=>p.id!==id);sDB();renderKE();showToast('削除しました');fbSaveSettings();}
 
 // ═══ ランチデリ管理 ═══
 let ldYear=null,ldMonth=null;
@@ -7153,9 +7233,9 @@ async function syncFromGitHub(){
     const result=await ghGetFile(GH_DATA_FILE);
     if(result&&result.data){
       const remote=result.data;
-      const localRecords=DB.records;const localPaid=DB.paid;const localFare=DB.fare;const localLunch=DB.lunch;const localLunchEnabled=DB.lunchEnabled;
+      const localRecords=DB.records;const localPaid=DB.paid;const localFare=DB.fare;const localLunch=DB.lunch;const localLunchEnabled=DB.lunchEnabled;const localAbsence=DB.absence;
       DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]},remote);
-      DB.records=localRecords;DB.paid=localPaid;DB.fare=localFare;DB.lunch=localLunch;DB.lunchEnabled=localLunchEnabled;
+      DB.records=localRecords;DB.paid=localPaid;DB.fare=localFare;DB.lunch=localLunch;DB.lunchEnabled=localLunchEnabled;DB.absence=localAbsence||DB.absence||[];
       ensureSuperAdmins();
       sDB();setSyncStatus('✓ 同期済み '+new Date().toLocaleTimeString('ja'),'var(--gd)');
       renderSG();if(document.getElementById('pg-admin').classList.contains('active')){renderAL();}
@@ -7198,9 +7278,9 @@ async function initSync(){
       const firstStaff=remote.staff&&remote.staff[0];
       if(firstStaff&&firstStaff.name&&/[\u4e00-\u9fff\u3040-\u30ff]/.test(firstStaff.name)){
         // 正常な日本語データ → 読み込み
-        const localRecords=DB.records;const localPaid=DB.paid;const localFare=DB.fare;const localLunch=DB.lunch;const localLunchEnabled=DB.lunchEnabled;
+        const localRecords=DB.records;const localPaid=DB.paid;const localFare=DB.fare;const localLunch=DB.lunch;const localLunchEnabled=DB.lunchEnabled;const localAbsence=DB.absence;
         DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]},remote);
-        DB.records=localRecords;DB.paid=localPaid;DB.fare=localFare;DB.lunch=localLunch;DB.lunchEnabled=localLunchEnabled;
+        DB.records=localRecords;DB.paid=localPaid;DB.fare=localFare;DB.lunch=localLunch;DB.lunchEnabled=localLunchEnabled;DB.absence=localAbsence||DB.absence||[];
         ensureSuperAdmins();
         sDB();setSyncStatus('\u2713 \u540c\u671f\u6e08 '+new Date().toLocaleTimeString('ja'),'var(--gd)');
         renderSG();
@@ -8271,6 +8351,32 @@ lDB();autoStart();setInterval(tick,30000);tick();
     <div style="display:flex;gap:9px;margin-top:11px;">
       <button class="bn" onclick="closeAddPaidModal()" style="flex:1;">キャンセル</button>
       <button class="fb" onclick="submitAddPaid()" style="flex:1;">追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- 欠勤追加モーダル（有給と同じ作り） -->
+<div id="add-kekkin-modal" class="mod" style="display:none;">
+  <div class="mc">
+    <div class="cl">＋ 欠勤を追加</div>
+    <div class="frw"><label class="fl">スタッフ</label>
+      <select class="fsl" id="ak-staff"></select>
+    </div>
+    <div class="frw"><label class="fl">日付</label>
+      <input class="fi" type="date" id="ak-date">
+    </div>
+    <div class="frw"><label class="fl">種別</label>
+      <select class="fi" id="ak-type">
+        <option value="full">全日（1.0日）</option>
+        <option value="half">半日（0.5日）</option>
+      </select>
+    </div>
+    <div class="frw"><label class="fl">メモ（任意）</label>
+      <input class="fi" type="text" id="ak-memo" placeholder="例: 体調不良">
+    </div>
+    <div style="display:flex;gap:9px;margin-top:11px;">
+      <button class="bn" onclick="closeAddKekkinModal()" style="flex:1;">キャンセル</button>
+      <button class="fb" onclick="submitAddKekkin()" style="flex:1;">追加</button>
     </div>
   </div>
 </div>
