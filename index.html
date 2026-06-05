@@ -234,11 +234,12 @@ console.log('Firebase initialized (compat)');
       <button class="at" id="atab-log" onclick="showAS('log')">ログ</button>
       <button class="at" id="atab-report" onclick="showAS('report')">レポート</button>
       <button class="at" id="atab-data" onclick="showAS('data')">データ移行</button><button class="at" id="atab-pw" onclick="showAS('pw')">PW管理</button><button class="at" id="atab-devset" onclick="showAS('devset')">端末表示設定</button>
+      <!-- シフト管理（両社共通） -->
+      <button class="at" id="atab-pattern" onclick="showAS('pattern')" style="background:#E8F5E9;">勤務パターン</button>
+      <button class="at" id="atab-shiftcal" onclick="showAS('shiftcal')" style="background:#E8F5E9;">勤務登録</button>
+      <button class="at" id="atab-allshift" onclick="showAS('allshift')" style="background:#E8F5E9;">全員シフト</button>
+      <button class="at" id="atab-group" onclick="showAS('group')" style="background:#E8F5E9;">グループ管理</button>
       <!-- フルラフ専用 -->
-      <button class="at fl-only" id="atab-pattern" onclick="showAS('pattern')" style="background:#FFF3E0;">勤務パターン</button>
-      <button class="at fl-only" id="atab-shiftcal" onclick="showAS('shiftcal')" style="background:#FFF3E0;">勤務登録</button>
-      <button class="at fl-only" id="atab-allshift" onclick="showAS('allshift')" style="background:#FFF3E0;">全員シフト</button>
-      <button class="at fl-only" id="atab-group" onclick="showAS('group')" style="background:#FFF3E0;">グループ管理</button>
       <button class="at fl-only" id="atab-ot" onclick="showAS('ot')" style="background:#FFF3E0;">時間外承認</button>
     </div>
     <div class="pad">
@@ -423,8 +424,8 @@ console.log('Firebase initialized (compat)');
     
     <!-- フルラフ専用：勤務パターン管理 -->
     <div class="asc" id="asc-pattern">
-      <div class="card" style="border:2px solid #FFB74D;background:#FFF3E0;">
-        <div class="cl" style="color:#E65100;">📋 勤務パターン管理（フルラフ専用）</div>
+      <div class="card">
+        <div class="cl" style="color:#2E7D32;">📋 勤務パターン管理（<span id="wp-co-label"></span>）</div>
         <div class="fs2" style="color:#5D4037;">勤務時間のパターンを登録します（自動採番、時間昇順で並び替え）</div>
         <div class="frw">
           <label class="fl">開始時刻</label>
@@ -444,8 +445,8 @@ console.log('Firebase initialized (compat)');
     
     <!-- フルラフ専用：勤務登録（カレンダー） -->
     <div class="asc" id="asc-shiftcal">
-      <div class="card" style="border:2px solid #FFB74D;background:#FFF3E0;">
-        <div class="cl" style="color:#E65100;">📅 勤務登録（フルラフ専用）</div>
+      <div class="card">
+        <div class="cl" style="color:#2E7D32;">📅 勤務登録（<span id="sc-co-label"></span>）</div>
         <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;">
           <select class="fsl" id="sc-staff" onchange="onScStaffChange()" style="flex:1;min-width:180px;"></select>
           <select id="sc-month" onchange="renderShiftCal()"></select>
@@ -464,12 +465,13 @@ console.log('Firebase initialized (compat)');
       </div>
     </div>
     
-    <!-- フルラフ専用：全員シフト -->
+    <!-- 全員シフト（両社共通） -->
     <div class="asc" id="asc-allshift">
-      <div class="card" style="border:2px solid #FFB74D;background:#FFF3E0;">
-        <div class="cl" style="color:#E65100;">👥 全員シフト（フルラフ専用・閲覧専用）</div>
-        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;">
+      <div class="card">
+        <div class="cl" style="color:#2E7D32;">👥 全員シフト（<span id="as-co-label"></span>・閲覧専用）</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
           <select id="as-month" onchange="renderAllShift()"></select>
+          <button class="bn" onclick="printAllShift()" style="background:#1565C0;color:#fff;font-size:11px;">🖨 A4印刷（横）</button>
           <div id="as-group-tabs" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
         </div>
         <div style="overflow:auto;max-height:600px;border:1px solid var(--br);border-radius:7px;background:#fff;">
@@ -481,8 +483,8 @@ console.log('Firebase initialized (compat)');
     
     <!-- フルラフ専用：グループ管理 -->
     <div class="asc" id="asc-group">
-      <div class="card" style="border:2px solid #FFB74D;background:#FFF3E0;">
-        <div class="cl" style="color:#E65100;">🏷️ グループ管理（フルラフ専用）</div>
+      <div class="card">
+        <div class="cl" style="color:#2E7D32;">🏷️ グループ管理（<span id="gr-co-label"></span>）</div>
         <div class="fs2" style="color:#5D4037;">スタッフをグループに分類します</div>
         <div class="frw">
           <label class="fl">グループ名</label>
@@ -2885,8 +2887,8 @@ function sortPatterns(patterns){
 // パターン番号を並び順に従って再採番（IDは不変）
 function renumberPatterns(){
   if(!DB.workPatterns)return;
-  const fl=DB.workPatterns.filter(p=>p.company==='fulllife');
-  const others=DB.workPatterns.filter(p=>p.company!=='fulllife');
+  const fl=DB.workPatterns.filter(p=>p.company===CO);
+  const others=DB.workPatterns.filter(p=>p.company!==CO);
   const sorted=sortPatterns(fl);
   sorted.forEach((p,i)=>{p.no=i+1;});
   DB.workPatterns=[...others,...sorted];
@@ -4380,8 +4382,12 @@ function saveLicsPicker(){
 
 
 
+// シフト系：現在会社名ラベル
+function coLabelName(){return CO==='fulllife'?'フルラフ':(CO==='koyokai'?'香庸会':CO);}
+function setShiftCoLabel(id){const e=document.getElementById(id);if(e)e.textContent=coLabelName();}
 // 勤務パターン管理画面 初期化
 function initWPAdmin(){
+  setShiftCoLabel('wp-co-label');
   renderWPList();
 }
 
@@ -4391,8 +4397,8 @@ function addWorkPattern(){
   if(!start||!end){showToast('開始・終了時刻を入力してください');return;}
   if(parseHM(end)<=parseHM(start)){showToast('終了時刻は開始時刻より後にしてください');return;}
   if(!DB.workPatterns)DB.workPatterns=[];
-  const maxNo=DB.workPatterns.filter(p=>p.company==='fulllife').reduce((a,b)=>Math.max(a,b.no||0),0);
-  DB.workPatterns.push({id:Date.now(),no:maxNo+1,startTime:start,endTime:end,company:'fulllife'});
+  const maxNo=DB.workPatterns.filter(p=>p.company===CO).reduce((a,b)=>Math.max(a,b.no||0),0);
+  DB.workPatterns.push({id:Date.now(),no:maxNo+1,startTime:start,endTime:end,company:CO});
   renumberPatterns();
   sDB();fbSaveSettings();
   document.getElementById('wp-start').value='';
@@ -4421,7 +4427,7 @@ function toggleWpDeleteMode(){
 function renderWPList(){
   const el=document.getElementById('wp-list');
   if(!el)return;
-  let list=(DB.workPatterns||[]).filter(p=>p.company==='fulllife');
+  let list=(DB.workPatterns||[]).filter(p=>p.company===CO);
   list=sortPatterns(list);
   // 削除モード切替ボタン
   let header='';
@@ -4462,11 +4468,12 @@ let scState={
 };
 
 function initShiftCal(){
+  setShiftCoLabel('sc-co-label');
   // スタッフ選択肢
   const sel=document.getElementById('sc-staff');
   if(sel){
     sel.innerHTML='<option value="">スタッフを選択</option>';
-    const list=DB.staff.filter(s=>s.company==='fulllife').sort((a,b)=>a.id-b.id);
+    const list=DB.staff.filter(s=>s.company===CO).sort((a,b)=>a.id-b.id);
     list.forEach(s=>{
       const o=document.createElement('option');
       o.value=s.id;
@@ -4502,7 +4509,7 @@ function onScStaffChange(){
 function renderScPatternList(){
   const el=document.getElementById('sc-pattern-list');
   if(!el)return;
-  const allPatterns=(DB.workPatterns||[]).filter(p=>p.company==='fulllife');
+  const allPatterns=(DB.workPatterns||[]).filter(p=>p.company===CO);
   let patterns;
   if(scState.staffId){
     const usage=(DB.patternUsage||[]).filter(u=>u.staffId===scState.staffId);
@@ -4765,8 +4772,9 @@ document.addEventListener('keydown',function(e){
 
 
 
-// ═══ フルラフ専用：グループ管理 ═══
+// ═══ グループ管理（両社共通・会社別） ═══
 function initGroupAdmin(){
+  setShiftCoLabel('gr-co-label');
   renderGRList();
   renderGRStaffList();
 }
@@ -4776,10 +4784,10 @@ function addGroup(){
   if(!name){showToast('グループ名を入力してください');return;}
   if(!DB.groups)DB.groups=[];
   // 重複チェック
-  if(DB.groups.find(g=>g.name===name&&g.company==='fulllife')){
+  if(DB.groups.find(g=>g.name===name&&g.company===CO)){
     showToast('同名のグループが既にあります');return;
   }
-  DB.groups.push({id:Date.now(),name,company:'fulllife'});
+  DB.groups.push({id:Date.now(),name,company:CO});
   sDB();fbSaveSettings();
   document.getElementById('gr-name').value='';
   showToast('グループを追加しました ✓');
@@ -4800,7 +4808,7 @@ function delGroup(id){
 function renderGRList(){
   const el=document.getElementById('gr-list');
   if(!el)return;
-  const list=(DB.groups||[]).filter(g=>g.company==='fulllife');
+  const list=(DB.groups||[]).filter(g=>g.company===CO);
   if(!list.length){
     el.innerHTML='<div style="color:var(--t2);font-size:11px;text-align:center;padding:14px;">グループ未登録</div>';
     return;
@@ -4817,8 +4825,8 @@ function renderGRList(){
 function renderGRStaffList(){
   const el=document.getElementById('gr-staff-list');
   if(!el)return;
-  const staff=DB.staff.filter(s=>s.company==='fulllife').sort((a,b)=>a.id-b.id);
-  const groups=(DB.groups||[]).filter(g=>g.company==='fulllife');
+  const staff=DB.staff.filter(s=>s.company===CO).sort((a,b)=>a.id-b.id);
+  const groups=(DB.groups||[]).filter(g=>g.company===CO);
   if(!staff.length){
     el.innerHTML='<div style="color:var(--t2);font-size:11px;text-align:center;padding:14px;">スタッフなし</div>';
     return;
@@ -4852,7 +4860,31 @@ function updateStaffGroup(sid,gid){
 // ═══ フルラフ専用：全員シフト一覧 ═══
 let asState={ym:null,groupId:null};
 
+// 全員シフトをA4横で印刷
+function printAllShift(){
+  const tbl=document.getElementById('as-table');
+  if(!tbl||!tbl.innerHTML.trim()){showToast('表示するシフトがありません');return;}
+  const ym=document.getElementById('as-month')?document.getElementById('as-month').value:'';
+  const title=coLabelName()+' 全員シフト '+ym;
+  const w=window.open('','_blank');
+  if(!w){showToast('ポップアップを許可してください');return;}
+  w.document.write('<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>'+title+'</title>'
+    +'<style>@page{size:A4 landscape;margin:8mm;}'
+    +'body{font-family:\'Hiragino Sans\',\'Yu Gothic\',sans-serif;margin:0;padding:6px;}'
+    +'h2{font-size:14px;text-align:center;margin:4px 0 8px;}'
+    +'table{border-collapse:collapse;width:100%;font-size:9px;table-layout:fixed;}'
+    +'th,td{border:1px solid #555;padding:2px 3px;text-align:center;white-space:nowrap;overflow:hidden;}'
+    +'thead th{background:#eee;}'
+    +'@media print{button{display:none;}}'
+    +'</style></head><body>'
+    +'<h2>'+title+'</h2>'
+    +tbl.outerHTML
+    +'<p style="text-align:center;margin-top:10px;"><button onclick="window.print()" style="padding:8px 16px;border:none;border-radius:6px;background:#1565C0;color:#fff;font-weight:700;cursor:pointer;">印刷 / PDF保存</button></p>'
+    +'</body></html>');
+  w.document.close();
+}
 function initAllShift(){
+  setShiftCoLabel('as-co-label');
   // 月選択肢
   const ms=document.getElementById('as-month');
   if(ms&&!ms.options.length){
@@ -4877,14 +4909,14 @@ function initAllShift(){
 function renderAllShiftGroupTabs(){
   const el=document.getElementById('as-group-tabs');
   if(!el)return;
-  const groups=(DB.groups||[]).filter(g=>g.company==='fulllife');
+  const groups=(DB.groups||[]).filter(g=>g.company===CO);
   let html=`<button onclick="filterAllShift(null)" style="padding:5px 11px;border:1px solid ${asState.groupId===null?'#E65100':'var(--br)'};border-radius:6px;background:${asState.groupId===null?'#FFF3E0':'#fff'};color:${asState.groupId===null?'#E65100':'var(--t2)'};font-size:11px;font-weight:${asState.groupId===null?700:400};cursor:pointer;font-family:inherit;">全員</button>`;
   groups.forEach(g=>{
     const sel=asState.groupId===g.id;
     html+=`<button onclick="filterAllShift(${g.id})" style="padding:5px 11px;border:1px solid ${sel?'#E65100':'var(--br)'};border-radius:6px;background:${sel?'#FFF3E0':'#fff'};color:${sel?'#E65100':'var(--t2)'};font-size:11px;font-weight:${sel?700:400};cursor:pointer;font-family:inherit;">${g.name}</button>`;
   });
   // 未割当タブ
-  const unassignedCount=DB.staff.filter(s=>s.company==='fulllife'&&!(DB.staffGroup||[]).find(sg=>sg.staffId===s.id)).length;
+  const unassignedCount=DB.staff.filter(s=>s.company===CO&&!(DB.staffGroup||[]).find(sg=>sg.staffId===s.id)).length;
   if(unassignedCount){
     const sel=asState.groupId==='unassigned';
     html+=`<button onclick="filterAllShift('unassigned')" style="padding:5px 11px;border:1px solid ${sel?'#E65100':'var(--br)'};border-radius:6px;background:${sel?'#FFF3E0':'#fff'};color:${sel?'#E65100':'var(--t2)'};font-size:11px;font-weight:${sel?700:400};cursor:pointer;font-family:inherit;">未割当（${unassignedCount}）</button>`;
@@ -4906,7 +4938,7 @@ function renderAllShift(){
   if(!ym){t.innerHTML='<tr><td>月を選択</td></tr>';return;}
   
   // スタッフ抽出
-  let staff=DB.staff.filter(s=>s.company==='fulllife');
+  let staff=DB.staff.filter(s=>s.company===CO);
   if(asState.groupId==='unassigned'){
     staff=staff.filter(s=>!(DB.staffGroup||[]).find(sg=>sg.staffId===s.id));
   }else if(asState.groupId){
@@ -4976,7 +5008,7 @@ function asDrop(e,targetId){
   let order=JSON.parse(localStorage.getItem(orderKey)||'[]');
   // 現在表示中スタッフから取得
   if(!order.length){
-    let staff=DB.staff.filter(s=>s.company==='fulllife');
+    let staff=DB.staff.filter(s=>s.company===CO);
     if(asState.groupId==='unassigned')staff=staff.filter(s=>!(DB.staffGroup||[]).find(sg=>sg.staffId===s.id));
     else if(asState.groupId){const ids=(DB.staffGroup||[]).filter(sg=>sg.groupId===asState.groupId).map(sg=>sg.staffId);staff=staff.filter(s=>ids.includes(s.id));}
     order=staff.sort((a,b)=>a.id-b.id).map(s=>s.id);
@@ -5218,7 +5250,7 @@ function revertBizTrip(id){
 
 
 // フルラフ専用の管理サブタブ
-const FL_ONLY_SUBS=['pattern','shiftcal','allshift','group','ot'];
+const FL_ONLY_SUBS=['ot'];
 function applyFulllifeTabsVisibility(){
   const isFulllife=(CO==='fulllife');
   // フルラフ専用タブのボタン表示/非表示
