@@ -1779,10 +1779,23 @@ function lDB(){
     localStorage.setItem('kintai_staff_ver',STAFF_VER);
   }
   if(!DB.staff.length){
-    
+
     sDB();
   }
+  ensureSuperAdmins();
   initJobLicenseMasters();
+}
+
+// 川口(id:1)・壹岐(id:3)は常に総合管理者として復元（同期等で権限が欠落してもロックアウトを防ぐ）
+function ensureSuperAdmins(){
+  if(!DB.staff)return;
+  [1,3].forEach(aid=>{
+    const s=DB.staff.find(x=>x.id===aid);
+    if(!s)return;
+    s.adminRole='super';
+    s.adminPerm='both';
+    if(!s.adminPw)s.adminPw='2525';
+  });
 }
 
 function pad(n){return String(n).padStart(2,'0');}
@@ -7143,6 +7156,7 @@ async function syncFromGitHub(){
       const localRecords=DB.records;const localPaid=DB.paid;const localFare=DB.fare;const localLunch=DB.lunch;const localLunchEnabled=DB.lunchEnabled;
       DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]},remote);
       DB.records=localRecords;DB.paid=localPaid;DB.fare=localFare;DB.lunch=localLunch;DB.lunchEnabled=localLunchEnabled;
+      ensureSuperAdmins();
       sDB();setSyncStatus('✓ 同期済み '+new Date().toLocaleTimeString('ja'),'var(--gd)');
       renderSG();if(document.getElementById('pg-admin').classList.contains('active')){renderAL();}
     } else {
@@ -7187,6 +7201,7 @@ async function initSync(){
         const localRecords=DB.records;const localPaid=DB.paid;const localFare=DB.fare;const localLunch=DB.lunch;const localLunchEnabled=DB.lunchEnabled;
         DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[]},remote);
         DB.records=localRecords;DB.paid=localPaid;DB.fare=localFare;DB.lunch=localLunch;DB.lunchEnabled=localLunchEnabled;
+        ensureSuperAdmins();
         sDB();setSyncStatus('\u2713 \u540c\u671f\u6e08 '+new Date().toLocaleTimeString('ja'),'var(--gd)');
         renderSG();
       } else if(firstStaff&&firstStaff.name){
