@@ -149,6 +149,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 .mtb.active{background:var(--nv);color:#fff;border-color:var(--nv);}
 .mtab-section{display:none;}
 .mtab-section.active{display:block;}
+.op-ins{min-width:30px;padding:4px 8px;border:1px solid #90CAF9;border-radius:6px;background:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.op-ins:hover{background:#E3F2FD;}
+#op-table input{border:none;width:100%;box-sizing:border-box;text-align:center;font-size:11px;font-family:inherit;background:transparent;padding:1px;}
+#op-table input:focus{outline:2px solid #1565C0;background:#FFFDE7;}
+#op-table td,#op-table th{border:1px solid #bbb;padding:0;}
+#op-table .op-hdr input{font-weight:700;font-size:10px;color:#1a1a2e;}
 </style>
 
 
@@ -239,6 +245,7 @@ console.log('Firebase initialized (compat)');
       <button class="at" id="atab-shiftcal" onclick="showAS('shiftcal')" style="background:#E8F5E9;">勤務登録</button>
       <button class="at" id="atab-allshift" onclick="showAS('allshift')" style="background:#E8F5E9;">全員シフト</button>
       <button class="at" id="atab-group" onclick="showAS('group')" style="background:#E8F5E9;">グループ管理</button>
+      <button class="at ko-only" id="atab-outpat" onclick="showAS('outpat')" style="background:#E3F2FD;">外来勤務表</button>
       <!-- フルラフ専用 -->
       <button class="at fl-only" id="atab-ot" onclick="showAS('ot')" style="background:#FFF3E0;">時間外承認</button>
     </div>
@@ -502,6 +509,42 @@ console.log('Firebase initialized (compat)');
       </div>
     </div>
     
+    <!-- 香庸会専用：外来勤務表エディタ -->
+    <div class="asc" id="asc-outpat">
+      <div class="card">
+        <div class="cl" style="color:#1565C0;">🏥 外来勤務表（香庸会）</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">
+          <select id="op-month" onchange="renderOutpat()"></select>
+          <button class="bn" onclick="printOutpat()" style="background:#1565C0;color:#fff;font-size:11px;">🖨 A4印刷（横）</button>
+          <button class="bn" onclick="opAddStaffCol()" style="background:#fff;color:#1565C0;border:1px solid #90CAF9;font-size:11px;">＋スタッフ列</button>
+          <button class="bn" onclick="opAddDutyCol()" style="background:#fff;color:#1565C0;border:1px solid #90CAF9;font-size:11px;">＋係欄</button>
+          <button class="bn" onclick="opCopyPrevMonth()" style="background:#fff;color:#5D4037;border:1px solid var(--br);font-size:11px;">前月の枠をコピー</button>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;align-items:center;background:#F1F8E9;border:1px solid #C5E1A5;border-radius:7px;padding:6px;">
+          <span style="font-size:10px;color:#33691E;font-weight:700;">選択セルへ挿入:</span>
+          <button class="op-ins" onclick="opInsert('◎')" title="早帰り">◎</button>
+          <button class="op-ins" onclick="opInsert('○')" title="通常勤務">○</button>
+          <button class="op-ins" onclick="opInsert('▲')" title="居残り(MRI対応)">▲</button>
+          <button class="op-ins" onclick="opInsert('◆')" title="居残り(14時以降予約)">◆</button>
+          <button class="op-ins" onclick="opInsert('✕')" title="勤務不可">✕</button>
+          <button class="op-ins" onclick="opInsert('有給')" style="color:#C62828;">有給</button>
+          <button class="op-ins" onclick="opInsert('有給AM')" style="color:#C62828;">有給AM</button>
+          <button class="op-ins" onclick="opInsert('有給PM')" style="color:#C62828;">有給PM</button>
+          <button class="op-ins" onclick="opInsert('代休')" style="color:#C62828;">代休</button>
+          <button class="op-ins" onclick="opInsert('代理出勤')">代理出勤</button>
+          <button class="op-ins" onclick="opInsert('')" style="color:#999;">クリア</button>
+        </div>
+        <div style="font-size:9.5px;color:var(--t2);margin-bottom:6px;">◎早帰り ○通常勤務 ▲居残り(12:45にMRI終了せず処置対応中) ◆居残り(14時以降予約でMRI未終了) ✕勤務不可 ／ 列見出しをクリックで名称編集・空欄にすると列削除</div>
+        <div style="overflow:auto;max-height:600px;border:1px solid var(--br);border-radius:7px;background:#fff;">
+          <table id="op-table" style="border-collapse:collapse;font-size:10px;"></table>
+        </div>
+        <div style="margin-top:10px;">
+          <div style="font-size:11px;font-weight:700;margin-bottom:4px;">脚注（注記）</div>
+          <textarea id="op-footer" onchange="opSetFooter(this.value)" style="width:100%;min-height:120px;font-size:10px;font-family:inherit;border:1px solid var(--br);border-radius:7px;padding:8px;box-sizing:border-box;line-height:1.6;"></textarea>
+        </div>
+      </div>
+    </div>
+
     <!-- フルラフ専用：時間外承認 -->
     <div class="asc" id="asc-ot">
       <div class="card" style="border:2px solid #FFB74D;background:#FFF3E0;">
@@ -1676,7 +1719,7 @@ function fbSaveSettings() {
 
 const TL={in:'出勤',out:'退勤',break:'休憩開始',resume:'勤務再開',early:'早出',fare:'交通費',paid:'有給',lunch:'ランチデリ'};
 
-let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],bizTrips:[],bizTripRates:{},workplaces:[],duties:[],contractClauses:[]};
+let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],bizTrips:[],bizTripRates:{},workplaces:[],duties:[],contractClauses:[],outpatient:{}};
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 
@@ -1740,6 +1783,7 @@ function lDB(){
 }
 
 function pad(n){return String(n).padStart(2,'0');}
+function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function nowStr(){const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());}
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
 function fmtHM(ms){if(!ms||ms<=0)return'';const m=Math.floor(ms/60000);return Math.floor(m/60)+':'+pad(m%60);}
@@ -5025,6 +5069,212 @@ function asDrop(e,targetId){
 
 
 
+// ═══ 香庸会専用：外来勤務表エディタ ═══
+const OP_DEF_STAFF=['亀田','髙木','前田','宮浦','関','鴨井','北川','内','寺','大'];
+const OP_DEF_DUTY=['受付','待合','処置','画像','3F'];
+const OP_DEF_BIZ=2;
+const OP_SLOTS=[['am','午前'],['exam','検査'],['pm','午後']];
+const OP_DEF_FOOTER=
+'※早帰り12:45・19:45　※木曜、第2・第3・第4土曜午後は14:00～17:00\n'
++'※▲は12:45にMRI終了せず鴨井さんがレントゲン対応中の場合は残る\n'
++'※◆は14時以降に予約があり 休憩から勤務開始時間までにMRI終了してなければ残る\n'
++'※☆は受付欄の整理・MIはミーティング　※午後の処置は担当業務\n'
++'※午前ポスト係（月）髙木（火）関（水）前田（木）亀田（金）宮浦（土）鴨井\n'
++'※午後ポスト係（月）前田（火）鴨井（水）宮浦（金）髙木\n'
++'※勤務表の修正は、修正液を使わずに余白に名前を記入して下さい\n'
++'予約時休憩時間：亀田 12:45～13:30\n'
++'前田 14:00→12:30～13:45、14:30→13:00～14:15、15:00→13:30～14:45\n'
++'髙木、宮浦 15:00出勤 12:00帰り・15:30出勤 12:30早帰り';
+const OP_CLINIC='川口脳神経外科リハビリクリニック';
+let opState={ym:null,focusKey:null};
+
+function opKey(ym){return 'koyokai|'+ym;}
+function opMonth(ym){
+  DB.outpatient=DB.outpatient||{};
+  const k=opKey(ym);
+  if(!DB.outpatient[k]){
+    // 直近の既存月から枠をコピー（なければ既定）
+    const prev=opLatestBefore(ym);
+    DB.outpatient[k]=prev?{staffCols:prev.staffCols.slice(),dutyCols:prev.dutyCols.slice(),bizCount:prev.bizCount,footer:prev.footer,cells:{},dayNotes:{}}
+      :{staffCols:OP_DEF_STAFF.slice(),dutyCols:OP_DEF_DUTY.slice(),bizCount:OP_DEF_BIZ,footer:OP_DEF_FOOTER,cells:{},dayNotes:{}};
+  }
+  return DB.outpatient[k];
+}
+function opLatestBefore(ym){
+  DB.outpatient=DB.outpatient||{};
+  const keys=Object.keys(DB.outpatient).filter(k=>k.startsWith('koyokai|')&&k.split('|')[1]<ym).sort();
+  return keys.length?DB.outpatient[keys[keys.length-1]]:null;
+}
+
+function initOutpat(){
+  const ms=document.getElementById('op-month');
+  if(ms&&!ms.options.length){
+    const now=new Date();
+    for(let i=-6;i<=12;i++){
+      const dt=new Date(now.getFullYear(),now.getMonth()+i,1);
+      const v=dt.getFullYear()+'-'+pad(dt.getMonth()+1);
+      const o=document.createElement('option');o.value=v;
+      o.textContent=dt.getFullYear()+'年'+(dt.getMonth()+1)+'月';
+      if(i===0)o.selected=true;
+      ms.appendChild(o);
+    }
+  }
+  opState.ym=ms?ms.value:null;
+  renderOutpat();
+}
+
+function renderOutpat(){
+  const t=document.getElementById('op-table');if(!t)return;
+  const ms=document.getElementById('op-month');
+  const ym=ms?ms.value:opState.ym;opState.ym=ym;
+  if(!ym){t.innerHTML='<tr><td>月を選択</td></tr>';return;}
+  const mo=opMonth(ym);
+  const ft=document.getElementById('op-footer');if(ft)ft.value=mo.footer||'';
+  const [y,m]=ym.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const days=['日','月','火','水','木','金','土'];
+  const sc=mo.staffCols,dc=mo.dutyCols,bn=mo.bizCount;
+  // ヘッダー
+  let h='<thead><tr style="background:#E3F2FD;position:sticky;top:0;z-index:2;">'
+    +'<th style="min-width:34px;">日付</th><th style="min-width:26px;">曜</th><th style="min-width:34px;">時間</th>';
+  sc.forEach((n,i)=>{h+=`<th class="op-hdr" style="min-width:48px;"><input value="${esc(n)}" onchange="opSetStaffCol(${i},this.value)" title="空欄で列削除"></th>`;});
+  dc.forEach((n,i)=>{h+=`<th class="op-hdr" style="min-width:46px;background:#FFF9C4;"><input value="${esc(n)}" onchange="opSetDutyCol(${i},this.value)" title="空欄で列削除"></th>`;});
+  for(let b=0;b<bn;b++){h+=`<th style="min-width:50px;background:#F1F8E9;">担当業務</th>`;}
+  h+='</tr></thead><tbody>';
+  // 各日（3行）
+  for(let d=1;d<=lastDay;d++){
+    const dow=new Date(y,m-1,d).getDay();
+    const dcol=dow===0?'#C62828':(dow===6?'#1976D2':'#333');
+    const note=(mo.dayNotes||{})[d]||'';
+    OP_SLOTS.forEach((sl,si)=>{
+      h+='<tr>';
+      if(si===0){
+        h+=`<td rowspan="3" style="text-align:center;font-weight:700;color:${dcol};vertical-align:top;padding:2px;">${d}<br><input value="${esc(note)}" onchange="opSetNote(${d},this.value)" placeholder="" style="width:30px;font-size:8px;color:#C62828;text-align:center;"></td>`;
+        h+=`<td rowspan="3" style="text-align:center;color:${dcol};font-weight:700;">${days[dow]}</td>`;
+      }
+      h+=`<td style="font-size:9px;text-align:center;background:#FAFAFA;white-space:nowrap;">${sl[1]}</td>`;
+      sc.forEach((n,ci)=>{h+=opCell(d,sl[0],'s',ci,mo);});
+      dc.forEach((n,ci)=>{h+=opCell(d,sl[0],'d',ci,mo,'#FFFDE7');});
+      for(let b=0;b<bn;b++){h+=opCell(d,sl[0],'b',b,mo,'#F9FBF4');}
+      h+='</tr>';
+    });
+  }
+  h+='</tbody>';
+  t.innerHTML=h;
+}
+function opCellKey(d,slot,type,ci){return d+'|'+slot+'|'+type+'|'+ci;}
+function opCell(d,slot,type,ci,mo,bg){
+  const key=opCellKey(d,slot,type,ci);
+  const v=(mo.cells||{})[key]||'';
+  const red=/有給|代休/.test(v)?'color:#C62828;font-weight:700;':'';
+  return `<td style="${bg?'background:'+bg+';':''}"><input data-opkey="${key}" value="${esc(v)}" style="${red}" onfocus="opState.focusKey='${key}'" oninput="opRecolor(this)" onchange="opSet('${key}',this.value)"></td>`;
+}
+function opRecolor(el){el.style.color=/有給|代休/.test(el.value)?'#C62828':'';el.style.fontWeight=/有給|代休/.test(el.value)?'700':'';}
+function opSet(key,val){
+  const mo=opMonth(opState.ym);mo.cells=mo.cells||{};
+  if(val.trim())mo.cells[key]=val;else delete mo.cells[key];
+  sDB();
+}
+function opSetNote(d,val){const mo=opMonth(opState.ym);mo.dayNotes=mo.dayNotes||{};if(val.trim())mo.dayNotes[d]=val;else delete mo.dayNotes[d];sDB();}
+function opSetFooter(val){const mo=opMonth(opState.ym);mo.footer=val;sDB();}
+function opSetStaffCol(i,val){
+  const mo=opMonth(opState.ym);
+  if(!val.trim()){if(confirm('この列を削除しますか？（この月の入力値も消えます）')){mo.staffCols.splice(i,1);opShiftCells('s',i);}sDB();renderOutpat();return;}
+  mo.staffCols[i]=val.trim();sDB();
+}
+function opSetDutyCol(i,val){
+  const mo=opMonth(opState.ym);
+  if(!val.trim()){if(confirm('この列を削除しますか？（この月の入力値も消えます）')){mo.dutyCols.splice(i,1);opShiftCells('d',i);}sDB();renderOutpat();return;}
+  mo.dutyCols[i]=val.trim();sDB();
+}
+// 列削除時に該当type・該当index以降のセルを詰める
+function opShiftCells(type,removed){
+  const mo=opMonth(opState.ym);const nc={};
+  Object.keys(mo.cells||{}).forEach(k=>{
+    const[d,sl,tp,ci]=k.split('|');
+    if(tp!==type){nc[k]=mo.cells[k];return;}
+    const idx=parseInt(ci);
+    if(idx===removed)return;
+    const ni=idx>removed?idx-1:idx;
+    nc[opCellKey(d,sl,tp,ni)]=mo.cells[k];
+  });
+  mo.cells=nc;
+}
+function opAddStaffCol(){const mo=opMonth(opState.ym);mo.staffCols.push('');sDB();renderOutpat();}
+function opAddDutyCol(){const mo=opMonth(opState.ym);mo.dutyCols.push('');sDB();renderOutpat();}
+function opCopyPrevMonth(){
+  const prev=opLatestBefore(opState.ym);
+  if(!prev){showToast('コピー元の月がありません');return;}
+  if(!confirm('前月の列構成・脚注をこの月にコピーします。よろしいですか？（入力値はコピーしません）'))return;
+  const mo=opMonth(opState.ym);
+  mo.staffCols=prev.staffCols.slice();mo.dutyCols=prev.dutyCols.slice();mo.bizCount=prev.bizCount;mo.footer=prev.footer;
+  sDB();renderOutpat();showToast('前月の枠をコピーしました');
+}
+function opInsert(sym){
+  const key=opState.focusKey;
+  if(!key){showToast('先にセルを選択してください');return;}
+  const inp=document.querySelector('#op-table input[data-opkey="'+key+'"]');
+  if(!inp)return;
+  inp.value=sym;opRecolor(inp);opSet(key,sym);
+  inp.focus();
+}
+
+// A4横で外来勤務表を印刷
+function printOutpat(){
+  const ym=opState.ym;if(!ym){showToast('月を選択してください');return;}
+  const mo=opMonth(ym);
+  const [y,m]=ym.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const days=['日','月','火','水','木','金','土'];
+  const sc=mo.staffCols,dc=mo.dutyCols,bn=mo.bizCount;
+  const title=y+'年 '+m+'月 【外来勤務表】　'+OP_CLINIC;
+  let body='<table><thead><tr><th>日付</th><th>曜</th><th>時間</th>';
+  sc.forEach(n=>body+='<th>'+esc(n)+'</th>');
+  dc.forEach(n=>body+='<th class="duty">'+esc(n)+'</th>');
+  for(let b=0;b<bn;b++)body+='<th class="biz">担当業務</th>';
+  body+='</tr></thead><tbody>';
+  for(let d=1;d<=lastDay;d++){
+    const dow=new Date(y,m-1,d).getDay();
+    const cls=dow===0?'sun':(dow===6?'sat':'');
+    const note=(mo.dayNotes||{})[d]||'';
+    OP_SLOTS.forEach((sl,si)=>{
+      body+='<tr>';
+      if(si===0){
+        body+=`<td rowspan="3" class="dt ${cls}">${d}${note?'<br><span class="note">'+esc(note)+'</span>':''}</td>`;
+        body+=`<td rowspan="3" class="${cls}">${days[dow]}</td>`;
+      }
+      body+='<td class="slot">'+sl[1]+'</td>';
+      const cell=(type,ci,extra)=>{const v=(mo.cells||{})[opCellKey(d,sl[0],type,ci)]||'';const r=/有給|代休/.test(v)?' red':'';return `<td class="${extra||''}${r}">${esc(v).replace(/\n/g,'<br>')}</td>`;};
+      sc.forEach((n,ci)=>body+=cell('s',ci,''));
+      dc.forEach((n,ci)=>body+=cell('d',ci,'duty'));
+      for(let b=0;b<bn;b++)body+=cell('b',b,'biz');
+      body+='</tr>';
+    });
+  }
+  body+='</tbody></table>';
+  const footer=esc(mo.footer||'').replace(/\n/g,'<br>');
+  const w=window.open('','_blank');
+  if(!w){showToast('ポップアップを許可してください');return;}
+  w.document.write('<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>'+title+'</title>'
+    +'<style>@page{size:A4 landscape;margin:6mm;}'
+    +'body{font-family:\'Hiragino Sans\',\'Yu Gothic\',sans-serif;margin:0;padding:4px;}'
+    +'h2{font-size:13px;text-align:center;margin:2px 0 6px;}'
+    +'table{border-collapse:collapse;width:100%;font-size:8px;table-layout:fixed;}'
+    +'th,td{border:1px solid #555;padding:1px 2px;text-align:center;white-space:nowrap;overflow:hidden;}'
+    +'thead th{background:#eee;}th.duty,td.duty{background:#fffde7;}th.biz,td.biz{background:#f1f8e9;}'
+    +'td.dt{font-weight:700;}td.slot{background:#fafafa;font-size:7px;}'
+    +'.sun{color:#C62828;}.sat{color:#1976D2;}.red{color:#C62828;font-weight:700;}.note{color:#C62828;font-size:7px;}'
+    +'.foot{font-size:8px;margin-top:6px;line-height:1.5;white-space:normal;}'
+    +'@media print{button{display:none;}}'
+    +'</style></head><body>'
+    +'<h2>'+title+'</h2>'+body
+    +'<div class="foot">'+footer+'</div>'
+    +'<p style="text-align:center;margin-top:8px;"><button onclick="window.print()" style="padding:8px 16px;border:none;border-radius:6px;background:#1565C0;color:#fff;font-weight:700;cursor:pointer;">印刷 / PDF保存</button></p>'
+    +'</body></html>');
+  w.document.close();
+}
+
+
 // ═══ フルラフ専用：時間外申請（個人画面）・承認（管理画面） ═══
 
 // 個人画面：時間外タブの表示制御（フルラフのみ）
@@ -5278,12 +5528,12 @@ function applyFulllifeTabsVisibility(){
     if(isKoyokai)el.style.removeProperty('display');
     else el.style.setProperty('display','none','important');
   });
-  // 香庸会以外でリハ臨勤タブが開いていたらマスタ管理へ戻す
+  // 香庸会以外で香庸会専用タブ（リハ臨勤・外来勤務表）が開いていたらマスタ管理へ戻す
   if(!isKoyokai){
     const active=document.querySelector('.asc.active');
-    if(active&&active.id==='asc-special'){
+    if(active&&(active.id==='asc-special'||active.id==='asc-outpat')){
       active.classList.remove('active');
-      const tab=document.getElementById('atab-special');if(tab)tab.classList.remove('active');
+      ['atab-special','atab-outpat'].forEach(id=>{const tab=document.getElementById(id);if(tab)tab.classList.remove('active');});
       const sc=document.getElementById('asc-staff');if(sc)sc.classList.add('active');
       const st=document.getElementById('atab-staff');if(st)st.classList.add('active');
     }
@@ -5295,20 +5545,21 @@ function showAS(sub){
   // 香庸会ではフルラフ専用タブを開かせない（混在防止）
   if(CO!=='fulllife'&&typeof FL_ONLY_SUBS!=='undefined'&&FL_ONLY_SUBS.includes(sub))sub='staff';
   // リハ臨勤は香庸会のみ
-  if(CO!=='koyokai'&&sub==='special')sub='staff';
+  if(CO!=='koyokai'&&(sub==='special'||sub==='outpat'))sub='staff';
   // 警告も再描画
   if(typeof renderPunchWarnings==='function')renderPunchWarnings();
   // 管理画面の会社名更新（CO同期）
   if(typeof updateCompanyHeader==='function')updateCompanyHeader();
   // フルラフ専用タブの表示/非表示をCOに同期（毎回再適用）
   if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
-  ['staff','shift','rec','paid','special','biztrip','log','report','data','pw','devset','pattern','shiftcal','allshift','group','ot'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
+  ['staff','shift','rec','paid','special','biztrip','log','report','data','pw','devset','pattern','shiftcal','allshift','group','ot','outpat'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
   if(sub==='pw')initPwmStaffSelect();
   if(sub==='devset')initDevset();
   if(sub==='pattern')initWPAdmin();
   if(sub==='shiftcal')initShiftCal();
   if(sub==='group')initGroupAdmin();
   if(sub==='allshift')initAllShift();
+  if(sub==='outpat')initOutpat();
   if(sub==='ot')initOTAdmin();
   if(sub==='biztrip')initBizTripAdmin();
   if(sub==='rehab')initRehabAdmin();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}
