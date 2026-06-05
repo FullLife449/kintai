@@ -1613,6 +1613,7 @@ function fbLoadAndSync(co) {
   if(fbStaffVer !== STAFF_VER){
     localStorage.removeItem('kintai_staff_ver'); // lDBで種を確実に再読込させる
     lDB();                                        // DB.staff = 最新の種(53名) + 管理者復元
+    sortStaffByEmployeeId();
     fbSaveStaff('koyokai');                       // 両社ノードへ反映（DB.staffは両社分を保持）
     fbSaveStaff('fulllife');
     localStorage.setItem('kintai_fbstaff_ver', STAFF_VER);
@@ -1627,6 +1628,7 @@ function fbLoadAndSync(co) {
         loadedStaff = loadedStaff.map(s=>({...s, company: s.company||(co==='fulllife'?'fulllife':'koyokai')}));
         DB.staff = loadedStaff;
         ensureSuperAdmins();
+        sortStaffByEmployeeId();
         console.log('Staff loaded:', DB.staff.length);
       } else {
         // データなし→現在のlocalStorageのスタッフをアップロード
@@ -1795,7 +1797,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-05d 名簿FB反映'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-05e 社員番号順'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -1818,6 +1820,7 @@ function lDB(){
     sDB();
   }
   ensureSuperAdmins();
+  sortStaffByEmployeeId();
   initJobLicenseMasters();
 }
 
@@ -1830,6 +1833,15 @@ function ensureSuperAdmins(){
     s.adminRole='super';
     s.adminPerm='both';
     if(!s.adminPw)s.adminPw='2525';
+  });
+}
+
+// スタッフを「会社（香庸会→フルラフ）→社員番号」の順に並べ替える（全画面・CSVの並びを統一）
+function sortStaffByEmployeeId(){
+  if(!DB.staff)return;
+  DB.staff.sort((a,b)=>{
+    if(a.company!==b.company)return a.company==='koyokai'?-1:1;
+    return (a.employeeId||a.id||0)-(b.employeeId||b.id||0);
   });
 }
 
@@ -6165,7 +6177,7 @@ function doExportInd(sid,ym){
 // ═══ スタッフ管理 ═══
 function renderAL(){
   const el=document.getElementById('asl');const tl={contract:'契約型',free:'フリー型',annual:'年俸型'};
-  const list=DB.staff.filter(s=>s.company===CO);
+  const list=DB.staff.filter(s=>s.company===CO).sort((a,b)=>(a.employeeId||a.id)-(b.employeeId||b.id));
   if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:12px;padding:14px;text-align:center;">スタッフが登録されていません</div>';return;}
   el.innerHTML=list.map(s=>{
     let ss='';if(s.type==='contract'&&s.dowShifts){const wds=['mon','tue','wed','thu','fri'];const wdA=wds.map(d=>(s.dowShifts[d]||[]).map(sh=>sh.s+'〜'+sh.e).join(',')).filter(Boolean);const uniq=[...new Set(wdA)];if(uniq.length===1)ss='<br><b>平日:</b> '+uniq[0];else if(uniq.length>1)ss='<br><b>平日:</b> 曜日別設定あり';if(s.dowShifts.sat){const sa=Object.entries(s.dowShifts.sat).filter(([_,v])=>v&&v.length>0);if(sa.length)ss+='<br><b>土曜:</b> 第'+sa.map(([k,v])=>k+'('+v.map(x=>x.s+'〜'+x.e).join(')')).join(' 第');}}
