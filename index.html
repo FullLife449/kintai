@@ -1801,7 +1801,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-06a 外来勤務表 体制列追加'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-06b 外来勤務表 空列除去/体制列'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -5200,6 +5200,7 @@ function renderOutpat(){
   const ym=ms?ms.value:opState.ym;opState.ym=ym;
   if(!ym){t.innerHTML='<tr><td>月を選択</td></tr>';return;}
   const mo=opMonth(ym);
+  if(opSanitizeCols(mo))sDB();
   const ft=document.getElementById('op-footer');if(ft)ft.value=mo.footer||'';
   const [y,m]=ym.split('-').map(Number);
   const lastDay=new Date(y,m,0).getDate();
@@ -5262,8 +5263,9 @@ function opSetDutyCol(i,val){
   mo.dutyCols[i]=val.trim();sDB();
 }
 // 列削除時に該当type・該当index以降のセルを詰める
-function opShiftCells(type,removed){
-  const mo=opMonth(opState.ym);const nc={};
+function opShiftCells(type,removed){opShiftCellsOn(opMonth(opState.ym),type,removed);}
+function opShiftCellsOn(mo,type,removed){
+  const nc={};
   Object.keys(mo.cells||{}).forEach(k=>{
     const[d,sl,tp,ci]=k.split('|');
     if(tp!==type){nc[k]=mo.cells[k];return;}
@@ -5274,8 +5276,27 @@ function opShiftCells(type,removed){
   });
   mo.cells=nc;
 }
-function opAddStaffCol(){const mo=opMonth(opState.ym);mo.staffCols.push('');sDB();renderOutpat();}
-function opAddDutyCol(){const mo=opMonth(opState.ym);mo.dutyCols.push('');sDB();renderOutpat();}
+// 旧データに残った「空の列」を除去してセルを詰める（変更があればtrue）
+function opSanitizeCols(mo){
+  let changed=false;
+  for(let i=(mo.staffCols||[]).length-1;i>=0;i--){
+    if(!String(mo.staffCols[i]).trim()){mo.staffCols.splice(i,1);opShiftCellsOn(mo,'s',i);changed=true;}
+  }
+  for(let i=(mo.dutyCols||[]).length-1;i>=0;i--){
+    if(!String(mo.dutyCols[i]).trim()){mo.dutyCols.splice(i,1);opShiftCellsOn(mo,'d',i);changed=true;}
+  }
+  return changed;
+}
+function opAddStaffCol(){
+  const name=prompt('追加するスタッフ列の名前');if(name===null)return;
+  const v=name.trim();if(!v){showToast('名前を入力してください');return;}
+  const mo=opMonth(opState.ym);mo.staffCols.push(v);sDB();renderOutpat();
+}
+function opAddDutyCol(){
+  const name=prompt('追加する係欄の名前');if(name===null)return;
+  const v=name.trim();if(!v){showToast('名前を入力してください');return;}
+  const mo=opMonth(opState.ym);mo.dutyCols.push(v);sDB();renderOutpat();
+}
 // 週パターン展開：各曜日の「月内で最初の日」の内容を、同じ曜日の以降の週へコピー（1週分の雛形を5週に展開）
 function opCopyCell(mo,src,dst,slot,type,ci){
   const sk=opCellKey(src,slot,type,ci),dk=opCellKey(dst,slot,type,ci);
