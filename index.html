@@ -1801,7 +1801,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-06g 外来勤務表 印刷1枚目18日に収める'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-06h 外来勤務表 印刷タイトル余白確保/18日収め'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -5422,11 +5422,11 @@ function printOutpat(){
   const footer=esc(mo.footer||'').replace(/\n/g,'<br>');
   const html='<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>'+title+'</title>'
     +'<style>@page{size:A4 portrait;margin:6mm;}'
-    +'body{font-family:\'Hiragino Sans\',\'Yu Gothic\',sans-serif;margin:0;padding:1px;}'
-    +'h2{font-size:13px;text-align:center;margin:1px 0 3px;}'
+    +'body{font-family:\'Hiragino Sans\',\'Yu Gothic\',sans-serif;margin:0;padding:4px;}'
+    +'h2{font-size:12px;text-align:center;margin:2px 0 5px;}'
     +'table{border-collapse:collapse;width:100%;font-size:9px;table-layout:fixed;}'
     +'th,td{border:1px solid #555;padding:0 2px;text-align:center;white-space:nowrap;overflow:hidden;}'
-    +'thead th{height:4.6mm;}tbody tr{height:4.6mm;}'  /* 18日分(54行)＋見出しでA4縦に収める */
+    +'thead th{height:4.4mm;}tbody tr{height:4.4mm;}'  /* 18日分(54行)＋見出し＋タイトルでA4縦に収める */
     +'thead th{background:#eee;}'
     +'td.dt{font-weight:700;}td.slot{background:#fafafa;font-size:7px;}'
     +'tr.exam td{background:#E3F2FD;}tr.pm td{background:#FFF9C4;}'
