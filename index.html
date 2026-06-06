@@ -569,7 +569,7 @@ console.log('Firebase initialized (compat)');
 
       <!-- 勤務パターン雛形（5週） -->
       <div class="card">
-        <details>
+        <details ontoggle="if(this.open)renderOpPattern()">
           <summary style="cursor:pointer;font-weight:700;color:#1565C0;font-size:13px;">🗓 勤務パターン雛形（5週）— 月へ展開できます</summary>
           <div style="font-size:10px;color:var(--t2);margin:8px 0;line-height:1.6;">
             5週ぶんの基本パターンをここで作成しておき、上の月エディタで月を選んで「📥 勤務パターンを展開」を押すと、その月へ一括反映されます。<br>
