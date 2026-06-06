@@ -1801,7 +1801,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-06b 外来勤務表 空列除去/体制列'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-06c 外来勤務表 印刷iframe化(白紙対策)'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -5415,12 +5415,10 @@ function printOutpat(){
   const SPLIT=20;
   let body='<h2>'+title+'</h2><table>'+thead()+bodyRows(1,Math.min(SPLIT,lastDay))+'</table>';
   if(lastDay>SPLIT){
-    body+='<div class="pgbreak"></div><h2>'+title+'</h2><table>'+thead()+bodyRows(SPLIT+1,lastDay)+'</table>';
+    body+='<h2 class="pgbreak">'+title+'</h2><table>'+thead()+bodyRows(SPLIT+1,lastDay)+'</table>';
   }
   const footer=esc(mo.footer||'').replace(/\n/g,'<br>');
-  const w=window.open('','_blank');
-  if(!w){showToast('ポップアップを許可してください');return;}
-  w.document.write('<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>'+title+'</title>'
+  const html='<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>'+title+'</title>'
     +'<style>@page{size:A4 landscape;margin:6mm;}'
     +'body{font-family:\'Hiragino Sans\',\'Yu Gothic\',sans-serif;margin:0;padding:4px;}'
     +'h2{font-size:13px;text-align:center;margin:2px 0 6px;}'
@@ -5430,14 +5428,20 @@ function printOutpat(){
     +'td.dt{font-weight:700;}td.slot{background:#fafafa;font-size:7px;}'
     +'.sun{color:#C62828;}.sat{color:#1976D2;}.red{color:#C62828;font-weight:700;}.note{color:#C62828;font-size:7px;}'
     +'.foot{font-size:8px;margin-top:6px;line-height:1.5;white-space:normal;}'
-    +'.pgbreak{break-before:page;page-break-before:always;height:0;}'
-    +'@media print{button{display:none;}}'
+    +'h2.pgbreak{break-before:page;page-break-before:always;}'
     +'</style></head><body>'
     +body
     +'<div class="foot">'+footer+'</div>'
-    +'<p style="text-align:center;margin-top:8px;"><button onclick="window.print()" style="padding:8px 16px;border:none;border-radius:6px;background:#1565C0;color:#fff;font-weight:700;cursor:pointer;">印刷 / PDF保存</button></p>'
-    +'</body></html>');
-  w.document.close();
+    +'</body></html>';
+  // Safari対策：ポップアップ印刷だと白紙になるため、非表示iframeで印刷する
+  const oldf=document.getElementById('op-print-frame');if(oldf)oldf.remove();
+  const ifr=document.createElement('iframe');
+  ifr.id='op-print-frame';
+  ifr.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+  document.body.appendChild(ifr);
+  const doc=ifr.contentWindow.document;
+  doc.open();doc.write(html);doc.close();
+  setTimeout(function(){try{ifr.contentWindow.focus();ifr.contentWindow.print();}catch(e){showToast('印刷に失敗しました');}},300);
 }
 
 
