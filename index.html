@@ -1801,7 +1801,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-06d 外来勤務表 印刷A4縦'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-06e 外来勤務表 行を時間帯で色分け'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -5210,9 +5210,9 @@ function renderOutpat(){
   let h='<thead><tr style="background:#E3F2FD;position:sticky;top:0;z-index:2;">'
     +'<th style="min-width:34px;">日付</th><th style="min-width:26px;">曜</th><th style="min-width:34px;">時間</th>';
   sc.forEach((n,i)=>{h+=`<th class="op-hdr" style="min-width:48px;"><input value="${esc(n)}" onchange="opSetStaffCol(${i},this.value)" title="空欄で列削除"></th>`;});
-  dc.forEach((n,i)=>{h+=`<th class="op-hdr" style="min-width:46px;background:#FFF9C4;"><input value="${esc(n)}" onchange="opSetDutyCol(${i},this.value)" title="空欄で列削除"></th>`;});
-  for(let b=0;b<bn;b++){h+=`<th style="min-width:50px;background:#F1F8E9;">担当業務</th>`;}
-  h+=`<th style="min-width:50px;background:#E8EAF6;">体制</th>`;
+  dc.forEach((n,i)=>{h+=`<th class="op-hdr" style="min-width:46px;"><input value="${esc(n)}" onchange="opSetDutyCol(${i},this.value)" title="空欄で列削除"></th>`;});
+  for(let b=0;b<bn;b++){h+=`<th style="min-width:50px;">担当業務</th>`;}
+  h+=`<th style="min-width:50px;">体制</th>`;
   h+='</tr></thead><tbody>';
   // 各日（3行）
   for(let d=1;d<=lastDay;d++){
@@ -5220,16 +5220,17 @@ function renderOutpat(){
     const dcol=dow===0?'#C62828':(dow===6?'#1976D2':'#333');
     const note=(mo.dayNotes||{})[d]||'';
     OP_SLOTS.forEach((sl,si)=>{
+      const rbg=si===1?'#E3F2FD':(si===2?'#FFF9C4':''); // 午前=なし 検査=薄青 午後=薄黄
       h+='<tr>';
       if(si===0){
         h+=`<td rowspan="3" style="text-align:center;font-weight:700;color:${dcol};vertical-align:top;padding:2px;">${d}<br><input value="${esc(note)}" onchange="opSetNote(${d},this.value)" placeholder="" style="width:30px;font-size:8px;color:#C62828;text-align:center;"></td>`;
         h+=`<td rowspan="3" style="text-align:center;color:${dcol};font-weight:700;">${days[dow]}</td>`;
       }
-      h+=`<td style="font-size:9px;text-align:center;background:#FAFAFA;white-space:nowrap;">${sl[1]}</td>`;
-      sc.forEach((n,ci)=>{h+=opCell(d,sl[0],'s',ci,mo);});
-      dc.forEach((n,ci)=>{h+=opCell(d,sl[0],'d',ci,mo,'#FFFDE7');});
-      for(let b=0;b<bn;b++){h+=opCell(d,sl[0],'b',b,mo,'#F9FBF4');}
-      h+=opCell(d,sl[0],'r',0,mo,'#F3F1FB');
+      h+=`<td style="font-size:9px;text-align:center;background:${rbg||'#FAFAFA'};white-space:nowrap;">${sl[1]}</td>`;
+      sc.forEach((n,ci)=>{h+=opCell(d,sl[0],'s',ci,mo,rbg);});
+      dc.forEach((n,ci)=>{h+=opCell(d,sl[0],'d',ci,mo,rbg);});
+      for(let b=0;b<bn;b++){h+=opCell(d,sl[0],'b',b,mo,rbg);}
+      h+=opCell(d,sl[0],'r',0,mo,rbg);
       h+='</tr>';
     });
   }
@@ -5394,7 +5395,8 @@ function printOutpat(){
       const cls=dow===0?'sun':(dow===6?'sat':'');
       const note=(mo.dayNotes||{})[d]||'';
       OP_SLOTS.forEach((sl,si)=>{
-        body+='<tr>';
+        const rcls=si===1?'exam':(si===2?'pm':''); // 午前=なし 検査=薄青 午後=薄黄
+        body+='<tr'+(rcls?' class="'+rcls+'"':'')+'>';
         if(si===0){
           body+=`<td rowspan="3" class="dt ${cls}">${d}${note?'<br><span class="note">'+esc(note)+'</span>':''}</td>`;
           body+=`<td rowspan="3" class="${cls}">${days[dow]}</td>`;
@@ -5424,8 +5426,9 @@ function printOutpat(){
     +'h2{font-size:13px;text-align:center;margin:2px 0 6px;}'
     +'table{border-collapse:collapse;width:100%;font-size:8px;table-layout:fixed;}'
     +'th,td{border:1px solid #555;padding:1px 2px;text-align:center;white-space:nowrap;overflow:hidden;}'
-    +'thead th{background:#eee;}th.duty,td.duty{background:#fffde7;}th.biz,td.biz{background:#f1f8e9;}th.taisei,td.taisei{background:#e8eaf6;}'
+    +'thead th{background:#eee;}'
     +'td.dt{font-weight:700;}td.slot{background:#fafafa;font-size:7px;}'
+    +'tr.exam td{background:#E3F2FD;}tr.pm td{background:#FFF9C4;}'
     +'.sun{color:#C62828;}.sat{color:#1976D2;}.red{color:#C62828;font-weight:700;}.note{color:#C62828;font-size:7px;}'
     +'.foot{font-size:8px;margin-top:6px;line-height:1.5;white-space:normal;}'
     +'h2.pgbreak{break-before:page;page-break-before:always;}'
