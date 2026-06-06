@@ -309,10 +309,6 @@ console.log('Firebase initialized (compat)');
       
       <!-- 有給セクション -->
       <div id="phc-view-paid">
-        <div class="card"><div class="cl">有給付与・残数管理</div>
-          <div class="fs2" style="margin-bottom:8px;">入職日からの付与日基準で前期・当期を表示します（自動付与は毎回チェック）</div>
-          <div style="overflow-x:auto;"><table class="rt2" style="font-size:10.5px;"><thead><tr><th>社員番号</th><th>氏名</th><th>方式</th><th>前期残</th><th>当期付与</th><th>当期残</th><th>合計</th><th>操作</th></tr></thead><tbody id="pg-tb"></tbody></table></div>
-        </div>
         <div class="card"><div class="cl">有給申請履歴</div>
           <div class="fr" style="margin-bottom:10px;">
             <select class="fsl" id="ph-s" onchange="renderPH()"><option value="">全スタッフ</option></select>
@@ -322,18 +318,14 @@ console.log('Firebase initialized (compat)');
           <div style="overflow-x:auto;"><table class="rt2"><thead><tr><th>日付</th><th>曜</th><th>名前</th><th>種別</th><th>メモ</th><th>操作</th></tr></thead><tbody id="ph-tb"><tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">上で絞り込んで表示</td></tr></tbody></table></div>
           <div id="ph-sum" style="margin-top:9px;font-size:11px;color:var(--t2);"></div>
         </div>
+        <div class="card"><div class="cl">有給付与・残数管理</div>
+          <div class="fs2" style="margin-bottom:8px;">入職日からの付与日基準で前期・当期を表示します（自動付与は毎回チェック）</div>
+          <div style="overflow-x:auto;"><table class="rt2" style="font-size:10.5px;"><thead><tr><th>社員番号</th><th>氏名</th><th>方式</th><th>前期残</th><th>当期付与</th><th>当期残</th><th>合計</th><th>操作</th></tr></thead><tbody id="pg-tb"></tbody></table></div>
+        </div>
       </div>
       
       <!-- 代休セクション -->
       <div id="phc-view-sub" style="display:none;">
-        <!-- 代休付与・残数 -->
-        <div class="card"><div class="cl">代休付与・残数管理</div>
-          <div class="fs2" style="margin-bottom:8px;">代理出勤・付与・代休消化を一覧で管理できます</div>
-          <div class="fr" style="margin-bottom:10px;">
-            
-          </div>
-          <div style="overflow-x:auto;"><table class="rt2" style="font-size:11px;"><thead><tr><th>社員番号</th><th>氏名</th><th>付与</th><th>代理出勤</th><th>消化</th><th>残</th><th>付与</th></tr></thead><tbody id="sub-tb"></tbody></table></div>
-        </div>
         <!-- 代休申請履歴 -->
         <div class="card"><div class="cl">代休申請履歴</div>
           <div class="fr" style="margin-bottom:10px;">
@@ -343,6 +335,14 @@ console.log('Firebase initialized (compat)');
           </div>
           <div style="overflow-x:auto;"><table class="rt2"><thead><tr><th>日付</th><th>名前</th><th>種別</th><th>単位</th><th>交代者</th><th>操作</th></tr></thead><tbody id="sh-tb"><tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">上で絞り込んで表示</td></tr></tbody></table></div>
           <div id="sh-sum" style="margin-top:9px;font-size:11px;color:var(--t2);"></div>
+        </div>
+        <!-- 代休付与・残数 -->
+        <div class="card"><div class="cl">代休付与・残数管理</div>
+          <div class="fs2" style="margin-bottom:8px;">代理出勤・付与・代休消化を一覧で管理できます</div>
+          <div class="fr" style="margin-bottom:10px;">
+
+          </div>
+          <div style="overflow-x:auto;"><table class="rt2" style="font-size:11px;"><thead><tr><th>社員番号</th><th>氏名</th><th>付与</th><th>代理出勤</th><th>消化</th><th>残</th><th>付与</th></tr></thead><tbody id="sub-tb"></tbody></table></div>
         </div>
       </div>
 
@@ -537,6 +537,7 @@ console.log('Firebase initialized (compat)');
           <button class="bn" onclick="opAddDutyCol()" style="background:#fff;color:#1565C0;border:1px solid #90CAF9;font-size:11px;">＋係欄</button>
           <button class="bn" onclick="opExpandWeek()" style="background:#fff;color:#2E7D32;border:1px solid #A5D6A7;font-size:11px;">📅 週パターンを5週展開</button>
           <button class="bn" onclick="opApplyPattern()" style="background:#1565C0;color:#fff;font-size:11px;">📥 勤務パターンを展開</button>
+          <button class="bn" onclick="opReflectRequests()" style="background:#6A1B9A;color:#fff;font-size:11px;" title="有給・欠勤・代休・代理出勤の申請を反映（締日15日→16日以降に実行）">📨 申請を反映</button>
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;align-items:center;background:#F1F8E9;border:1px solid #C5E1A5;border-radius:7px;padding:6px;">
           <span style="font-size:10px;color:#33691E;font-weight:700;">選択セルへ挿入:</span>
@@ -1823,7 +1824,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-06i 外来勤務表 5週勤務パターン雛形→月展開'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-07a 申請反映ボタン＋有給/代休タブ先頭に履歴'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -5468,6 +5469,52 @@ function opImportMonthToPattern(){
     });
   }
   sDB();renderOpPattern();showToast('勤務パターンに取り込みました');
+}
+
+// ═══ 申請（有給・欠勤・代休・代理出勤）を外来勤務表へ反映 ═══
+// 締日15日→16日以降に反映する運用。対象は「表示中の月」に日付がある申請。
+// スタッフは外来勤務表の名前列の「姓」とDB.staff（香庸会）の姓を突き合わせて特定。
+// 全日＝午前/検査/午後の3行、午前(AM)＝午前行、午後(PM)＝午後行、半日(単位half)＝午前行に記号。
+function opReflectRequests(){
+  const ym=opState.ym;if(!ym){showToast('月を選択してください');return;}
+  const mo=opMonth(ym);
+  const ALL=['am','exam','pm'];
+  // 名前列(姓) → staffId のマップ（香庸会のみ）
+  const colOf={};const matched=[];
+  mo.staffCols.forEach((col,ci)=>{
+    const key=String(col).trim();if(!key)return;
+    const st=DB.staff.find(s=>s.company==='koyokai'&&String(s.name).split(/[ 　]/)[0]===key);
+    if(st){colOf[st.id]=ci;matched.push(key);}
+  });
+  if(!matched.length){showToast('一致するスタッフ列がありません');return;}
+  if(!confirm(ym+' の申請（有給・欠勤・代休・代理出勤）を外来勤務表へ反映します。\n対象スタッフ：'+matched.join('、')+'\n各日の該当セルは上書きされます。よろしいですか？'))return;
+  let count=0;
+  const put=(date,ci,slots,token)=>{
+    if(!String(date).startsWith(ym))return;
+    const day=parseInt(String(date).split('-')[2],10);if(!day)return;
+    mo.cells=mo.cells||{};
+    slots.forEach(sc=>{mo.cells[opCellKey(day,sc,'s',ci)]=token;});
+    count++;
+  };
+  (DB.paid||[]).forEach(p=>{const ci=colOf[p.staffId];if(ci==null)return;
+    if(p.type==='am')put(p.date,ci,['am'],'有給AM');
+    else if(p.type==='pm')put(p.date,ci,['pm'],'有給PM');
+    else put(p.date,ci,ALL,'有給');
+  });
+  (DB.absence||[]).forEach(p=>{const ci=colOf[p.staffId];if(ci==null)return;
+    if(p.type==='am')put(p.date,ci,['am'],'欠勤AM');
+    else if(p.type==='pm')put(p.date,ci,['pm'],'欠勤PM');
+    else if(p.type==='half')put(p.date,ci,['am'],'欠勤');
+    else put(p.date,ci,ALL,'欠勤');
+  });
+  (DB.subOff||[]).forEach(p=>{const ci=colOf[p.staffId];if(ci==null)return;
+    put(p.date,ci,p.unit==='half'?['am']:ALL,'代休');
+  });
+  (DB.substitute||[]).forEach(p=>{const ci=colOf[p.staffId];if(ci==null)return;
+    put(p.date,ci,p.unit==='half'?['am']:ALL,'代理出勤');
+  });
+  sDB();renderOutpat();
+  showToast(count?(count+'件の申請を反映しました'):'対象月に該当する申請はありませんでした');
 }
 // 複数選択モード
 function opToggleMulti(){
