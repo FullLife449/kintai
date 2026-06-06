@@ -1801,7 +1801,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-05f 外来勤務表 週展開/複数選択'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-06a 外来勤務表 体制列追加'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -5211,6 +5211,7 @@ function renderOutpat(){
   sc.forEach((n,i)=>{h+=`<th class="op-hdr" style="min-width:48px;"><input value="${esc(n)}" onchange="opSetStaffCol(${i},this.value)" title="空欄で列削除"></th>`;});
   dc.forEach((n,i)=>{h+=`<th class="op-hdr" style="min-width:46px;background:#FFF9C4;"><input value="${esc(n)}" onchange="opSetDutyCol(${i},this.value)" title="空欄で列削除"></th>`;});
   for(let b=0;b<bn;b++){h+=`<th style="min-width:50px;background:#F1F8E9;">担当業務</th>`;}
+  h+=`<th style="min-width:50px;background:#E8EAF6;">体制</th>`;
   h+='</tr></thead><tbody>';
   // 各日（3行）
   for(let d=1;d<=lastDay;d++){
@@ -5227,6 +5228,7 @@ function renderOutpat(){
       sc.forEach((n,ci)=>{h+=opCell(d,sl[0],'s',ci,mo);});
       dc.forEach((n,ci)=>{h+=opCell(d,sl[0],'d',ci,mo,'#FFFDE7');});
       for(let b=0;b<bn;b++){h+=opCell(d,sl[0],'b',b,mo,'#F9FBF4');}
+      h+=opCell(d,sl[0],'r',0,mo,'#F3F1FB');
       h+='</tr>';
     });
   }
@@ -5295,6 +5297,7 @@ function opExpandWeek(){
       mo.staffCols.forEach((n,ci)=>opCopyCell(mo,src,d,sl[0],'s',ci));
       mo.dutyCols.forEach((n,ci)=>opCopyCell(mo,src,d,sl[0],'d',ci));
       for(let b=0;b<mo.bizCount;b++)opCopyCell(mo,src,d,sl[0],'b',b);
+      opCopyCell(mo,src,d,sl[0],'r',0);
     });
   }
   sDB();renderOutpat();showToast('週パターンを5週分に展開しました');
@@ -5352,30 +5355,47 @@ function printOutpat(){
   const days=['日','月','火','水','木','金','土'];
   const sc=mo.staffCols,dc=mo.dutyCols,bn=mo.bizCount;
   const title=y+'年 '+m+'月 【外来勤務表】　'+OP_CLINIC;
-  let body='<table><thead><tr><th>日付</th><th>曜</th><th>時間</th>';
-  sc.forEach(n=>body+='<th>'+esc(n)+'</th>');
-  dc.forEach(n=>body+='<th class="duty">'+esc(n)+'</th>');
-  for(let b=0;b<bn;b++)body+='<th class="biz">担当業務</th>';
-  body+='</tr></thead><tbody>';
-  for(let d=1;d<=lastDay;d++){
-    const dow=new Date(y,m-1,d).getDay();
-    const cls=dow===0?'sun':(dow===6?'sat':'');
-    const note=(mo.dayNotes||{})[d]||'';
-    OP_SLOTS.forEach((sl,si)=>{
-      body+='<tr>';
-      if(si===0){
-        body+=`<td rowspan="3" class="dt ${cls}">${d}${note?'<br><span class="note">'+esc(note)+'</span>':''}</td>`;
-        body+=`<td rowspan="3" class="${cls}">${days[dow]}</td>`;
-      }
-      body+='<td class="slot">'+sl[1]+'</td>';
-      const cell=(type,ci,extra)=>{const v=(mo.cells||{})[opCellKey(d,sl[0],type,ci)]||'';const r=/有給|代休|欠勤/.test(v)?' red':'';return `<td class="${extra||''}${r}">${esc(v).replace(/\n/g,'<br>')}</td>`;};
-      sc.forEach((n,ci)=>body+=cell('s',ci,''));
-      dc.forEach((n,ci)=>body+=cell('d',ci,'duty'));
-      for(let b=0;b<bn;b++)body+=cell('b',b,'biz');
-      body+='</tr>';
-    });
+  // ヘッダー（タイトル＋日付の見出し行）を生成
+  function thead(){
+    let h='<thead><tr><th>日付</th><th>曜</th><th>時間</th>';
+    sc.forEach(n=>h+='<th>'+esc(n)+'</th>');
+    dc.forEach(n=>h+='<th class="duty">'+esc(n)+'</th>');
+    for(let b=0;b<bn;b++)h+='<th class="biz">担当業務</th>';
+    h+='<th class="taisei">体制</th>';
+    h+='</tr></thead>';
+    return h;
   }
-  body+='</tbody></table>';
+  // 指定範囲（from〜to日）の本体行を生成
+  function bodyRows(from,to){
+    let body='<tbody>';
+    for(let d=from;d<=to;d++){
+      const dow=new Date(y,m-1,d).getDay();
+      const cls=dow===0?'sun':(dow===6?'sat':'');
+      const note=(mo.dayNotes||{})[d]||'';
+      OP_SLOTS.forEach((sl,si)=>{
+        body+='<tr>';
+        if(si===0){
+          body+=`<td rowspan="3" class="dt ${cls}">${d}${note?'<br><span class="note">'+esc(note)+'</span>':''}</td>`;
+          body+=`<td rowspan="3" class="${cls}">${days[dow]}</td>`;
+        }
+        body+='<td class="slot">'+sl[1]+'</td>';
+        const cell=(type,ci,extra)=>{const v=(mo.cells||{})[opCellKey(d,sl[0],type,ci)]||'';const r=/有給|代休|欠勤/.test(v)?' red':'';return `<td class="${extra||''}${r}">${esc(v).replace(/\n/g,'<br>')}</td>`;};
+        sc.forEach((n,ci)=>body+=cell('s',ci,''));
+        dc.forEach((n,ci)=>body+=cell('d',ci,'duty'));
+        for(let b=0;b<bn;b++)body+=cell('b',b,'biz');
+        body+=cell('r',0,'taisei');
+        body+='</tr>';
+      });
+    }
+    body+='</tbody>';
+    return body;
+  }
+  // 1枚目=1〜20日、2枚目=21日〜末日（2枚目もタイトルと見出し行を付ける）
+  const SPLIT=20;
+  let body='<h2>'+title+'</h2><table>'+thead()+bodyRows(1,Math.min(SPLIT,lastDay))+'</table>';
+  if(lastDay>SPLIT){
+    body+='<div class="pgbreak"></div><h2>'+title+'</h2><table>'+thead()+bodyRows(SPLIT+1,lastDay)+'</table>';
+  }
   const footer=esc(mo.footer||'').replace(/\n/g,'<br>');
   const w=window.open('','_blank');
   if(!w){showToast('ポップアップを許可してください');return;}
@@ -5385,13 +5405,14 @@ function printOutpat(){
     +'h2{font-size:13px;text-align:center;margin:2px 0 6px;}'
     +'table{border-collapse:collapse;width:100%;font-size:8px;table-layout:fixed;}'
     +'th,td{border:1px solid #555;padding:1px 2px;text-align:center;white-space:nowrap;overflow:hidden;}'
-    +'thead th{background:#eee;}th.duty,td.duty{background:#fffde7;}th.biz,td.biz{background:#f1f8e9;}'
+    +'thead th{background:#eee;}th.duty,td.duty{background:#fffde7;}th.biz,td.biz{background:#f1f8e9;}th.taisei,td.taisei{background:#e8eaf6;}'
     +'td.dt{font-weight:700;}td.slot{background:#fafafa;font-size:7px;}'
     +'.sun{color:#C62828;}.sat{color:#1976D2;}.red{color:#C62828;font-weight:700;}.note{color:#C62828;font-size:7px;}'
     +'.foot{font-size:8px;margin-top:6px;line-height:1.5;white-space:normal;}'
+    +'.pgbreak{break-before:page;page-break-before:always;height:0;}'
     +'@media print{button{display:none;}}'
     +'</style></head><body>'
-    +'<h2>'+title+'</h2>'+body
+    +body
     +'<div class="foot">'+footer+'</div>'
     +'<p style="text-align:center;margin-top:8px;"><button onclick="window.print()" style="padding:8px 16px;border:none;border-radius:6px;background:#1565C0;color:#fff;font-weight:700;cursor:pointer;">印刷 / PDF保存</button></p>'
     +'</body></html>');
