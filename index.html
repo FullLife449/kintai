@@ -830,7 +830,8 @@ console.log('Firebase initialized (compat)');
         <div class="frw"><label class="fl">出張者氏名</label><input class="fi" type="text" id="pi-bt-name" readonly style="background:#f5f5f5;"></div>
         <div class="frw"><label class="fl">出張目的<br>（会合名等）</label><input class="fi" type="text" id="pi-bt-purpose" placeholder="例: 第81回学術総会"></div>
         <div class="frw"><label class="fl">出発地</label><input class="fi" type="text" id="pi-bt-departure" value="香里園駅"></div>
-        <div class="frw"><label class="fl">場所<br>（住所・施設名）</label><input class="fi" type="text" id="pi-bt-place" placeholder="例: パシフィコ横浜"></div>
+        <div class="frw"><label class="fl">施設名</label><input class="fi" type="text" id="pi-bt-place" placeholder="例: パシフィコ横浜"></div>
+        <div class="frw"><label class="fl">住所</label><input class="fi" type="text" id="pi-bt-address" placeholder="例: 横浜市西区みなとみらい1-1-1"></div>
         <div class="frw"><label class="fl">最寄駅</label><input class="fi" type="text" id="pi-bt-station" placeholder="例: みなとみらい駅"></div>
         <div class="frw"><label class="fl">出張期間 開始</label><input class="fi" type="date" id="pi-bt-start" onchange="updateBizTripMeta()"></div>
         <div class="frw"><label class="fl">出張期間 終了</label><input class="fi" type="date" id="pi-bt-end" onchange="updateBizTripMeta()"></div>
@@ -842,6 +843,9 @@ console.log('Firebase initialized (compat)');
         <div class="frw"><label class="fl">学会等の費用</label><input class="fi" type="number" inputmode="numeric" id="pi-bt-fee" placeholder="0" oninput="updateBizTripTotal()"></div>
         <div class="frw"><label class="fl">交通費</label><input class="fi" type="number" inputmode="numeric" id="pi-bt-transfee" placeholder="0" oninput="updateBizTripTotal()"></div>
         <div class="frw"><label class="fl">宿泊費</label><input class="fi" type="number" inputmode="numeric" id="pi-bt-lodgefee" placeholder="0" oninput="updateBizTripTotal()"></div>
+        <div class="frw" style="align-items:center;"><label class="fl">日当（自動）</label><div id="pi-bt-perdiem" style="flex:1;font-size:12px;color:#283593;font-weight:700;padding:6px 0;">—</div></div>
+        <div class="frw"><label class="fl">その他</label><input class="fi" type="number" inputmode="numeric" id="pi-bt-otherfee" placeholder="0" oninput="updateBizTripTotal()"></div>
+        <div class="frw"><label class="fl">その他の内容</label><input class="fi" type="text" id="pi-bt-othernote" placeholder="例: 駐車場代・資料代 等"></div>
         <div style="margin:9px 0;padding:11px 13px;background:linear-gradient(135deg,#E8EAF6,#C5CAE9);border:1px solid #9FA8DA;border-radius:9px;display:flex;justify-content:space-between;align-items:center;">
           <span style="font-size:12px;font-weight:700;color:#283593;">金額合計</span>
           <span id="pi-bt-total" style="font-size:20px;font-weight:800;color:#1a1a2e;">0 円</span>
@@ -1824,7 +1828,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-07b 有給・代休に編集ボタン追加'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-07c 出張：施設名/住所分離・日当・その他精算'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -4159,8 +4163,28 @@ function renderBizTripRule(){const el=document.getElementById('bt-rule-body');if
 function toggleBizTripRule(){const b=document.getElementById('bt-rule-body'),a=document.getElementById('bt-rule-arrow');if(!b)return;renderBizTripRule();const open=b.style.display==='none'||!b.style.display;b.style.display=open?'block':'none';if(a)a.textContent=open?'▲':'▼';}
 
 function btNum(id){return parseInt((document.getElementById(id)||{}).value)||0;}
+function btVal(id){const e=document.getElementById(id);return e?e.value:'';}
+// 日当：日帰り=規程「日帰り」×1、宿泊=規程「出張1日」×日数（泊数+1）
+function bizTripPerDiem(start,end){
+  const r=DB.bizTripRates||{};
+  const nv=bizTripNights(start,end);
+  let rate,count;
+  if(nv.nights===0){rate=parseInt(r.perDiemTrip)||0;count=1;}
+  else{rate=parseInt(r.perDiemDay)||0;count=nv.days;}
+  return {rate,count,amount:rate*count,nights:nv.nights,days:nv.days};
+}
+function updateBizTripPerDiem(){
+  const pd=bizTripPerDiem(btVal('pi-bt-start'),btVal('pi-bt-end'));
+  const el=document.getElementById('pi-bt-perdiem');
+  if(el){
+    el.textContent=pd.rate?(pd.rate.toLocaleString()+'円 × '+pd.count+'日'+(pd.nights===0?'（日帰り）':'')+' = '+pd.amount.toLocaleString()+'円')
+      :'規程未設定（0円）';
+  }
+  return pd.amount;
+}
 function updateBizTripTotal(){
-  const t=btNum('pi-bt-fee')+btNum('pi-bt-transfee')+btNum('pi-bt-lodgefee');
+  const pd=updateBizTripPerDiem();
+  const t=btNum('pi-bt-fee')+btNum('pi-bt-transfee')+btNum('pi-bt-lodgefee')+pd+btNum('pi-bt-otherfee');
   const el=document.getElementById('pi-bt-total');
   if(el)el.textContent=t.toLocaleString()+' 円';
   return t;
@@ -4178,6 +4202,7 @@ function updateBizTripMeta(){
   const end=document.getElementById('pi-bt-end')?document.getElementById('pi-bt-end').value:'';
   const el=document.getElementById('pi-bt-nights');
   if(el)el.textContent=bizTripNights(start,end).label;
+  updateBizTripTotal();
 }
 let btReceiptChecked=false;
 function toggleBtReceipt(){
@@ -4194,8 +4219,10 @@ function submitPIBizTrip(){
   const endDate=document.getElementById('pi-bt-end').value||startDate;
   if(!purpose){showToast('出張目的を入力してください');return;}
   if(!startDate){showToast('出張期間（開始）を入力してください');return;}
-  const feeConf=btNum('pi-bt-fee'),feeTransport=btNum('pi-bt-transfee'),feeLodging=btNum('pi-bt-lodgefee');
-  const total=feeConf+feeTransport+feeLodging;
+  const feeConf=btNum('pi-bt-fee'),feeTransport=btNum('pi-bt-transfee'),feeLodging=btNum('pi-bt-lodgefee'),feeOther=btNum('pi-bt-otherfee');
+  const pd=bizTripPerDiem(startDate,endDate);
+  const feePerDiem=pd.amount;
+  const total=feeConf+feeTransport+feeLodging+feePerDiem+feeOther;
   const nv=bizTripNights(startDate,endDate);
   if(!DB.bizTrips)DB.bizTrips=[];
   DB.bizTrips.push({
@@ -4206,12 +4233,16 @@ function submitPIBizTrip(){
     purpose,
     departure:(document.getElementById('pi-bt-departure').value||'香里園駅').trim(),
     place:(document.getElementById('pi-bt-place').value||'').trim(),
+    address:(document.getElementById('pi-bt-address').value||'').trim(),
     station:(document.getElementById('pi-bt-station').value||'').trim(),
     startDate,endDate,nights:nv.nights,
     transport:(document.getElementById('pi-bt-transport').value||'').trim(),
     lodging:(document.getElementById('pi-bt-lodging').value||'').trim(),
     companion:(document.getElementById('pi-bt-companion').value||'').trim(),
-    feeConf,feeTransport,feeLodging,total,
+    feeConf,feeTransport,feeLodging,
+    feePerDiem,perDiemRate:pd.rate,perDiemDays:pd.count,
+    feeOther,otherNote:(document.getElementById('pi-bt-othernote').value||'').trim(),
+    total,
     receipt:btReceiptChecked,
     memo:(document.getElementById('pi-bt-memo').value||'').trim(),
     status:'pending',approvedBy:null,
@@ -4220,7 +4251,7 @@ function submitPIBizTrip(){
   sDB();fbSaveSettings();
   renderPiBizTripList();
   // 入力欄クリア（出発地は香里園駅に戻す）
-  ['pi-bt-purpose','pi-bt-place','pi-bt-station','pi-bt-transport','pi-bt-lodging','pi-bt-companion','pi-bt-fee','pi-bt-transfee','pi-bt-lodgefee','pi-bt-memo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['pi-bt-purpose','pi-bt-place','pi-bt-address','pi-bt-station','pi-bt-transport','pi-bt-lodging','pi-bt-companion','pi-bt-fee','pi-bt-transfee','pi-bt-lodgefee','pi-bt-otherfee','pi-bt-othernote','pi-bt-memo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('pi-bt-end').value='';
   const dep=document.getElementById('pi-bt-departure');if(dep)dep.value='香里園駅';
   btReceiptChecked=false;const rb=document.getElementById('pi-bt-receipt-box');if(rb){rb.innerHTML='';rb.style.borderColor='var(--br)';}
@@ -4254,7 +4285,7 @@ function renderPiBizTripList(){
         </span>
       </div>
       <div style="color:var(--t2);margin-top:3px;">${t.purpose||''}${t.place?'／'+t.place:''}</div>
-      <div style="color:var(--t2);margin-top:2px;">学会${(t.feeConf||0).toLocaleString()} / 交通${(t.feeTransport||0).toLocaleString()} / 宿泊${(t.feeLodging||0).toLocaleString()}</div>
+      <div style="color:var(--t2);margin-top:2px;">学会${(t.feeConf||0).toLocaleString()} / 交通${(t.feeTransport||0).toLocaleString()} / 宿泊${(t.feeLodging||0).toLocaleString()} / 日当${(t.feePerDiem||0).toLocaleString()} / その他${(t.feeOther||0).toLocaleString()}${t.otherNote?'（'+t.otherNote+'）':''}</div>
     </div>`;
   }).join('');
 }
@@ -4294,7 +4325,8 @@ function printBizTrip(id){
     ${row('出張者氏名',esc(t.staffName))}
     ${row('出張目的（会合名等）',esc(t.purpose))}
     ${row('出発地',esc(t.departure||'香里園駅'))}
-    ${row('場所（住所・施設名）',esc(t.place))}
+    ${row('施設名',esc(t.place))}
+    ${row('住所',esc(t.address))}
     ${row('出張先施設の最寄駅',esc(t.station))}
     ${row('出張期間',period)}
     ${row('交通手段',esc(t.transport))}
@@ -4307,6 +4339,8 @@ function printBizTrip(id){
     ${row('学会などの費用',yen(t.feeConf))}
     ${row('交通費',yen(t.feeTransport))}
     ${row('宿泊費',yen(t.feeLodging))}
+    ${row('日当',(t.perDiemRate?(Number(t.perDiemRate).toLocaleString()+'円 × '+(t.perDiemDays||0)+'日 = '):'')+yen(t.feePerDiem))}
+    ${row('その他'+(t.otherNote?'（'+esc(t.otherNote)+'）':''),yen(t.feeOther))}
     <tr><th>金額合計</th><td class="total">${yen(t.total)}</td></tr>
   </table>
   <div class="addr">${esc(BIZTRIP_ADDRESSEE)}</div>
