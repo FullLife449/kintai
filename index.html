@@ -536,6 +536,7 @@ console.log('Firebase initialized (compat)');
           <button class="bn" onclick="opAddStaffCol()" style="background:#fff;color:#1565C0;border:1px solid #90CAF9;font-size:11px;">＋スタッフ列</button>
           <button class="bn" onclick="opAddDutyCol()" style="background:#fff;color:#1565C0;border:1px solid #90CAF9;font-size:11px;">＋係欄</button>
           <button class="bn" onclick="opExpandWeek()" style="background:#fff;color:#2E7D32;border:1px solid #A5D6A7;font-size:11px;">📅 週パターンを5週展開</button>
+          <button class="bn" onclick="opApplyPattern()" style="background:#1565C0;color:#fff;font-size:11px;">📥 勤務パターンを展開</button>
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;align-items:center;background:#F1F8E9;border:1px solid #C5E1A5;border-radius:7px;padding:6px;">
           <span style="font-size:10px;color:#33691E;font-weight:700;">選択セルへ挿入:</span>
@@ -564,6 +565,27 @@ console.log('Firebase initialized (compat)');
           <div style="font-size:11px;font-weight:700;margin-bottom:4px;">脚注（注記）</div>
           <textarea id="op-footer" onchange="opSetFooter(this.value)" style="width:100%;min-height:120px;font-size:10px;font-family:inherit;border:1px solid var(--br);border-radius:7px;padding:8px;box-sizing:border-box;line-height:1.6;"></textarea>
         </div>
+      </div>
+
+      <!-- 勤務パターン雛形（5週） -->
+      <div class="card">
+        <details>
+          <summary style="cursor:pointer;font-weight:700;color:#1565C0;font-size:13px;">🗓 勤務パターン雛形（5週）— 月へ展開できます</summary>
+          <div style="font-size:10px;color:var(--t2);margin:8px 0;line-height:1.6;">
+            5週ぶんの基本パターンをここで作成しておき、上の月エディタで月を選んで「📥 勤務パターンを展開」を押すと、その月へ一括反映されます。<br>
+            ・週番号は<b>土曜日基準</b>：その月の第N土曜を含む週が<b>N週目</b>、最後の土曜より後の日は<b>5週目</b>。<br>
+            ・記号入力は月エディタと同じ操作（セルを選んで上の記号ボタン／「複数選択」ONで一括）。列見出しの編集・空欄で削除も同じ。<br>
+            ・展開すると、その月の<b>係構成と各セルは上書き</b>されます（日付メモ・脚注は残ります）。展開後に有給・代休などの個別の違いは月側で直してください。
+          </div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">
+            <button class="bn" onclick="opPatAddStaffCol()" style="background:#fff;color:#1565C0;border:1px solid #90CAF9;font-size:11px;">＋スタッフ列</button>
+            <button class="bn" onclick="opPatAddDutyCol()" style="background:#fff;color:#1565C0;border:1px solid #90CAF9;font-size:11px;">＋係欄</button>
+            <button class="bn" onclick="opImportMonthToPattern()" style="background:#fff;color:#33691E;border:1px solid #A5D6A7;font-size:11px;">⤵ 表示中の月から取り込む</button>
+          </div>
+          <div style="overflow:auto;max-height:520px;border:1px solid var(--br);border-radius:7px;background:#fff;">
+            <table id="op-pat-table" style="border-collapse:collapse;font-size:10px;"></table>
+          </div>
+        </details>
       </div>
     </div>
 
@@ -1801,7 +1823,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-06h 外来勤務表 印刷タイトル余白確保/18日収め'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-06i 外来勤務表 5週勤務パターン雛形→月展開'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -5192,6 +5214,7 @@ function initOutpat(){
   }
   opState.ym=ms?ms.value:null;
   renderOutpat();
+  renderOpPattern();
 }
 
 function renderOutpat(){
@@ -5238,15 +5261,23 @@ function renderOutpat(){
   t.innerHTML=h;
 }
 function opCellKey(d,slot,type,ci){return d+'|'+slot+'|'+type+'|'+ci;}
+// セル<td>の共通生成（月エディタ・パターンエディタで共用）。dataKeyが 'P:' 始まりならパターン側に保存される
+function opCellHTML(dataKey,v,bg){
+  const red=/有給|代休|欠勤/.test(v)?'color:#C62828;font-weight:700;':'';
+  const selCls=opState.sel&&opState.sel.has(dataKey)?' class="op-sel"':'';
+  return `<td style="${bg?'background:'+bg+';':''}"><input data-opkey="${dataKey}"${selCls} value="${esc(v)}" style="${red}" onmousedown="return opCellDown(event,'${dataKey}')" onfocus="opState.focusKey='${dataKey}'" oninput="opRecolor(this)" onchange="opSet('${dataKey}',this.value)"></td>`;
+}
 function opCell(d,slot,type,ci,mo,bg){
   const key=opCellKey(d,slot,type,ci);
-  const v=(mo.cells||{})[key]||'';
-  const red=/有給|代休|欠勤/.test(v)?'color:#C62828;font-weight:700;':'';
-  const selCls=opState.sel&&opState.sel.has(key)?' class="op-sel"':'';
-  return `<td style="${bg?'background:'+bg+';':''}"><input data-opkey="${key}"${selCls} value="${esc(v)}" style="${red}" onmousedown="return opCellDown(event,'${key}')" onfocus="opState.focusKey='${key}'" oninput="opRecolor(this)" onchange="opSet('${key}',this.value)"></td>`;
+  return opCellHTML(key,(mo.cells||{})[key]||'',bg);
 }
 function opRecolor(el){el.style.color=/有給|代休|欠勤/.test(el.value)?'#C62828':'';el.style.fontWeight=/有給|代休|欠勤/.test(el.value)?'700':'';}
 function opSet(key,val){
+  if(key.indexOf('P:')===0){ // 勤務パターン雛形のセル
+    const pat=opPattern();pat.cells=pat.cells||{};const k=key.slice(2);
+    if(val.trim())pat.cells[k]=val;else delete pat.cells[k];
+    sDB();return;
+  }
   const mo=opMonth(opState.ym);mo.cells=mo.cells||{};
   if(val.trim())mo.cells[key]=val;else delete mo.cells[key];
   sDB();
@@ -5324,17 +5355,132 @@ function opExpandWeek(){
   }
   sDB();renderOutpat();showToast('週パターンを5週分に展開しました');
 }
+
+// ═══ 勤務パターン雛形（5週×曜日）→ 月へ展開 ═══
+// 週番号：その日より前にある土曜の数＋1（最大5）。＝その月の第N土曜を含む週がN週目、最後の土曜より後は5週目。
+function opWeekIndex(y,m,d){
+  let sat=0;
+  for(let i=1;i<d;i++){if(new Date(y,m-1,i).getDay()===6)sat++;}
+  return Math.min(5,sat+1);
+}
+function opPattern(){
+  DB.outpatientPattern=DB.outpatientPattern||{staffCols:OP_DEF_STAFF.slice(),dutyCols:OP_DEF_DUTY.slice(),bizCount:OP_DEF_BIZ,cells:{}};
+  return DB.outpatientPattern;
+}
+function opPatKey(w,dow,slot,type,ci){return w+'|'+dow+'|'+slot+'|'+type+'|'+ci;}
+function opPatCell(w,dow,slot,type,ci,pat,bg){
+  const pk=opPatKey(w,dow,slot,type,ci);
+  return opCellHTML('P:'+pk,(pat.cells||{})[pk]||'',bg);
+}
+function renderOpPattern(){
+  const t=document.getElementById('op-pat-table');if(!t)return;
+  const pat=opPattern();
+  const sc=pat.staffCols,dc=pat.dutyCols,bn=pat.bizCount;
+  const days=['日','月','火','水','木','金','土'];
+  let h='<thead><tr style="background:#E3F2FD;position:sticky;top:0;z-index:2;">'
+    +'<th style="min-width:30px;">週</th><th style="min-width:26px;">曜</th><th style="min-width:34px;">時間</th>';
+  sc.forEach((n,i)=>{h+=`<th class="op-hdr" style="min-width:48px;"><input value="${esc(n)}" onchange="opPatSetStaffCol(${i},this.value)" title="空欄で列削除"></th>`;});
+  dc.forEach((n,i)=>{h+=`<th class="op-hdr" style="min-width:46px;"><input value="${esc(n)}" onchange="opPatSetDutyCol(${i},this.value)" title="空欄で列削除"></th>`;});
+  for(let b=0;b<bn;b++){h+=`<th style="min-width:50px;">担当業務</th>`;}
+  h+=`<th style="min-width:50px;">体制</th>`;
+  h+='</tr></thead><tbody>';
+  for(let w=1;w<=5;w++){
+    for(let dow=0;dow<7;dow++){
+      const dcol=dow===0?'#C62828':(dow===6?'#1976D2':'#333');
+      OP_SLOTS.forEach((sl,si)=>{
+        const rbg=si===1?'#E3F2FD':(si===2?'#FFF9C4':''); // 午前=なし 検査=薄青 午後=薄黄
+        h+='<tr>';
+        if(dow===0&&si===0){h+=`<td rowspan="21" style="text-align:center;font-weight:700;color:#1565C0;background:#F1F8E9;vertical-align:middle;">${w}<br>週</td>`;}
+        if(si===0){h+=`<td rowspan="3" style="text-align:center;color:${dcol};font-weight:700;">${days[dow]}</td>`;}
+        h+=`<td style="font-size:9px;text-align:center;background:${rbg||'#FAFAFA'};white-space:nowrap;">${sl[1]}</td>`;
+        sc.forEach((n,ci)=>{h+=opPatCell(w,dow,sl[0],'s',ci,pat,rbg);});
+        dc.forEach((n,ci)=>{h+=opPatCell(w,dow,sl[0],'d',ci,pat,rbg);});
+        for(let b=0;b<bn;b++){h+=opPatCell(w,dow,sl[0],'b',b,pat,rbg);}
+        h+=opPatCell(w,dow,sl[0],'r',0,pat,rbg);
+        h+='</tr>';
+      });
+    }
+  }
+  h+='</tbody>';t.innerHTML=h;
+}
+// パターンの列削除時にセルを詰める（キーは w|dow|slot|type|ci の5要素）
+function opPatShiftCells(type,removed){
+  const pat=opPattern();const nc={};
+  Object.keys(pat.cells||{}).forEach(k=>{
+    const p=k.split('|');
+    if(p[3]!==type){nc[k]=pat.cells[k];return;}
+    const idx=parseInt(p[4]);
+    if(idx===removed)return;
+    const ni=idx>removed?idx-1:idx;
+    nc[opPatKey(p[0],p[1],p[2],type,ni)]=pat.cells[k];
+  });
+  pat.cells=nc;
+}
+function opPatSetStaffCol(i,val){
+  const pat=opPattern();
+  if(!val.trim()){if(confirm('この列を削除しますか？（パターンの入力値も消えます）')){pat.staffCols.splice(i,1);opPatShiftCells('s',i);}sDB();renderOpPattern();return;}
+  pat.staffCols[i]=val.trim();sDB();
+}
+function opPatSetDutyCol(i,val){
+  const pat=opPattern();
+  if(!val.trim()){if(confirm('この列を削除しますか？（パターンの入力値も消えます）')){pat.dutyCols.splice(i,1);opPatShiftCells('d',i);}sDB();renderOpPattern();return;}
+  pat.dutyCols[i]=val.trim();sDB();
+}
+function opPatAddStaffCol(){const n=prompt('追加するスタッフ列の名前');if(n===null)return;const v=n.trim();if(!v){showToast('名前を入力してください');return;}opPattern().staffCols.push(v);sDB();renderOpPattern();}
+function opPatAddDutyCol(){const n=prompt('追加する係欄の名前');if(n===null)return;const v=n.trim();if(!v){showToast('名前を入力してください');return;}opPattern().dutyCols.push(v);sDB();renderOpPattern();}
+// 勤務パターンを選択中の月へ展開（係構成とセルを上書き。日付メモ・脚注は据え置き）
+function opApplyPattern(){
+  const ym=opState.ym;if(!ym){showToast('月を選択してください');return;}
+  if(!confirm('勤務パターン（5週雛形）を「'+ym+'」へ展開します。\nこの月の係構成と各セルはパターン内容で上書きされます（日付メモ・脚注は残ります）。よろしいですか？'))return;
+  const pat=opPattern();const mo=opMonth(ym);
+  mo.staffCols=pat.staffCols.slice();mo.dutyCols=pat.dutyCols.slice();mo.bizCount=pat.bizCount;
+  mo.cells={};
+  const [y,m]=ym.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  for(let d=1;d<=lastDay;d++){
+    const w=opWeekIndex(y,m,d);const dow=new Date(y,m-1,d).getDay();
+    OP_SLOTS.forEach(sl=>{
+      const put=(type,ci)=>{const v=(pat.cells||{})[opPatKey(w,dow,sl[0],type,ci)];if(v)mo.cells[opCellKey(d,sl[0],type,ci)]=v;};
+      pat.staffCols.forEach((n,ci)=>put('s',ci));
+      pat.dutyCols.forEach((n,ci)=>put('d',ci));
+      for(let b=0;b<pat.bizCount;b++)put('b',b);
+      put('r',0);
+    });
+  }
+  sDB();renderOutpat();showToast(ym+' に勤務パターンを展開しました');
+}
+// 表示中の月の内容をパターン雛形に取り込む（各 週×曜日 は最初に該当した日の値を採用）
+function opImportMonthToPattern(){
+  const ym=opState.ym;if(!ym){showToast('月を選択してください');return;}
+  if(!confirm('表示中の月「'+ym+'」の内容を勤務パターン（5週雛形）に取り込みます。\n現在のパターンは上書きされます。よろしいですか？'))return;
+  const mo=opMonth(ym);const pat=opPattern();
+  pat.staffCols=mo.staffCols.slice();pat.dutyCols=mo.dutyCols.slice();pat.bizCount=mo.bizCount;pat.cells={};
+  const [y,m]=ym.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  for(let d=1;d<=lastDay;d++){
+    const w=opWeekIndex(y,m,d);const dow=new Date(y,m-1,d).getDay();
+    OP_SLOTS.forEach(sl=>{
+      const grab=(type,ci)=>{const v=(mo.cells||{})[opCellKey(d,sl[0],type,ci)];const pk=opPatKey(w,dow,sl[0],type,ci);if(v&&!pat.cells[pk])pat.cells[pk]=v;};
+      mo.staffCols.forEach((n,ci)=>grab('s',ci));
+      mo.dutyCols.forEach((n,ci)=>grab('d',ci));
+      for(let b=0;b<mo.bizCount;b++)grab('b',b);
+      grab('r',0);
+    });
+  }
+  sDB();renderOpPattern();showToast('勤務パターンに取り込みました');
+}
 // 複数選択モード
 function opToggleMulti(){
   opState.multi=!opState.multi;
   if(!opState.multi)opClearSel();
-  const tbl=document.getElementById('op-table');if(tbl)tbl.classList.toggle('op-multi',opState.multi);
+  ['op-table','op-pat-table'].forEach(id=>{const tbl=document.getElementById(id);if(tbl)tbl.classList.toggle('op-multi',opState.multi);});
   const b=document.getElementById('op-multi-btn');
   if(b){b.style.background=opState.multi?'#1565C0':'#fff';b.style.color=opState.multi?'#fff':'#1565C0';b.textContent=opState.multi?'複数選択 ON':'複数選択';}
   opUpdateSelCount();
 }
+function opFindInput(key){return document.querySelector('input[data-opkey="'+key+'"]');}
 function opClearSel(){
-  if(opState.sel)opState.sel.forEach(k=>{const inp=document.querySelector('#op-table input[data-opkey="'+k+'"]');if(inp)inp.classList.remove('op-sel');});
+  if(opState.sel)opState.sel.forEach(k=>{const inp=opFindInput(k);if(inp)inp.classList.remove('op-sel');});
   opState.sel=new Set();opUpdateSelCount();
 }
 function opUpdateSelCount(){const el=document.getElementById('op-sel-count');if(el)el.textContent=opState.multi?('選択 '+opState.sel.size+'件'):'';}
@@ -5352,7 +5498,7 @@ function opInsert(sym){
   if(opState.multi){
     if(!opState.sel.size){showToast('セルを選択してください');return;}
     opState.sel.forEach(key=>{
-      const inp=document.querySelector('#op-table input[data-opkey="'+key+'"]');
+      const inp=opFindInput(key);
       if(inp){inp.value=sym;opRecolor(inp);}
       opSet(key,sym);
     });
@@ -5362,7 +5508,7 @@ function opInsert(sym){
   }
   const key=opState.focusKey;
   if(!key){showToast('先にセルを選択してください');return;}
-  const inp=document.querySelector('#op-table input[data-opkey="'+key+'"]');
+  const inp=opFindInput(key);
   if(!inp)return;
   inp.value=sym;opRecolor(inp);opSet(key,sym);
   inp.focus();
