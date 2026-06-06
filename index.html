@@ -532,7 +532,7 @@ console.log('Firebase initialized (compat)');
         <div class="cl" style="color:#1565C0;">🏥 外来勤務表（香庸会）</div>
         <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px;align-items:center;">
           <select id="op-month" onchange="renderOutpat()"></select>
-          <button class="bn" onclick="printOutpat()" style="background:#1565C0;color:#fff;font-size:11px;">🖨 A4印刷（横）</button>
+          <button class="bn" onclick="printOutpat()" style="background:#1565C0;color:#fff;font-size:11px;">🖨 A4印刷（縦）</button>
           <button class="bn" onclick="opAddStaffCol()" style="background:#fff;color:#1565C0;border:1px solid #90CAF9;font-size:11px;">＋スタッフ列</button>
           <button class="bn" onclick="opAddDutyCol()" style="background:#fff;color:#1565C0;border:1px solid #90CAF9;font-size:11px;">＋係欄</button>
           <button class="bn" onclick="opExpandWeek()" style="background:#fff;color:#2E7D32;border:1px solid #A5D6A7;font-size:11px;">📅 週パターンを5週展開</button>
@@ -1801,7 +1801,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-06c 外来勤務表 印刷iframe化(白紙対策)'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-06d 外来勤務表 印刷A4縦'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -5367,7 +5367,7 @@ function opInsert(sym){
   inp.focus();
 }
 
-// A4横で外来勤務表を印刷
+// A4縦で外来勤務表を印刷
 function printOutpat(){
   const ym=opState.ym;if(!ym){showToast('月を選択してください');return;}
   const mo=opMonth(ym);
@@ -5419,7 +5419,7 @@ function printOutpat(){
   }
   const footer=esc(mo.footer||'').replace(/\n/g,'<br>');
   const html='<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>'+title+'</title>'
-    +'<style>@page{size:A4 landscape;margin:6mm;}'
+    +'<style>@page{size:A4 portrait;margin:6mm;}'
     +'body{font-family:\'Hiragino Sans\',\'Yu Gothic\',sans-serif;margin:0;padding:4px;}'
     +'h2{font-size:13px;text-align:center;margin:2px 0 6px;}'
     +'table{border-collapse:collapse;width:100%;font-size:8px;table-layout:fixed;}'
