@@ -1824,7 +1824,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-07a 申請反映ボタン＋有給/代休タブ先頭に履歴'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-07b 有給・代休に編集ボタン追加'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -2344,7 +2344,7 @@ function renderSH(){
     const kindLbl=x.kind==='substitute'?'<span style="color:#558B2F;">代理出勤</span>':'<span style="color:#C62828;">代休</span>';
     const unit=x.unit==='half'?'半日':'全日';
     const replacer=x.replacer||'-';
-    return `<tr><td>${x.date}</td><td>${s?s.name:'?'}</td><td>${kindLbl}</td><td>${unit}</td><td>${replacer}</td><td><button class="fd" onclick="delSubEntry('${x.kind}',${x.staffId},'${x.date}')">削除</button></td></tr>`;
+    return `<tr><td>${x.date}</td><td>${s?s.name:'?'}</td><td>${kindLbl}</td><td>${unit}</td><td>${replacer}</td><td style="white-space:nowrap;"><button class="fd" onclick="openEditSubModal('${x.kind}',${x.staffId},'${x.date}')" style="background:#1565C0;color:#fff;border-color:#1565C0;margin-right:4px;">編集</button><button class="fd" onclick="delSubEntry('${x.kind}',${x.staffId},'${x.date}')">削除</button></td></tr>`;
   }).join('');
   const subCount=all.filter(x=>x.kind==='substitute').reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
   const offCount=all.filter(x=>x.kind==='suboff').reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
@@ -6774,22 +6774,39 @@ function initPH(){const sel=document.getElementById('ph-s');sel.innerHTML='<opti
   staffList.sort((a,b)=>a.id-b.id).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.id} ${s.name}</option>`);const ms=document.getElementById('ph-m');if(ms.options.length>1)return;const n=new Date();for(let i=0;i<6;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);ms.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}renderPH();}
 
 // ═══ 管理画面：有給/代休 追加モーダル ═══
-function openAddPaidModal(){
-  const sel=document.getElementById('ap-staff');
-  sel.innerHTML='';
+let paidEditId=null; // 有給：編集中の申請id（nullなら新規追加）
+function opFillPaidStaff(){
+  const sel=document.getElementById('ap-staff');sel.innerHTML='';
   let list=DB.staff.slice();
   if(currentAdmin&&currentAdmin.role!=='super')list=list.filter(s=>s.company===currentAdmin.company);
-  list.sort((a,b)=>a.id-b.id).forEach(s=>{
-    const o=document.createElement('option');o.value=s.id;o.textContent=s.id+' '+s.name;
-    sel.appendChild(o);
-  });
+  list.sort((a,b)=>a.id-b.id).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.id+' '+s.name;sel.appendChild(o);});
+}
+function openAddPaidModal(){
+  paidEditId=null;
+  opFillPaidStaff();
   document.getElementById('ap-date').value=todayStr();
   document.getElementById('ap-type').value='full';
   document.getElementById('ap-memo').value='';
+  document.getElementById('ap-modal-title').textContent='＋ 有給を追加';
+  document.getElementById('ap-submit-btn').textContent='追加';
+  document.getElementById('add-paid-modal').style.display='flex';
+}
+function openEditPaidModal(id){
+  const p=(DB.paid||[]).find(x=>x.id===id);
+  if(!p){showToast('対象が見つかりません');return;}
+  paidEditId=id;
+  opFillPaidStaff();
+  document.getElementById('ap-staff').value=p.staffId;
+  document.getElementById('ap-date').value=p.date;
+  document.getElementById('ap-type').value=p.type;
+  document.getElementById('ap-memo').value=p.memo||'';
+  document.getElementById('ap-modal-title').textContent='✎ 有給を編集';
+  document.getElementById('ap-submit-btn').textContent='保存';
   document.getElementById('add-paid-modal').style.display='flex';
 }
 function closeAddPaidModal(){
   document.getElementById('add-paid-modal').style.display='none';
+  paidEditId=null;
 }
 function submitAddPaid(){
   const sid=parseInt(document.getElementById('ap-staff').value);
@@ -6799,6 +6816,16 @@ function submitAddPaid(){
   if(!sid||!date){showToast('スタッフと日付を選択してください');return;}
   const s=DB.staff.find(x=>x.id===sid);
   if(!s)return;
+  if(!DB.paid)DB.paid=[];
+  if(paidEditId){ // 編集：既存申請を更新
+    const dup=DB.paid.find(p=>p.staffId===sid&&p.date===date&&p.id!==paidEditId);
+    if(dup){if(!confirm('この日は既に有給が登録されています（'+dup.type+'）。\n上書きしますか？'))return;DB.paid=DB.paid.filter(p=>p.id!==dup.id);}
+    const ent=DB.paid.find(p=>p.id===paidEditId);
+    if(ent){ent.staffId=sid;ent.date=date;ent.type=type;ent.memo=memo;ent.staffName=s.name;ent.company=s.company;}
+    paidEditId=null;
+    sDB();showToast(s.name+' の有給を更新しました ✓');closeAddPaidModal();renderPH();renderPaidGrants();fbSaveSettings();
+    return;
+  }
   // 重複チェック
   const dup=DB.paid.find(p=>p.staffId===sid&&p.date===date);
   if(dup){
@@ -6818,24 +6845,44 @@ function onAddSubKindChange(){
   const k=document.getElementById('as-kind').value;
   document.getElementById('as-replacer-wrap').style.display=(k==='substitute')?'':'none';
 }
-function openAddSubModal(){
-  const sel=document.getElementById('as-staff');
-  sel.innerHTML='';
+let subEditOrig=null; // 代休：編集中の元レコード {kind,staffId,date}（nullなら新規追加）
+function opFillSubStaff(){
+  const sel=document.getElementById('as-staff');sel.innerHTML='';
   let list=DB.staff.slice();
   if(currentAdmin&&currentAdmin.role!=='super')list=list.filter(s=>s.company===currentAdmin.company);
-  list.sort((a,b)=>a.id-b.id).forEach(s=>{
-    const o=document.createElement('option');o.value=s.id;o.textContent=s.id+' '+s.name;
-    sel.appendChild(o);
-  });
+  list.sort((a,b)=>a.id-b.id).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.id+' '+s.name;sel.appendChild(o);});
+}
+function openAddSubModal(){
+  subEditOrig=null;
+  opFillSubStaff();
   document.getElementById('as-date').value=todayStr();
   document.getElementById('as-kind').value='substitute';
   document.getElementById('as-unit').value='full';
   document.getElementById('as-replacer').value='';
   onAddSubKindChange();
+  document.getElementById('as-modal-title').textContent='＋ 代休・代理出勤を追加';
+  document.getElementById('as-submit-btn').textContent='追加';
+  document.getElementById('add-sub-modal').style.display='flex';
+}
+function openEditSubModal(kind,staffId,date){
+  const arr=kind==='substitute'?(DB.substitute||[]):(DB.subOff||[]);
+  const x=arr.find(e=>e.staffId===staffId&&e.date===date);
+  if(!x){showToast('対象が見つかりません');return;}
+  subEditOrig={kind,staffId,date};
+  opFillSubStaff();
+  document.getElementById('as-staff').value=staffId;
+  document.getElementById('as-date').value=date;
+  document.getElementById('as-kind').value=kind;
+  document.getElementById('as-unit').value=x.unit||'full';
+  document.getElementById('as-replacer').value=x.replacer||'';
+  onAddSubKindChange();
+  document.getElementById('as-modal-title').textContent='✎ 代休・代理出勤を編集';
+  document.getElementById('as-submit-btn').textContent='保存';
   document.getElementById('add-sub-modal').style.display='flex';
 }
 function closeAddSubModal(){
   document.getElementById('add-sub-modal').style.display='none';
+  subEditOrig=null;
 }
 function submitAddSub(){
   const sid=parseInt(document.getElementById('as-staff').value);
@@ -6847,23 +6894,34 @@ function submitAddSub(){
   if(kind==='substitute'&&!replacer){showToast('交代者の名前を入力してください');return;}
   const s=DB.staff.find(x=>x.id===sid);
   if(!s)return;
-  // 重複チェック
-  const arr=kind==='substitute'?(DB.substitute||[]):(DB.subOff||[]);
+  if(!DB.substitute)DB.substitute=[];
+  if(!DB.subOff)DB.subOff=[];
+  const editing=subEditOrig;
+  // 編集時：まず元レコードを削除（種別変更で別配列へ移動するケースに対応）
+  if(editing){
+    if(editing.kind==='substitute')DB.substitute=DB.substitute.filter(x=>!(x.staffId===editing.staffId&&x.date===editing.date));
+    else DB.subOff=DB.subOff.filter(x=>!(x.staffId===editing.staffId&&x.date===editing.date));
+  }
+  // 重複チェック（編集後の宛先で）
+  const arr=kind==='substitute'?DB.substitute:DB.subOff;
   const dup=arr.find(x=>x.staffId===sid&&x.date===date);
   if(dup){
-    if(!confirm('この日は既に同種が登録されています。\n上書きしますか？'))return;
+    if(!confirm('この日は既に同種が登録されています。\n上書きしますか？')){
+      // 取消：編集で消した元レコードを復元
+      if(editing){const re={staffId:editing.staffId,date:editing.date,unit,staffName:s.name,company:s.company};if(editing.kind==='substitute'){re.replacer=replacer;DB.substitute.push(re);}else DB.subOff.push(re);}
+      return;
+    }
     if(kind==='substitute')DB.substitute=DB.substitute.filter(x=>!(x.staffId===sid&&x.date===date));
     else DB.subOff=DB.subOff.filter(x=>!(x.staffId===sid&&x.date===date));
   }
-  if(!DB.substitute)DB.substitute=[];
-  if(!DB.subOff)DB.subOff=[];
   const entry={staffId:sid,date,unit,staffName:s.name,company:s.company};
   if(kind==='substitute')entry.replacer=replacer;
   if(kind==='substitute')DB.substitute.push(entry);
   else DB.subOff.push(entry);
+  subEditOrig=null;
   sDB();
   const kindLbl=kind==='substitute'?'代理出勤':'代休消化';
-  showToast(s.name+' に'+kindLbl+'を追加しました ✓');
+  showToast(s.name+' の'+kindLbl+(editing?'を更新しました ✓':'を追加しました ✓'));
   closeAddSubModal();
   renderSH();
   renderSubGrants();
@@ -6874,7 +6932,7 @@ function renderPH(){const sid=parseInt(document.getElementById('ph-s').value)||n
   // 一般管理者は自社のみ、スーパー管理者は全社
   if(currentAdmin&&currentAdmin.role!=='super'){
     list=list.filter(p=>{const st=DB.staff.find(s=>s.id===p.staffId);return st&&st.company===currentAdmin.company;});
-  }if(sid)list=list.filter(p=>p.staffId===sid);if(ym)list=list.filter(p=>p.date.startsWith(ym));list.sort((a,b)=>a.date<b.date?-1:1);const tb=document.getElementById('ph-tb');if(!list.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">有給申請履歴がありません</td></tr>';document.getElementById('ph-sum').textContent='';return;}tb.innerHTML=list.map(p=>{const dt=new Date(p.date);const d=dw[dt.getDay()];const we=isLegalHoliday(p.date);return`<tr><td style="${we?'color:#E24B4A;font-weight:500;':''}">${p.date}</td><td style="${we?'color:#E24B4A;':''}">${d}</td><td>${p.staffName}</td><td><span class="badge b-paid">${tl[p.type]||p.type}</span></td><td style="color:var(--t2);font-size:10px;">${p.memo||''}</td><td><button class="fd" onclick="delPD(${p.id})">削除</button></td></tr>`;}).join('');let f=0,h=0;list.forEach(p=>{if(p.type==='full')f++;else h++;});document.getElementById('ph-sum').innerHTML=`全日: <b>${f}日</b>　半日: <b>${h}回</b>　合計: <b>${f+h*0.5}日</b>`;}
+  }if(sid)list=list.filter(p=>p.staffId===sid);if(ym)list=list.filter(p=>p.date.startsWith(ym));list.sort((a,b)=>a.date<b.date?-1:1);const tb=document.getElementById('ph-tb');if(!list.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">有給申請履歴がありません</td></tr>';document.getElementById('ph-sum').textContent='';return;}tb.innerHTML=list.map(p=>{const dt=new Date(p.date);const d=dw[dt.getDay()];const we=isLegalHoliday(p.date);return`<tr><td style="${we?'color:#E24B4A;font-weight:500;':''}">${p.date}</td><td style="${we?'color:#E24B4A;':''}">${d}</td><td>${p.staffName}</td><td><span class="badge b-paid">${tl[p.type]||p.type}</span></td><td style="color:var(--t2);font-size:10px;">${p.memo||''}</td><td style="white-space:nowrap;"><button class="fd" onclick="openEditPaidModal(${p.id})" style="background:#1565C0;color:#fff;border-color:#1565C0;margin-right:4px;">編集</button><button class="fd" onclick="delPD(${p.id})">削除</button></td></tr>`;}).join('');let f=0,h=0;list.forEach(p=>{if(p.type==='full')f++;else h++;});document.getElementById('ph-sum').innerHTML=`全日: <b>${f}日</b>　半日: <b>${h}回</b>　合計: <b>${f+h*0.5}日</b>`;}
 function delPD(id){if(!confirm('この有給申請を削除しますか？'))return;DB.paid=DB.paid.filter(p=>p.id!==id);sDB();renderPH();if(typeof renderPaidGrants==='function')renderPaidGrants();showToast('削除しました');fbSaveSettings();}
 
 // ═══ 管理画面：欠勤（有給と同じ作り） ═══
@@ -8657,7 +8715,7 @@ lDB();autoStart();setInterval(tick,30000);tick();
 <!-- 有給追加モーダル -->
 <div id="add-paid-modal" class="mod" style="display:none;">
   <div class="mc">
-    <div class="cl">＋ 有給を追加</div>
+    <div class="cl" id="ap-modal-title">＋ 有給を追加</div>
     <div class="frw"><label class="fl">スタッフ</label>
       <select class="fsl" id="ap-staff"></select>
     </div>
@@ -8676,7 +8734,7 @@ lDB();autoStart();setInterval(tick,30000);tick();
     </div>
     <div style="display:flex;gap:9px;margin-top:11px;">
       <button class="bn" onclick="closeAddPaidModal()" style="flex:1;">キャンセル</button>
-      <button class="fb" onclick="submitAddPaid()" style="flex:1;">追加</button>
+      <button class="fb" id="ap-submit-btn" onclick="submitAddPaid()" style="flex:1;">追加</button>
     </div>
   </div>
 </div>
@@ -8710,7 +8768,7 @@ lDB();autoStart();setInterval(tick,30000);tick();
 <!-- 代休追加モーダル -->
 <div id="add-sub-modal" class="mod" style="display:none;">
   <div class="mc">
-    <div class="cl">＋ 代休・代理出勤を追加</div>
+    <div class="cl" id="as-modal-title">＋ 代休・代理出勤を追加</div>
     <div class="frw"><label class="fl">スタッフ</label>
       <select class="fsl" id="as-staff"></select>
     </div>
@@ -8734,7 +8792,7 @@ lDB();autoStart();setInterval(tick,30000);tick();
     </div>
     <div style="display:flex;gap:9px;margin-top:11px;">
       <button class="bn" onclick="closeAddSubModal()" style="flex:1;">キャンセル</button>
-      <button class="fb" onclick="submitAddSub()" style="flex:1;">追加</button>
+      <button class="fb" id="as-submit-btn" onclick="submitAddSub()" style="flex:1;">追加</button>
     </div>
   </div>
 </div>
