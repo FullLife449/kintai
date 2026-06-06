@@ -1209,6 +1209,16 @@ console.log('Firebase initialized (compat)');
       <div style="font-size:11px;font-weight:700;color:#4527A0;margin-bottom:8px;">🏢 所属・役職</div>
       <div class="frw"><label class="fl">所属部署</label><input class="fi" id="f-department" type="text" placeholder="例: 介護部"></div>
       <div class="frw"><label class="fl">役職</label><input class="fi" id="f-position" type="text" placeholder="例: 主任"></div>
+      <div class="frw"><label class="fl">出張日当クラス</label>
+        <select class="fi" id="f-perdiem-class">
+          <option value="">未設定</option>
+          <option value="1">1（制限なし）</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+      </div>
     </div>
     <!-- 扶養家族 -->
     <div style="margin:10px 0;padding:11px;background:#FCE4EC;border-radius:8px;border:1px solid #F8BBD0;">
@@ -1828,7 +1838,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-07c 出張：施設名/住所分離・日当・その他精算'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-07d 出張日当クラス(1-5)をスタッフ属性に追加'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -3200,6 +3210,7 @@ function loadMasterFields(s){
     'f-postal':s.postalCode||'',
     'f-department':s.department||'',
     'f-position':s.position||'',
+    'f-perdiem-class':s.perDiemClass||'',
     'f-pension-no':s.pensionNo||'',
     'f-emp-ins-no':s.empInsNo||'',
     'f-ins-acq':s.insAcqDate||'',
@@ -3296,6 +3307,7 @@ function collectMasterFields(){
     postalCode:g('f-postal'),
     department:g('f-department'),
     position:g('f-position'),
+    perDiemClass:g('f-perdiem-class'),
     pensionNo:g('f-pension-no'),
     empInsNo:g('f-emp-ins-no'),
     insAcqDate:g('f-ins-acq'),
