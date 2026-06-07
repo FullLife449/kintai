@@ -1029,6 +1029,7 @@ console.log('Firebase initialized (compat)');
         <!-- 代休取得申請フォーム -->
         <div id="pi-sub-form-suboff" style="display:none;">
           <div class="fs2">代休を取得する日を申請します</div>
+          <div class="fs2" style="color:#C62828;">⚠ 前月15日締め（例：7月の代休は6月15日まで）</div>
           <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="pi-sub-off-date"></div>
           <div class="frw"><label class="fl">単位</label>
             <select class="fi" id="pi-sub-off-unit">
@@ -7879,10 +7880,11 @@ function exportSingleCSV(type){
     const replacer=type==='substitute'?document.getElementById('pi-sub-sub-replacer').value.trim():'';
     if(!date){showToast('日付を入力してください');return;}
     if(type==='substitute'&&!replacer){showToast('交代者の名前を入力してください');return;}
-    // 代休は当月のみ申請可
-    if(!isCurrentMonthDate(date)){
-      showToast('代休の申請は当月（'+currentMonthLabel()+'）のみ可能です');
-      return;
+    // 代休は有給と同じ：前月15日締め・翌月分のみ。代理出勤は従来通り当月のみ。
+    if(type==='suboff'){
+      if(!isReqDateAllowed(date)){showToast('代休は前月15日締めです（申請可能: '+getReqRangeMessage()+'）');return;}
+    }else{
+      if(!isCurrentMonthDate(date)){showToast('代理出勤の申請は当月（'+currentMonthLabel()+'）のみ可能です');return;}
     }
     // 重複チェック
     const targetArr=type==='substitute'?DB.substitute:DB.subOff;
@@ -8949,10 +8951,11 @@ function renderPIList(type){
     const replacer=type==='substitute'?document.getElementById('pi-sub-sub-replacer').value.trim():'';
     if(!date){showToast('日付を入力してください');return;}
     if(type==='substitute'&&!replacer){showToast('交代者の名前を入力してください');return;}
-    // 代休は当月のみ申請可
-    if(!isCurrentMonthDate(date)){
-      showToast('代休の申請は当月（'+currentMonthLabel()+'）のみ可能です');
-      return;
+    // 代休は有給と同じ：前月15日締め・翌月分のみ。代理出勤は従来通り当月のみ。
+    if(type==='suboff'){
+      if(!isReqDateAllowed(date)){showToast('代休は前月15日締めです（申請可能: '+getReqRangeMessage()+'）');return;}
+    }else{
+      if(!isCurrentMonthDate(date)){showToast('代理出勤の申請は当月（'+currentMonthLabel()+'）のみ可能です');return;}
     }
     // 重複チェック
     const targetArr=type==='substitute'?DB.substitute:DB.subOff;
@@ -9117,10 +9120,11 @@ function submitPIRequest(type){
     const replacer=type==='substitute'?document.getElementById('pi-sub-sub-replacer').value.trim():'';
     if(!date){showToast('日付を入力してください');return;}
     if(type==='substitute'&&!replacer){showToast('交代者の名前を入力してください');return;}
-    // 代休は当月のみ申請可
-    if(!isCurrentMonthDate(date)){
-      showToast('代休の申請は当月（'+currentMonthLabel()+'）のみ可能です');
-      return;
+    // 代休は有給と同じ：前月15日締め・翌月分のみ。代理出勤は従来通り当月のみ。
+    if(type==='suboff'){
+      if(!isReqDateAllowed(date)){showToast('代休は前月15日締めです（申請可能: '+getReqRangeMessage()+'）');return;}
+    }else{
+      if(!isCurrentMonthDate(date)){showToast('代理出勤の申請は当月（'+currentMonthLabel()+'）のみ可能です');return;}
     }
     // 重複チェック
     const targetArr=type==='substitute'?DB.substitute:DB.subOff;
