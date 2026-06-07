@@ -735,8 +735,9 @@ console.log('Firebase initialized (compat)');
         <table style="width:100%;border-collapse:collapse;font-size:10px;">
           <tbody>
             <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">法定休日</td><td style="border:1px solid #ccc;padding:4px;"><b>日曜日・祝日</b></td></tr>
-            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">夏季休暇</td><td style="border:1px solid #ccc;padding:4px;">8/11（山の日）〜8/15。<b>有給1日</b>を有休消化として適用。適用日＝<b>8/15</b></td></tr>
-            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">冬季休暇</td><td style="border:1px solid #ccc;padding:4px;">12/29午後〜1/4。<b>有給2日</b>を有休消化として適用。適用日＝<b>12/31・1/2</b>（1/1は法定休日のため1/2へ）</td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">夏季休暇</td><td style="border:1px solid #ccc;padding:4px;">8/11（山の日）〜8/15。<b>有給1日</b>を有休消化として適用。適用日＝<b>8/15</b><br><span style="color:#C62828;">※常勤のみ適用</span></td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">冬季休暇</td><td style="border:1px solid #ccc;padding:4px;">12/29午後〜1/4。<b>有給2日</b>を有休消化として適用。適用日＝<b>12/31・1/2</b>（1/1は法定休日のため1/2へ）<br><span style="color:#C62828;">※常勤のみ適用</span></td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">「常勤」の定義</td><td style="border:1px solid #ccc;padding:4px;">有給付与モードが<b>「自動・常勤」</b>（週5日以上 or 週30h以上）のスタッフ。比例付与・手動・時給/バイト枠は対象外。</td></tr>
             <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">日曜出勤の振替</td><td style="border:1px solid #ccc;padding:4px;">日曜出勤＋同じ週に振替休日を取得 → 当該日曜は<b>振替出勤（通常出勤と同条件）</b>として計算</td></tr>
           </tbody>
         </table>
@@ -2767,10 +2768,30 @@ function applyWeeklyOT(weekDayResults){
   return updated;
 }
 
+// ═══ 夏季・冬季休暇の有休消化（常勤のみ自動登録） ═══
+// 適用対象は「常勤」= 有給付与モードが「自動・常勤」(paidMode==='auto_full') のスタッフのみ。
+// 夏季休暇=8/15に1日、冬季休暇=12/31・1/2に各1日（計2日）。法定休日（日曜・祝日）には付与しない。
+const SEASONAL_PAID_DATES={'08-15':'夏季休暇(有休消化)','12-31':'冬季休暇(有休消化)','01-02':'冬季休暇(有休消化)'};
+function ensureSeasonalPaid(sid,termDates){
+  const s=DB.staff.find(x=>x.id===sid);
+  if(!s||s.paidMode!=='auto_full')return; // 常勤のみ
+  DB.paid=DB.paid||[];
+  let added=false,seq=0;
+  termDates.forEach(date=>{
+    const memo=SEASONAL_PAID_DATES[date.slice(5)];if(!memo)return; // MM-DD一致
+    if(isLegalHoliday(date))return; // 1/1(元日)など法定休日には付与しない
+    if(DB.paid.some(p=>p.staffId===sid&&p.date===date))return; // 既存（手動含む）はスキップ
+    DB.paid.push({id:Date.now()+(seq++),staffId:sid,staffName:s.name,company:s.company,date,type:'full',memo,auto:'seasonal'});
+    added=true;
+  });
+  if(added)sDB();
+}
+
 function calcMonthSummary(sid,ym){
   // 集計期間: 前月16日〜当月15日
   const term=getTermDates(ym);
   const termDates=term.dates;
+  ensureSeasonalPaid(sid,termDates); // 夏季・冬季の有休消化を常勤に自動登録（idempotent）
   let weekdays=0,holdays=0,totalMs=0,paidDays=0,absenceDays=0,fareCount=0,lunchCount=0;
   let otA=0,otB=0,otC=0,otD=0,totalLateMin=0,totalEarlyMin=0;
   let p1Ms=0,p2Ms=0,p3Ms=0,p4Ms=0;const bd_total={};
