@@ -1862,9 +1862,20 @@ function fbLoadAndSync(co) {
     DB.staffGroup  = s.staffGroup  ? arr(s.staffGroup)  : [];
     DB.otRequests  = s.otRequests  ? arr(s.otRequests)  : [];
     DB.dayDefaults = s.dayDefaults ? arr(s.dayDefaults) : [];
-    // 職種/資格/就業場所/業務内容/契約書共通記載事項は「会社共通マスタ」のため
-    // 会社別には上書きせず、localStorage(lDB)の共有値を維持する（後方互換）
-    DB.adminPw = s.adminPw || null;
+    // マスタ・各種設定：remoteに値があれば採用、無ければlocalStorageの値を維持（空で上書きしない＝データ消失防止）
+    const pickL=(local,remote)=>{const r=remote!=null?arr(remote):[];const l=Array.isArray(local)?local:[];return r.length?r:l;};
+    const pickO=(local,remote)=>{const l=(local&&typeof local==='object')?local:{};const r=(remote&&typeof remote==='object')?remote:null;return (r&&Object.keys(r).length)?r:l;};
+    DB.jobs            = pickL(DB.jobs, s.jobs);
+    DB.licenses        = pickL(DB.licenses, s.licenses);
+    DB.workplaces      = pickL(DB.workplaces, s.workplaces);
+    DB.duties          = pickL(DB.duties, s.duties);
+    DB.contractClauses = pickL(DB.contractClauses, s.contractClauses);
+    DB.workForms       = pickL(DB.workForms, s.workForms);
+    DB.startRules      = pickL(DB.startRules, s.startRules);
+    DB.workRules       = pickO(DB.workRules, s.workRules);
+    DB.workRulesVer    = pickO(DB.workRulesVer, s.workRulesVer);
+    DB.outpatient      = pickO(DB.outpatient, s.outpatient);
+    DB.adminPw = s.adminPw || DB.adminPw || null;
     sDB();
     // 設定反映後に各画面を再描画
     if(typeof renderSG==='function')renderSG();
@@ -1941,6 +1952,11 @@ function fbSaveSettings() {
     dayDefaults: DB.dayDefaults||[],
     patternUsage: DB.patternUsage||[],
     staffOrder: DB.staffOrder||[],
+    workForms: DB.workForms||[],
+    startRules: DB.startRules||[],
+    workRules: DB.workRules||{},
+    workRulesVer: DB.workRulesVer||{},
+    outpatient: DB.outpatient||{},
     adminPw: DB.adminPw||null
   }).catch(e => console.error('fbSaveSettings error:', e));
 }
