@@ -537,7 +537,7 @@ console.log('Firebase initialized (compat)');
           <button class="bn" onclick="opAddDutyCol()" style="background:#fff;color:#1565C0;border:1px solid #90CAF9;font-size:11px;">＋係欄</button>
           <button class="bn" onclick="opExpandWeek()" style="background:#fff;color:#2E7D32;border:1px solid #A5D6A7;font-size:11px;">📅 週パターンを5週展開</button>
           <button class="bn" onclick="opApplyPattern()" style="background:#1565C0;color:#fff;font-size:11px;">📥 勤務パターンを展開</button>
-          <button class="bn" onclick="opReflectRequests()" style="background:#6A1B9A;color:#fff;font-size:11px;" title="有給・欠勤・代休・代理出勤の申請を反映（締日15日→16日以降に実行）">📨 申請を反映</button>
+          <button class="bn" onclick="opReflectRequests()" style="background:#6A1B9A;color:#fff;font-size:11px;" title="有給・欠勤・代休・代理出勤の申請は自動でリアルタイム反映されます。このボタンは手動で再読み込みする場合に使用">📨 申請を再反映</button>
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;align-items:center;background:#F1F8E9;border:1px solid #C5E1A5;border-radius:7px;padding:6px;">
           <span style="font-size:10px;color:#33691E;font-weight:700;">選択セルへ挿入:</span>
@@ -5355,7 +5355,9 @@ function renderOutpat(){
   const ym=ms?ms.value:opState.ym;opState.ym=ym;
   if(!ym){t.innerHTML='<tr><td>月を選択</td></tr>';return;}
   const mo=opMonth(ym);
-  if(opSanitizeCols(mo))sDB();
+  let _dirty=opSanitizeCols(mo);
+  if(opApplyReflections(ym,mo))_dirty=true; // 申請をリアルタイム反映＋古い反映の掃除
+  if(_dirty)sDB();
   const ft=document.getElementById('op-footer');if(ft)ft.value=mo.footer||'';
   const [y,m]=ym.split('-').map(Number);
   const lastDay=new Date(y,m,0).getDate();
@@ -5401,7 +5403,9 @@ function opCellHTML(dataKey,v,bg){
 }
 function opCell(d,slot,type,ci,mo,bg){
   const key=opCellKey(d,slot,type,ci);
-  return opCellHTML(key,(mo.cells||{})[key]||'',bg);
+  let v=(mo.cells||{})[key]||'';
+  if(type==='s'&&opRefl[key])v=opRefl[key]; // 申請を優先表示（リアルタイム反映）
+  return opCellHTML(key,v,bg);
 }
 function opRecolor(el){el.style.color=/有給|代休|欠勤/.test(el.value)?'#C62828':'';el.style.fontWeight=/有給|代休|欠勤/.test(el.value)?'700':'';}
 function opSet(key,val){
@@ -5602,50 +5606,77 @@ function opImportMonthToPattern(){
   sDB();renderOpPattern();showToast('勤務パターンに取り込みました');
 }
 
-// ═══ 申請（有給・欠勤・代休・代理出勤）を外来勤務表へ反映 ═══
-// 締日15日→16日以降に反映する運用。対象は「表示中の月」に日付がある申請。
+// ═══ 申請（有給・欠勤・代休・代理出勤）を外来勤務表へ自動反映 ═══
+// 申請は保存せず「描画のたびに再計算してセルへ重ねる」方式＝リアルタイム反映。
 // スタッフは外来勤務表の名前列の「姓」とDB.staff（香庸会）の姓を突き合わせて特定。
 // 全日＝午前/検査/午後の3行、午前(AM)＝午前行、午後(PM)＝午後行、半日(単位half)＝午前行に記号。
-function opReflectRequests(){
-  const ym=opState.ym;if(!ym){showToast('月を選択してください');return;}
-  const mo=opMonth(ym);
-  const ALL=['am','exam','pm'];
-  // 名前列(姓) → staffId のマップ（香庸会のみ）
-  const colOf={};const matched=[];
-  mo.staffCols.forEach((col,ci)=>{
+// 申請由来のトークン（自動反映で表示される値）。手入力の記号とは区別して掃除に使う。
+const OP_REFL_TOKENS=new Set(['有給','有給AM','有給PM','欠勤','欠勤AM','欠勤PM','代休','代理出勤']);
+// 現在描画中の月の反映マップ（保存はしない一時データ）
+let opRefl={};
+// 名前列(姓) → staffId のマップ（香庸会のみ）
+function opStaffColMap(mo){
+  const colOf={};
+  (mo.staffCols||[]).forEach((col,ci)=>{
     const key=String(col).trim();if(!key)return;
     const st=DB.staff.find(s=>s.company==='koyokai'&&String(s.name).split(/[ 　]/)[0]===key);
-    if(st){colOf[st.id]=ci;matched.push(key);}
+    if(st)colOf[st.id]=ci;
   });
-  if(!matched.length){showToast('一致するスタッフ列がありません');return;}
-  if(!confirm(ym+' の申請（有給・欠勤・代休・代理出勤）を外来勤務表へ反映します。\n対象スタッフ：'+matched.join('、')+'\n各日の該当セルは上書きされます。よろしいですか？'))return;
-  let count=0;
+  return colOf;
+}
+// その月の申請から「セルキー→トークン」の反映マップを計算する（保存はしない）
+function opComputeReflections(ym,mo){
+  const refl={};
+  if(!ym||!mo)return refl;
+  const ALL=['am','exam','pm'];
+  const colOf=opStaffColMap(mo);
   const put=(date,ci,slots,token)=>{
+    if(ci==null)return;
     if(!String(date).startsWith(ym))return;
     const day=parseInt(String(date).split('-')[2],10);if(!day)return;
-    mo.cells=mo.cells||{};
-    slots.forEach(sc=>{mo.cells[opCellKey(day,sc,'s',ci)]=token;});
-    count++;
+    slots.forEach(sc=>{refl[opCellKey(day,sc,'s',ci)]=token;});
   };
-  (DB.paid||[]).forEach(p=>{const ci=colOf[p.staffId];if(ci==null)return;
+  (DB.paid||[]).forEach(p=>{const ci=colOf[p.staffId];
     if(p.type==='am')put(p.date,ci,['am'],'有給AM');
     else if(p.type==='pm')put(p.date,ci,['pm'],'有給PM');
     else put(p.date,ci,ALL,'有給');
   });
-  (DB.absence||[]).forEach(p=>{const ci=colOf[p.staffId];if(ci==null)return;
+  (DB.absence||[]).forEach(p=>{const ci=colOf[p.staffId];
     if(p.type==='am')put(p.date,ci,['am'],'欠勤AM');
     else if(p.type==='pm')put(p.date,ci,['pm'],'欠勤PM');
     else if(p.type==='half')put(p.date,ci,['am'],'欠勤');
     else put(p.date,ci,ALL,'欠勤');
   });
-  (DB.subOff||[]).forEach(p=>{const ci=colOf[p.staffId];if(ci==null)return;
+  (DB.subOff||[]).forEach(p=>{const ci=colOf[p.staffId];
     put(p.date,ci,p.unit==='half'?['am']:ALL,'代休');
   });
-  (DB.substitute||[]).forEach(p=>{const ci=colOf[p.staffId];if(ci==null)return;
+  (DB.substitute||[]).forEach(p=>{const ci=colOf[p.staffId];
     put(p.date,ci,p.unit==='half'?['am']:ALL,'代理出勤');
   });
+  return refl;
+}
+// 反映マップを opRefl にセットし、申請が消えた分の古い反映トークンをセルから掃除する。
+// （過去に「申請を反映」ボタンでセルへ焼き込まれた値の後始末を兼ねる）。掃除があれば true を返す。
+function opApplyReflections(ym,mo){
+  const refl=opComputeReflections(ym,mo);
+  let changed=false;
+  const cells=mo.cells||{};
+  Object.keys(cells).forEach(k=>{
+    const parts=k.split('|'); // d|slot|type|ci
+    if(parts[2]==='s'&&OP_REFL_TOKENS.has(cells[k])&&!refl[k]){delete cells[k];changed=true;}
+  });
+  opRefl=refl;
+  return changed;
+}
+// 「申請を反映」ボタン：申請は描画時に自動反映されるため、再計算して再描画するだけ。
+function opReflectRequests(){
+  const ym=opState.ym;if(!ym){showToast('月を選択してください');return;}
+  const mo=opMonth(ym);
+  if(!Object.keys(opStaffColMap(mo)).length){showToast('一致するスタッフ列がありません');return;}
+  opApplyReflections(ym,mo);
+  const cnt=Object.keys(opRefl).length;
   sDB();renderOutpat();
-  showToast(count?(count+'件の申請を反映しました'):'対象月に該当する申請はありませんでした');
+  showToast(cnt?(ym+'：申請を反映中（'+cnt+'枠）'):(ym+'：対象の申請はありません'));
 }
 // 複数選択モード
 function opToggleMulti(){
@@ -5696,6 +5727,7 @@ function opInsert(sym){
 function printOutpat(){
   const ym=opState.ym;if(!ym){showToast('月を選択してください');return;}
   const mo=opMonth(ym);
+  opApplyReflections(ym,mo); // 印刷にも申請を反映
   const [y,m]=ym.split('-').map(Number);
   const lastDay=new Date(y,m,0).getDate();
   const days=['日','月','火','水','木','金','土'];
@@ -5726,7 +5758,7 @@ function printOutpat(){
           body+=`<td rowspan="3" class="${cls}">${days[dow]}</td>`;
         }
         body+='<td class="slot">'+sl[1]+'</td>';
-        const cell=(type,ci,extra)=>{const v=(mo.cells||{})[opCellKey(d,sl[0],type,ci)]||'';const r=/有給|代休|欠勤/.test(v)?' red':'';return `<td class="${extra||''}${r}">${esc(v).replace(/\n/g,'<br>')}</td>`;};
+        const cell=(type,ci,extra)=>{const ck=opCellKey(d,sl[0],type,ci);let v=(mo.cells||{})[ck]||'';if(type==='s'&&opRefl[ck])v=opRefl[ck];const r=/有給|代休|欠勤/.test(v)?' red':'';return `<td class="${extra||''}${r}">${esc(v).replace(/\n/g,'<br>')}</td>`;};
         sc.forEach((n,ci)=>body+=cell('s',ci,''));
         dc.forEach((n,ci)=>body+=cell('d',ci,'duty'));
         for(let b=0;b<bn;b++)body+=cell('b',b,'biz');
