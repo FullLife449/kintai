@@ -2593,8 +2593,9 @@ function getShifts(staff,date){
 }
 function getEffShifts(sid,date){
   const ds=DB.dayShifts.find(d=>d.staffId===sid&&d.date===date);
-  if(ds)return ds.shifts;
-  return getShifts(DB.staff.find(s=>s.id===sid),date);
+  // 日次シフトにシフト時間がある場合のみ採用。空/未定義（種別のみ上書き・旧データ）なら既定シフトへフォールバック。
+  if(ds&&Array.isArray(ds.shifts)&&ds.shifts.length)return ds.shifts;
+  return getShifts(DB.staff.find(s=>s.id===sid),date)||[];
 }
 
 // シフト時間からその日の所定労働時間（ms）を自動計算
