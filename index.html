@@ -241,7 +241,7 @@ console.log('Firebase initialized (compat)');
       <button class="at ko-only" id="atab-special" onclick="showAS('special')" style="background:#E3F2FD;">リハ臨勤</button>
       <button class="at" id="atab-log" onclick="showAS('log')">ログ</button>
       <button class="at" id="atab-report" onclick="showAS('report')">レポート</button>
-      <button class="at" id="atab-data" onclick="showAS('data')">データ移行</button><button class="at" id="atab-pw" onclick="showAS('pw')">PW管理</button><button class="at" id="atab-devset" onclick="showAS('devset')">端末表示設定</button>
+      <button class="at" id="atab-data" onclick="showAS('data')">データ移行</button><button class="at" id="atab-pw" onclick="showAS('pw')">PW管理</button><button class="at" id="atab-devset" onclick="showAS('devset')">端末表示設定</button><button class="at" id="atab-other" onclick="showAS('other')" style="display:none;">その他</button>
       <!-- シフト管理（両社共通） -->
       <button class="at" id="atab-pattern" onclick="showAS('pattern')" style="background:#E8F5E9;">勤務パターン</button>
       <button class="at" id="atab-shiftcal" onclick="showAS('shiftcal')" style="background:#E8F5E9;">勤務登録</button>
@@ -635,6 +635,15 @@ console.log('Firebase initialized (compat)');
         <div style="overflow-x:auto;">
           <table class="rt2" style="font-size:11px;"><thead><tr><th>期間</th><th>氏名</th><th>目的/場所</th><th>金額</th><th>状態</th><th>操作</th></tr></thead><tbody id="bta-tb"></tbody></table>
         </div>
+      </div>
+    </div>
+    <!-- その他（上級管理者）：出張日当クラス設定 -->
+    <div class="asc" id="asc-other">
+      <div class="card">
+        <div class="cl" style="color:#4527A0;">🧭 出張日当クラス設定</div>
+        <div class="fs2" style="margin-bottom:9px;">クラス1〜5ごとに日当・宿泊費上限・交通費を設定します。内容は出張規約（別表）に反映されます。各スタッフへの割り当ては「スタッフ編集 → 所属・役職 → 出張日当クラス」で行います。</div>
+        <div id="pdc-wrap"></div>
+        <button class="fb" style="width:100%;margin-top:6px;" onclick="savePerDiemClasses()">クラス設定を保存</button>
       </div>
     </div>
     <div class="asc" id="asc-rehab">
@@ -1705,6 +1714,7 @@ function fbLoadAndSync(co) {
     DB.rehabSlots  = s.rehabSlots  ? arr(s.rehabSlots)  : [];
     DB.bizTrips    = s.bizTrips    ? arr(s.bizTrips)    : [];
     DB.bizTripRates= s.bizTripRates|| {};
+    DB.perDiemClasses= s.perDiemClasses|| {};
     DB.substitute  = s.substitute  ? arr(s.substitute)  : [];
     DB.subOff      = s.subOff      ? arr(s.subOff)      : [];
     DB.subGrants   = s.subGrants   ? arr(s.subGrants)   : [];
@@ -1778,6 +1788,7 @@ function fbSaveSettings() {
     rehabSlots: DB.rehabSlots||[],
     bizTrips: DB.bizTrips||[],
     bizTripRates: DB.bizTripRates||{},
+    perDiemClasses: DB.perDiemClasses||{},
     workplaces: DB.workplaces||[],
     duties: DB.duties||[],
     contractClauses: DB.contractClauses||[],
@@ -1798,7 +1809,7 @@ function fbSaveSettings() {
 
 const TL={in:'出勤',out:'退勤',break:'休憩開始',resume:'勤務再開',early:'早出',fare:'交通費',paid:'有給',lunch:'ランチデリ'};
 
-let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],bizTrips:[],bizTripRates:{},workplaces:[],duties:[],contractClauses:[],outpatient:{},absence:[]};
+let DB={staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],substitute:[],subOff:[],subGrants:[],workPatterns:[],shiftCalendar:[],groups:[],staffGroup:[],otRequests:[],dayDefaults:[],patternUsage:[],staffOrder:[],paidGrantsV2:[],paidHistory:[],jobs:[],licenses:[],rehab:[],rehabSlots:[],bizTrips:[],bizTripRates:{},perDiemClasses:{},workplaces:[],duties:[],contractClauses:[],outpatient:{},absence:[]};
 let pSid=null,eSid=null,eRid=null,rSid=null,rDate=null,pPaid=null,dsCnt=0;
 
 
@@ -1838,7 +1849,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-07d 出張日当クラス(1-5)をスタッフ属性に追加'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-07e その他タブ：出張日当クラス設定→規約反映'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -4168,11 +4179,71 @@ function bizTripRuleHTML(){
 <b>第7条（日当）</b> 出張1日につき${btRateText(r.perDiemDay)}円を支給する。日帰り出張は${btRateText(r.perDiemTrip)}円とする。${(btRateUnset(r.perDiemDay)||btRateUnset(r.perDiemTrip))?note:''}<br>
 <b>第8条（申請・承認）</b> 出張に先立ち「出張申請書」を提出し、所属長の承認を得るものとする。<br>
 <b>第9条（精算）</b> 出張終了後は速やかに、領収書を添付して旅費の精算を行う。<br>
-<b>第10条（その他）</b> 本規程に定めのない事項は、その都度理事長が定める。<br>
-<span style="color:var(--t2);">附則 この規程は＿＿＿＿年＿＿月＿＿日より施行する。</span>`;
+<b>第10条（出張日当クラス）</b> 日当・宿泊費の上限・交通費の等級は、職員ごとに定める出張日当クラス（別表）による。<br>
+<b>第11条（その他）</b> 本規程に定めのない事項は、その都度理事長が定める。<br>
+<span style="color:var(--t2);">附則 この規程は＿＿＿＿年＿＿月＿＿日より施行する。</span>`+btClassTableHTML();
+}
+// 出張日当クラス 別表（規程に反映）
+function btClassTableHTML(){
+  const pc=DB.perDiemClasses||{};
+  const bd='border:1px solid #888;padding:3px;';
+  const yen=v=>(v===''||v==null||isNaN(Number(v)))?'＿＿＿':Number(v).toLocaleString();
+  let rows='';
+  for(let c=1;c<=5;c++){
+    const d=pc[''+c]||{};
+    const diem=(d.perDiem===''||d.perDiem==null||isNaN(Number(d.perDiem)))?'＿＿＿':Number(d.perDiem).toLocaleString();
+    rows+=`<tr><td style="${bd}text-align:center;font-weight:700;">${c}</td><td style="${bd}">${esc(d.name||'')}</td><td style="${bd}text-align:right;">${diem}円</td><td style="${bd}">都市圏 ${yen(d.lodgeCity)}円／その他 ${yen(d.lodgeOther)}円</td><td style="${bd}">${esc(d.transport||'')}</td></tr>`;
+  }
+  return `<br><b>別表（出張日当クラス）</b><br>
+<table style="width:100%;border-collapse:collapse;font-size:10px;margin-top:4px;">
+<tr style="background:#f0f0f0;"><th style="${bd}">クラス</th><th style="${bd}">名称</th><th style="${bd}">日当</th><th style="${bd}">宿泊費上限</th><th style="${bd}">交通費</th></tr>
+${rows}</table>`;
 }
 function renderBizTripRule(){const el=document.getElementById('bt-rule-body');if(el)el.innerHTML=bizTripRuleHTML();}
 function toggleBizTripRule(){const b=document.getElementById('bt-rule-body'),a=document.getElementById('bt-rule-arrow');if(!b)return;renderBizTripRule();const open=b.style.display==='none'||!b.style.display;b.style.display=open?'block':'none';if(a)a.textContent=open?'▲':'▼';}
+
+// ═══ 出張日当クラス設定（上級管理者：その他タブ）═══
+const PERDIEM_CLASS_DEFAULTS={
+  '1':{name:'制限なし',perDiem:5000,lodgeCity:100000,lodgeOther:100000,transport:'新幹線グリーン使用可・飛行機ファーストクラス使用可'},
+  '2':{name:'',perDiem:'',lodgeCity:'',lodgeOther:'',transport:''},
+  '3':{name:'業務 管理職',perDiem:2000,lodgeCity:12000,lodgeOther:10000,transport:'指定席利用可'},
+  '4':{name:'業務',perDiem:1000,lodgeCity:12000,lodgeOther:10000,transport:'指定席利用可'},
+  '5':{name:'学会等自主参加',perDiem:0,lodgeCity:12000,lodgeOther:10000,transport:'指定席利用可'}
+};
+function ensurePerDiemClasses(){
+  if(!DB.perDiemClasses)DB.perDiemClasses={};
+  for(let c=1;c<=5;c++){const k=''+c;if(!DB.perDiemClasses[k])DB.perDiemClasses[k]=Object.assign({},PERDIEM_CLASS_DEFAULTS[k]);}
+  return DB.perDiemClasses;
+}
+function initPerDiemClasses(){ensurePerDiemClasses();renderPerDiemClassUI();}
+function renderPerDiemClassUI(){
+  const wrap=document.getElementById('pdc-wrap');if(!wrap)return;
+  const pc=ensurePerDiemClasses();
+  const v=x=>(x===''||x==null)?'':x;
+  let h='';
+  for(let c=1;c<=5;c++){
+    const d=pc[''+c]||{};
+    h+=`<div style="border:1px solid var(--br);border-radius:8px;padding:10px;margin-bottom:10px;background:#FAFAFA;">
+      <div style="font-weight:700;color:#4527A0;margin-bottom:6px;">クラス ${c}</div>
+      <div class="frw"><label class="fl">名称</label><input class="fi" id="pdc-${c}-name" value="${esc(d.name||'')}" placeholder="例: 業務 管理職"></div>
+      <div class="frw"><label class="fl">日当（円）</label><input class="fi" type="number" inputmode="numeric" id="pdc-${c}-diem" value="${v(d.perDiem)}" placeholder="0"></div>
+      <div class="frw"><label class="fl">宿泊費上限 都市圏（円）</label><input class="fi" type="number" inputmode="numeric" id="pdc-${c}-city" value="${v(d.lodgeCity)}" placeholder="例: 12000"></div>
+      <div class="frw"><label class="fl">宿泊費上限 その他（円）</label><input class="fi" type="number" inputmode="numeric" id="pdc-${c}-other" value="${v(d.lodgeOther)}" placeholder="例: 10000"></div>
+      <div class="frw"><label class="fl">交通費（記述）</label><input class="fi" id="pdc-${c}-trans" value="${esc(d.transport||'')}" placeholder="例: 指定席利用可"></div>
+    </div>`;
+  }
+  wrap.innerHTML=h;
+}
+function savePerDiemClasses(){
+  const num=id=>{const e=document.getElementById(id);const x=e?e.value.trim():'';return x===''?'':(parseInt(x)||0);};
+  const txt=id=>{const e=document.getElementById(id);return e?e.value.trim():'';};
+  const pc={};
+  for(let c=1;c<=5;c++){pc[''+c]={name:txt(`pdc-${c}-name`),perDiem:num(`pdc-${c}-diem`),lodgeCity:num(`pdc-${c}-city`),lodgeOther:num(`pdc-${c}-other`),transport:txt(`pdc-${c}-trans`)};}
+  DB.perDiemClasses=pc;
+  sDB();fbSaveSettings();
+  if(typeof renderBizTripRule==='function')renderBizTripRule();
+  showToast('出張日当クラスを保存しました ✓');
+}
 
 function btNum(id){return parseInt((document.getElementById(id)||{}).value)||0;}
 function btVal(id){const e=document.getElementById(id);return e?e.value:'';}
@@ -5965,7 +6036,7 @@ function showAS(sub){
   if(typeof updateCompanyHeader==='function')updateCompanyHeader();
   // フルラフ専用タブの表示/非表示をCOに同期（毎回再適用）
   if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
-  ['staff','shift','rec','paid','special','biztrip','log','report','data','pw','devset','pattern','shiftcal','allshift','group','ot','outpat'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
+  ['staff','shift','rec','paid','special','biztrip','log','report','data','pw','devset','pattern','shiftcal','allshift','group','ot','outpat','other'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
   if(sub==='pw')initPwmStaffSelect();
   if(sub==='devset')initDevset();
   if(sub==='pattern')initWPAdmin();
@@ -5975,6 +6046,7 @@ function showAS(sub){
   if(sub==='outpat')initOutpat();
   if(sub==='ot')initOTAdmin();
   if(sub==='biztrip')initBizTripAdmin();
+  if(sub==='other')initPerDiemClasses();
   if(sub==='rehab')initRehabAdmin();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}
   // 打刻修正・日次シフト・特別枠のスタッフ選択肢を会社別に更新
   if(sub==='rec'||sub==='shift'||sub==='special'){if(typeof loadAS==='function')loadAS();}
@@ -8146,6 +8218,9 @@ function applyAdminPermissions(admin){
   // PW管理タブは管理者なら全員表示（中身でフィルタ）
   const pwTab=document.getElementById('atab-pw');
   if(pwTab)pwTab.style.display='';
+  // 「その他（出張日当クラス）」タブは上級以上のみ
+  const otherTab=document.getElementById('atab-other');
+  if(otherTab)otherTab.style.display=(typeof canViewSalary==='function'&&canViewSalary())?'':'none';
   // 一般管理者は会社切替ボタンを非表示
   const switchBtn=document.querySelector('button[onclick="switchCompany()"]');
   if(switchBtn)switchBtn.style.display=isSuperAdmin?'':'none';
