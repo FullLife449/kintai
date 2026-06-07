@@ -242,6 +242,7 @@ console.log('Firebase initialized (compat)');
       <button class="at" id="atab-log" onclick="showAS('log')">ログ</button>
       <button class="at" id="atab-report" onclick="showAS('report')">レポート</button>
       <button class="at" id="atab-paydef" onclick="showAS('paydef')" style="background:#EDE7F6;">📋 項目定義</button>
+      <button class="at" id="atab-workrules" onclick="showAS('workrules')" style="background:#EDE7F6;">📖 就業規則</button>
       <button class="at" id="atab-data" onclick="showAS('data')">データ移行</button><button class="at" id="atab-pw" onclick="showAS('pw')">PW管理</button><button class="at" id="atab-devset" onclick="showAS('devset')">端末表示設定</button><button class="at" id="atab-other" onclick="showAS('other')" style="display:none;">その他</button>
       <!-- シフト管理（両社共通） -->
       <button class="at" id="atab-pattern" onclick="showAS('pattern')" style="background:#E8F5E9;">勤務パターン</button>
@@ -748,6 +749,23 @@ console.log('Firebase initialized (compat)');
         <div style="font-size:9.5px;color:var(--t2);margin-top:10px;line-height:1.6;">
           ※ 集計期間：前月16日〜当月15日。<br>
           ※ 本定義に反する出力が見つかった場合は出力側を修正します。変更時は労務士確認＋ <code>docs/給与計算ルール.md</code> 更新を先に行います。
+        </div>
+      </div>
+      </div>
+    </div>
+    <!-- 就業規則（後日整理・取り込み予定。現状は箇条書きで保管） -->
+    <div class="asc" id="asc-workrules">
+      <div class="pad">
+      <div class="card">
+        <div class="cl" style="color:#1a1a2e;">📖 就業規則（<span id="wr-co-label">-</span>）</div>
+        <div style="font-size:10px;color:var(--t2);line-height:1.6;margin-bottom:8px;">
+          後日、正式な就業規則を取り込み・整理する予定です。現状はメモ（箇条書き）として保管します。会社ごとに保存されます。<br>
+          ・1行1項目で自由に追記できます。編集すると自動保存されます。
+        </div>
+        <textarea id="wr-text" onchange="saveWorkRules(this.value)" oninput="wrDirty()" placeholder="例）・〇〇すること" style="width:100%;box-sizing:border-box;min-height:340px;font-size:12px;line-height:1.8;padding:10px;border:1px solid var(--br);border-radius:8px;font-family:inherit;resize:vertical;"></textarea>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+          <button class="bn" onclick="saveWorkRules(document.getElementById('wr-text').value)" style="background:#1a1a2e;color:#fff;font-size:12px;padding:9px 16px;">💾 保存</button>
+          <span id="wr-status" style="font-size:10px;color:var(--t2);"></span>
         </div>
       </div>
       </div>
@@ -6191,7 +6209,7 @@ function showAS(sub){
   if(typeof updateCompanyHeader==='function')updateCompanyHeader();
   // フルラフ専用タブの表示/非表示をCOに同期（毎回再適用）
   if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
-  ['staff','shift','rec','paid','special','biztrip','log','report','paydef','data','pw','devset','pattern','shiftcal','allshift','group','ot','outpat','other'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
+  ['staff','shift','rec','paid','special','biztrip','log','report','paydef','workrules','data','pw','devset','pattern','shiftcal','allshift','group','ot','outpat','other'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
   if(sub==='pw')initPwmStaffSelect();
   if(sub==='devset')initDevset();
   if(sub==='pattern')initWPAdmin();
@@ -6203,11 +6221,34 @@ function showAS(sub){
   if(sub==='biztrip')initBizTripAdmin();
   if(sub==='other')initPerDiemClasses();
   if(sub==='rehab')initRehabAdmin();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}
+  if(sub==='workrules')initWorkRules();
   // 打刻修正・日次シフト・特別枠のスタッフ選択肢を会社別に更新
   if(sub==='rec'||sub==='shift'||sub==='special'){if(typeof loadAS==='function')loadAS();}
   if(sub==='shift'&&typeof renderDSL==='function')renderDSL();
   if(sub==='special'&&typeof renderRehabSlotAdmin==='function')renderRehabSlotAdmin();
   if(sub==='staff'&&typeof renderAL==='function')renderAL();
+}
+
+// ═══ 就業規則（会社ごとに保存。後日整理・取り込み予定の暫定メモ） ═══
+// 初期内容は箇条書き。編集すると DB.workRules[会社] に保存される。
+const DEFAULT_WORKRULES=
+'・勤務開始1時間以上前に打刻をしないこと\n'
++'・夏季休暇（8/11 山の日〜8/15）：常勤は有給1日を有休消化（適用日 8/15）\n'
++'・冬季休暇（12/29 午後〜1/4）：常勤は有給2日を有休消化（適用日 12/31・1/2 ※1/1は法定休日のため1/2へ）\n'
++'・「常勤」＝有給付与方式が「自動・常勤」のスタッフ（比例・手動・パートは除く）';
+function initWorkRules(){
+  DB.workRules=DB.workRules||{};
+  if(DB.workRules[CO]===undefined)DB.workRules[CO]=DEFAULT_WORKRULES; // 未設定なら初期箇条書き
+  const ta=document.getElementById('wr-text');if(ta)ta.value=DB.workRules[CO];
+  const lbl=document.getElementById('wr-co-label');if(lbl)lbl.textContent=(CO==='koyokai'?'香庸会':'フルラフ');
+  const st=document.getElementById('wr-status');if(st)st.textContent='';
+}
+function wrDirty(){const st=document.getElementById('wr-status');if(st){st.textContent='未保存…';st.style.color='#C62828';}}
+function saveWorkRules(val){
+  DB.workRules=DB.workRules||{};
+  DB.workRules[CO]=val;
+  sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();
+  const st=document.getElementById('wr-status');if(st){st.textContent='保存しました ✓';st.style.color='#2E7D32';}
 }
 
 // ═══ 打刻グリッド ═══
