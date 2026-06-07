@@ -241,6 +241,7 @@ console.log('Firebase initialized (compat)');
       <button class="at ko-only" id="atab-special" onclick="showAS('special')" style="background:#E3F2FD;">リハ臨勤</button>
       <button class="at" id="atab-log" onclick="showAS('log')">ログ</button>
       <button class="at" id="atab-report" onclick="showAS('report')">レポート</button>
+      <button class="at" id="atab-paydef" onclick="showAS('paydef')" style="background:#EDE7F6;">📋 項目定義</button>
       <button class="at" id="atab-data" onclick="showAS('data')">データ移行</button><button class="at" id="atab-pw" onclick="showAS('pw')">PW管理</button><button class="at" id="atab-devset" onclick="showAS('devset')">端末表示設定</button><button class="at" id="atab-other" onclick="showAS('other')" style="display:none;">その他</button>
       <!-- シフト管理（両社共通） -->
       <button class="at" id="atab-pattern" onclick="showAS('pattern')" style="background:#E8F5E9;">勤務パターン</button>
@@ -676,6 +677,76 @@ console.log('Firebase initialized (compat)');
     <div class="ll" id="ll"><div style="color:var(--t2);font-size:12px;padding:14px;text-align:center;">まだ打刻がありません</div></div>
   </div>
     </div>
+    </div>
+    <!-- 給与取込・各項目の定義一覧（労務士確定ルール準拠） -->
+    <div class="asc" id="asc-paydef">
+      <div class="pad">
+      <div class="card">
+        <div class="cl" style="color:#1a1a2e;">📋 給与項目の定義一覧</div>
+        <div style="font-size:10px;color:var(--t2);line-height:1.6;margin-bottom:8px;">
+          給与取込CSVの各列と集計ルールの説明です（顧問労務士の確定ルールに準拠）。正本は <code>docs/給与計算ルール.md</code>。
+        </div>
+
+        <div style="font-size:12px;font-weight:700;color:#E65100;margin:10px 0 4px;">⏰ 時間外手当（A〜E）</div>
+        <table style="width:100%;border-collapse:collapse;font-size:10px;">
+          <thead><tr style="background:#FFF3E0;">
+            <th style="border:1px solid #ccc;padding:4px;white-space:nowrap;">区分</th>
+            <th style="border:1px solid #ccc;padding:4px;">定義</th>
+            <th style="border:1px solid #ccc;padding:4px;white-space:nowrap;">割増</th>
+          </tr></thead>
+          <tbody>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;">A<br>法定内残業</td><td style="border:1px solid #ccc;padding:4px;">所定（契約）時間を超え、<b>1日8時間以内</b>の労働。<br>例）所定4hの日に5h勤務 → A 1h／9h勤務 → A 4h（＋B 1h）。<br>法定休日（日曜・祝日）は対象外。</td><td style="border:1px solid #ccc;padding:4px;text-align:center;">0%</td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;">B<br>法定外残業</td><td style="border:1px solid #ccc;padding:4px;"><b>1日8時間を超えた</b>労働。<br>さらに<b>週合計40時間を超えた分はAから振り替えてB</b>に計上（1日8h以内でも週40h超ならB）。<br>例）月〜金35h＋土曜(所定4h)に7h → 土曜は A 1h・B 2h。</td><td style="border:1px solid #ccc;padding:4px;text-align:center;">25%</td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;">C<br>休日勤務</td><td style="border:1px solid #ccc;padding:4px;"><b>法定休日（日曜・祝日）</b>の全労働時間。</td><td style="border:1px solid #ccc;padding:4px;text-align:center;">35%</td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;">D<br>深夜労働</td><td style="border:1px solid #ccc;padding:4px;"><b>22:00〜翌5:00</b>の時間帯の労働時間。A〜Cと重複して加算。</td><td style="border:1px solid #ccc;padding:4px;text-align:center;">+25%</td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;">E<br>月60h超</td><td style="border:1px solid #ccc;padding:4px;">法定外残業（B＋C）が<b>1か月60時間を超えた分</b>。</td><td style="border:1px solid #ccc;padding:4px;text-align:center;">50%</td></tr>
+          </tbody>
+        </table>
+
+        <div style="font-size:12px;font-weight:700;color:#1565C0;margin:14px 0 4px;">💴 支給項目 1〜4（時給職員の時間帯別労働時間）</div>
+        <table style="width:100%;border-collapse:collapse;font-size:10px;">
+          <thead><tr style="background:#E3F2FD;">
+            <th style="border:1px solid #ccc;padding:4px;white-space:nowrap;">項目</th>
+            <th style="border:1px solid #ccc;padding:4px;">定義</th>
+          </tr></thead>
+          <tbody>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;">支給項目1</td><td style="border:1px solid #ccc;padding:4px;"><b>平日 午前</b>の労働時間</td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;">支給項目2</td><td style="border:1px solid #ccc;padding:4px;"><b>平日 午後</b>（または平日通し勤務）の労働時間</td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;">支給項目3</td><td style="border:1px solid #ccc;padding:4px;"><b>土曜 午前</b>の労働時間</td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;">支給項目4</td><td style="border:1px solid #ccc;padding:4px;"><b>土曜 午後</b>（または土曜通し勤務・バイト枠）の労働時間</td></tr>
+          </tbody>
+        </table>
+        <div style="font-size:9.5px;color:var(--t2);margin-top:4px;">※ スタッフ設定の「時給パターン（金額／曜日／時間帯）」に連動します。</div>
+
+        <div style="font-size:12px;font-weight:700;color:#33691E;margin:14px 0 4px;">📦 その他の給与取込CSV列</div>
+        <table style="width:100%;border-collapse:collapse;font-size:10px;">
+          <tbody>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">平日出勤／休日出勤</td><td style="border:1px solid #ccc;padding:4px;">平日の出勤日数／土曜・法定休日の出勤日数</td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">出勤時間</td><td style="border:1px solid #ccc;padding:4px;">実労働時間の合計（休憩控除後）</td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">遅刻／早退</td><td style="border:1px solid #ccc;padding:4px;">遅刻＝シフト開始より遅い打刻分。早退＝集計対象外（常に0）</td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">有休日数／欠勤日数</td><td style="border:1px solid #ccc;padding:4px;">有給取得日数／欠勤日数（全日1.0・半休0.5）</td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">回数手当1〜3</td><td style="border:1px solid #ccc;padding:4px;color:#999;">今回は対象外（未使用・空欄出力）</td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">非課税支給20</td><td style="border:1px solid #ccc;padding:4px;">交通費（出勤日数）。金額は給与システム側で <b>1日あたり交通費単価 × 出勤日数</b> を計算</td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">控除項目1</td><td style="border:1px solid #ccc;padding:4px;">昼食回数（給食費控除）</td></tr>
+          </tbody>
+        </table>
+
+        <div style="font-size:12px;font-weight:700;color:#6A1B9A;margin:14px 0 4px;">🗓 休暇・有休消化・法定休日ルール</div>
+        <table style="width:100%;border-collapse:collapse;font-size:10px;">
+          <tbody>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">法定休日</td><td style="border:1px solid #ccc;padding:4px;"><b>日曜日・祝日</b></td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">夏季休暇</td><td style="border:1px solid #ccc;padding:4px;">8/11（山の日）〜8/15。<b>有給1日</b>を有休消化として適用。適用日＝<b>8/15</b></td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">冬季休暇</td><td style="border:1px solid #ccc;padding:4px;">12/29午後〜1/4。<b>有給2日</b>を有休消化として適用。適用日＝<b>12/31・1/2</b>（1/1は法定休日のため1/2へ）</td></tr>
+            <tr><td style="border:1px solid #ccc;padding:4px;font-weight:700;white-space:nowrap;">日曜出勤の振替</td><td style="border:1px solid #ccc;padding:4px;">日曜出勤＋同じ週に振替休日を取得 → 当該日曜は<b>振替出勤（通常出勤と同条件）</b>として計算</td></tr>
+          </tbody>
+        </table>
+
+        <div style="font-size:9.5px;color:var(--t2);margin-top:10px;line-height:1.6;">
+          ※ 集計期間：前月16日〜当月15日。<br>
+          ※ 本定義に反する出力が見つかった場合は出力側を修正します。変更時は労務士確認＋ <code>docs/給与計算ルール.md</code> 更新を先に行います。
+        </div>
+      </div>
+      </div>
     </div>
     <div class="asc" id="asc-report">
       <div class="pad">
@@ -6082,7 +6153,7 @@ function showAS(sub){
   if(typeof updateCompanyHeader==='function')updateCompanyHeader();
   // フルラフ専用タブの表示/非表示をCOに同期（毎回再適用）
   if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
-  ['staff','shift','rec','paid','special','biztrip','log','report','data','pw','devset','pattern','shiftcal','allshift','group','ot','outpat','other'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
+  ['staff','shift','rec','paid','special','biztrip','log','report','paydef','data','pw','devset','pattern','shiftcal','allshift','group','ot','outpat','other'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
   if(sub==='pw')initPwmStaffSelect();
   if(sub==='devset')initDevset();
   if(sub==='pattern')initWPAdmin();
