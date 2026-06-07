@@ -243,6 +243,7 @@ console.log('Firebase initialized (compat)');
       <button class="at" id="atab-report" onclick="showAS('report')">レポート</button>
       <button class="at" id="atab-paydef" onclick="showAS('paydef')" style="background:#EDE7F6;">📋 項目定義</button>
       <button class="at" id="atab-workrules" onclick="showAS('workrules')" style="background:#EDE7F6;">📖 就業規則</button>
+      <button class="at" id="atab-startrules" onclick="showAS('startrules')" style="background:#E0F2F1;">🕒 勤務ルール</button>
       <button class="at" id="atab-data" onclick="showAS('data')">データ移行</button><button class="at" id="atab-pw" onclick="showAS('pw')">PW管理</button><button class="at" id="atab-devset" onclick="showAS('devset')">端末表示設定</button><button class="at" id="atab-other" onclick="showAS('other')" style="display:none;">その他</button>
       <!-- シフト管理（両社共通） -->
       <button class="at" id="atab-pattern" onclick="showAS('pattern')" style="background:#E8F5E9;">勤務パターン</button>
@@ -770,6 +771,35 @@ console.log('Firebase initialized (compat)');
       </div>
       </div>
     </div>
+    <!-- 勤務ルール（出勤時刻の丸め／フリー時間帯の選択肢を作成） -->
+    <div class="asc" id="asc-startrules">
+      <div class="pad">
+      <div class="card">
+        <div class="cl" style="color:#00695C;">🕒 勤務ルール（選択肢の作成）</div>
+        <div class="fs2" style="margin-bottom:8px;">出勤時刻の丸めルール・フリー時間帯を作成します。ここで作った選択肢が、スタッフ編集の「予定勤務形態 → 勤務開始ルール」の5つの欄で選べます（全スタッフ適用可）。</div>
+        <div style="padding:10px;background:#F1F8F7;border:1px solid #B2DFDB;border-radius:8px;margin-bottom:10px;">
+          <div class="frw"><label class="fl">種別</label>
+            <select class="fsl" id="sr-kind" onchange="srKindChange()">
+              <option value="anchor">出勤丸め（基準時刻に繰り上げ）</option>
+              <option value="free">フリー時間帯（打刻通り）</option>
+            </select>
+          </div>
+          <div id="sr-anchor-fields">
+            <div class="frw"><label class="fl">基準開始時刻</label><input class="fi" id="sr-time" type="time" value="08:45"></div>
+            <div class="frw"><label class="fl">何分前から</label><input class="fi" id="sr-before" type="number" value="60" min="0"></div>
+            <div class="fs2">例: 8:45・60分前 → 7:45以降の出勤は8:45からの勤務開始とする</div>
+          </div>
+          <div id="sr-free-fields" style="display:none;">
+            <div class="frw"><label class="fl">開始</label><input class="fi" id="sr-from" type="time" value="12:00"></div>
+            <div class="frw"><label class="fl">終了</label><input class="fi" id="sr-to" type="time" value="15:44"></div>
+            <div class="fs2">例: 12:00〜15:44 → この時間帯の勤務開始は打刻通り（フリー）</div>
+          </div>
+          <button class="ab" style="margin-top:8px;" onclick="addStartRule()">＋ ルールを追加</button>
+        </div>
+        <div id="sr-list"></div>
+      </div>
+      </div>
+    </div>
     <div class="asc" id="asc-report">
       <div class="pad">
     <div class="card">
@@ -1194,6 +1224,12 @@ console.log('Firebase initialized (compat)');
     <div id="ft-payroll-note" style="margin:6px 0 4px;padding:8px 10px;background:#EDE7F6;border:1px solid #B39DDB;border-radius:7px;font-size:10px;line-height:1.6;color:#4527A0;"></div>
     <div class="cl" style="margin-bottom:4px;">📅 予定勤務形態（曜日別・15分刻み）</div>
     <div class="fs2" style="margin-bottom:8px;">全スタッフで契約上の予定勤務時間を記録できます（例: 月 8:45-12:45 / 15:45-19:45、土曜は第1〜5週ごと）。</div>
+    <!-- 勤務開始ルール（出勤時刻の丸め／フリー時間帯）。選択肢は「🕒 勤務ルール」タブで作成 -->
+    <div style="margin:6px 0 10px;padding:9px 10px;background:#E0F2F1;border:1px solid #80CBC4;border-radius:8px;">
+      <div style="font-size:11px;font-weight:700;color:#00695C;margin-bottom:4px;">🕒 勤務開始ルール（最大5・全スタッフ適用可）</div>
+      <div class="fs2" style="margin-bottom:6px;">出勤時刻の丸め・フリー時間帯のルールを最大5つ選べます。選択肢は「🕒 勤務ルール」タブで作成します。</div>
+      <div id="f-startrules"></div>
+    </div>
     <div class="dow-tabs">
       <button class="dow-tab active" onclick="selDow('mon',this)">月</button>
       <button class="dow-tab" onclick="selDow('tue',this)">火</button>
@@ -2655,9 +2691,12 @@ function calcWork(sid,date){
   const inRec=recs.find(r=>r.type==='in'||r.type==='early');
   const outRec=[...recs].reverse().find(r=>r.type==='out');
   const isLegal=isLegalHoliday(date);
+  // 勤務開始ルール（出勤時刻の丸め/フリー）。出勤系の打刻時刻をルールで正規化する
+  const ruleIds=staff.startRuleIds||[];
+  const snapTs=ts=>{if(!ruleIds.length)return ts;const d=new Date(ts);const mm=d.getHours()*60+d.getMinutes();const sm=snapStartMin(mm,ruleIds);if(sm===mm)return ts;const nd=new Date(ts);nd.setHours(Math.floor(sm/60),sm%60,0,0);return nd.getTime();};
   let segs=[],inT=null,bkT=null;
   recs.forEach(r=>{const t=new Date(r.tsISO).getTime();
-    if(r.type==='in'||r.type==='resume'||r.type==='early')inT=t;
+    if(r.type==='in'||r.type==='resume'||r.type==='early')inT=snapTs(t);
     else if(r.type==='out'&&inT){segs.push({start:inT,end:t});inT=null;}
     else if(r.type==='break'&&inT){segs.push({start:inT,end:t});bkT=t;inT=null;}
     else if(r.type==='resume'&&bkT){bkT=null;inT=t;}
@@ -2741,7 +2780,8 @@ function calcWork(sid,date){
     return{total:net,breakdown:{'バイト枠':net},otA:0,otB:0,otC:0,otD:nightMs,otE:0,lateMin:0,earlyLeaveMin:0};
   }
   if(!inRec)return{};
-  const inMin=new Date(inRec.tsISO).getHours()*60+new Date(inRec.tsISO).getMinutes();
+  let inMin=new Date(inRec.tsISO).getHours()*60+new Date(inRec.tsISO).getMinutes();
+  if(ruleIds.length)inMin=snapStartMin(inMin,ruleIds); // 勤務開始ルールで出勤時刻を正規化
   const outMin=outRec?new Date(outRec.tsISO).getHours()*60+new Date(outRec.tsISO).getMinutes():null;
   const shifts=getEffShifts(sid,date).sort((a,b)=>parseHM(a.s)-parseHM(b.s));
   const dk=dowKey(new Date(date).getDay());
@@ -3459,6 +3499,7 @@ function collectMasterFields(){
     monthlyWage:parseNum(g('f-monthly-wage')),
     hourlyPatterns:(typeof collectHourlyPatterns==='function')?collectHourlyPatterns():[],
     hourlyPattern:(typeof collectHourlyPatterns==='function')?hourlyPatternsSummary(collectHourlyPatterns()):'',
+    startRuleIds:(typeof collectStaffStartRules==='function')?collectStaffStartRules():[],
     allowance1Name:g('f-allow1-name'),allowance1:g('f-allow1'),allowance1Period:g('f-allow1-period'),allowance1Note:g('f-allow1-note'),
     allowance2Name:g('f-allow2-name'),allowance2:g('f-allow2'),allowance2Period:g('f-allow2-period'),allowance2Note:g('f-allow2-note'),
     allowance3Name:g('f-allow3-name'),allowance3:g('f-allow3'),allowance3Period:g('f-allow3-period'),allowance3Note:g('f-allow3-note'),
@@ -6211,7 +6252,7 @@ function showAS(sub){
   if(typeof updateCompanyHeader==='function')updateCompanyHeader();
   // フルラフ専用タブの表示/非表示をCOに同期（毎回再適用）
   if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
-  ['staff','shift','rec','paid','special','biztrip','log','report','paydef','workrules','data','pw','devset','pattern','shiftcal','allshift','group','ot','outpat','other'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
+  ['staff','shift','rec','paid','special','biztrip','log','report','paydef','workrules','startrules','data','pw','devset','pattern','shiftcal','allshift','group','ot','outpat','other'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
   if(sub==='pw')initPwmStaffSelect();
   if(sub==='devset')initDevset();
   if(sub==='pattern')initWPAdmin();
@@ -6224,6 +6265,7 @@ function showAS(sub){
   if(sub==='other')initPerDiemClasses();
   if(sub==='rehab')initRehabAdmin();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}
   if(sub==='workrules')initWorkRules();
+  if(sub==='startrules')initStartRules();
   // 打刻修正・日次シフト・特別枠のスタッフ選択肢を会社別に更新
   if(sub==='rec'||sub==='shift'||sub==='special'){if(typeof loadAS==='function')loadAS();}
   if(sub==='shift'&&typeof renderDSL==='function')renderDSL();
@@ -6264,6 +6306,85 @@ function saveWorkRules(val){
   DB.workRules[CO]=val;
   sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();
   const st=document.getElementById('wr-status');if(st){st.textContent='保存しました ✓';st.style.color='#2E7D32';}
+}
+
+// ═══ 勤務ルール（出勤時刻の丸め／フリー時間帯） ═══
+// DB.startRules: [{id,kind:'anchor',time:'08:45',beforeMin:60} | {id,kind:'free',from:'12:00',to:'15:44'}]
+// staff.startRuleIds: 選択したルールidの配列（最大5）。全スタッフ共通の選択肢。
+function ensureStartRules(){
+  if(!DB.startRules){
+    DB.startRules=[
+      {id:1,kind:'anchor',time:'08:45',beforeMin:60},
+      {id:2,kind:'anchor',time:'13:45',beforeMin:60},
+      {id:3,kind:'anchor',time:'15:45',beforeMin:60},
+      {id:4,kind:'free',from:'12:00',to:'15:44'},
+    ];
+    sDB();
+  }
+  return DB.startRules;
+}
+function startRuleLabel(r){
+  if(!r)return'';
+  if(r.kind==='free')return 'フリー '+r.from+'〜'+r.to+'（打刻通り）';
+  const a=parseHM(r.time);if(a==null)return r.time+'丸め';
+  const b=Math.max(0,a-(r.beforeMin||60));
+  return r.time+'勤務開始（'+pad(Math.floor(b/60))+':'+pad(b%60)+'以降の出勤は'+r.time+'から）';
+}
+// 出勤時刻(分)をルールで正規化：フリー帯内は打刻通り、丸め基準の窓内なら基準時刻へ繰り上げ
+function snapStartMin(min,ruleIds){
+  const rules=(ruleIds||[]).map(id=>(DB.startRules||[]).find(r=>String(r.id)===String(id))).filter(Boolean);
+  for(const r of rules){if(r.kind==='free'){const f=parseHM(r.from),t=parseHM(r.to);if(f!=null&&t!=null&&min>=f&&min<=t)return min;}}
+  for(const r of rules){if(r.kind==='anchor'){const a=parseHM(r.time);if(a!=null&&min>=a-(r.beforeMin||60)&&min<=a)return a;}}
+  return min;
+}
+function srKindChange(){
+  const k=document.getElementById('sr-kind').value;
+  document.getElementById('sr-anchor-fields').style.display=k==='anchor'?'':'none';
+  document.getElementById('sr-free-fields').style.display=k==='free'?'':'none';
+}
+function addStartRule(){
+  ensureStartRules();
+  const k=document.getElementById('sr-kind').value;
+  let rule;
+  if(k==='anchor'){
+    const time=document.getElementById('sr-time').value;const before=parseInt(document.getElementById('sr-before').value)||60;
+    if(!time){showToast('基準開始時刻を入力してください');return;}
+    rule={id:Date.now(),kind:'anchor',time,beforeMin:before};
+  }else{
+    const from=document.getElementById('sr-from').value,to=document.getElementById('sr-to').value;
+    if(!from||!to){showToast('開始・終了を入力してください');return;}
+    rule={id:Date.now(),kind:'free',from,to};
+  }
+  DB.startRules.push(rule);sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();
+  renderStartRules();showToast('ルールを追加しました');
+}
+function delStartRule(id){
+  if(!confirm('このルールを削除しますか？（各スタッフの選択からも外れます）'))return;
+  DB.startRules=(DB.startRules||[]).filter(r=>String(r.id)!==String(id));
+  // スタッフの選択からも除去
+  (DB.staff||[]).forEach(s=>{if(Array.isArray(s.startRuleIds))s.startRuleIds=s.startRuleIds.filter(x=>String(x)!==String(id));});
+  sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();
+  renderStartRules();showToast('削除しました');
+}
+function renderStartRules(){
+  const wrap=document.getElementById('sr-list');if(!wrap)return;
+  const list=ensureStartRules();
+  if(!list.length){wrap.innerHTML='<div class="fs2" style="text-align:center;padding:12px;">ルールがありません</div>';return;}
+  wrap.innerHTML=list.map(r=>`<div class="spit"><div class="sii"><span style="font-weight:600;color:${r.kind==='free'?'#00695C':'#E65100'};">${r.kind==='free'?'フリー':'丸め'}</span>　${esc(startRuleLabel(r))}</div><button class="fd" onclick="delStartRule('${r.id}')">削除</button></div>`).join('');
+}
+function initStartRules(){ensureStartRules();srKindChange();renderStartRules();}
+// スタッフ編集フォームの5つの選択欄を描画
+function renderStaffStartRules(selectedIds){
+  const wrap=document.getElementById('f-startrules');if(!wrap)return;
+  ensureStartRules();
+  const sel=Array.isArray(selectedIds)?selectedIds.map(String):[];
+  const opts=id=>'<option value="">（なし）</option>'+(DB.startRules||[]).map(r=>`<option value="${r.id}"${String(r.id)===id?' selected':''}>${esc(startRuleLabel(r))}</option>`).join('');
+  let html='';
+  for(let i=0;i<5;i++){html+=`<select class="fsl f-startrule-sel" style="margin-bottom:5px;width:100%;">${opts(sel[i]||'')}</select>`;}
+  wrap.innerHTML=html;
+}
+function collectStaffStartRules(){
+  return Array.from(document.querySelectorAll('.f-startrule-sel')).map(s=>s.value).filter(Boolean);
 }
 
 // ═══ 打刻グリッド ═══
@@ -6895,6 +7016,7 @@ function initPanels(ds){
   }const se=document.getElementById('dp-sun');se.innerHTML=`<div id="sh-sun"></div><button class="fa" onclick="addShiftRow('sh-sun')">＋ 時間枠を追加</button><div class="dow-total" id="tot-sun">合計: 0分</div>`;(ds&&ds.sun||[]).forEach(sh=>addShiftRow('sh-sun',sh.s,sh.e));recalcDowTotals();}
 function openAdd(){eSid=null;document.getElementById('stm-t').textContent='スタッフを追加';setFft(false);document.getElementById('fn').value='';document.getElementById('feid').value='';document.getElementById('ft').value='contract';document.getElementById('fstd').value='480';document.getElementById('fbk').value='0';document.getElementById('ff').value='0';onTC();initPanels(null);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));const f1el=document.getElementById('ff1min');
   if(f1el)f1el.value=45;
+  if(typeof renderStaffStartRules==='function')renderStaffStartRules([]);
   const arEl=document.getElementById('ar');
   // マスタ管理フィールド初期化
   if(typeof loadMasterFields==='function')loadMasterFields({});
@@ -6949,6 +7071,8 @@ function openEdit(id){const s=DB.staff.find(x=>x.id===id);if(!s)return;eSid=id;d
   pickerStaffLics=s.licenses?s.licenses.slice():[];
   if(typeof renderJobsChips==='function')renderJobsChips();
   if(typeof renderLicsChips==='function')renderLicsChips();
+  // 勤務開始ルール（5欄）の読込
+  if(typeof renderStaffStartRules==='function')renderStaffStartRules(s.startRuleIds||[]);
   // 有給設定の読込
   const hireEl=document.getElementById('f-hire');if(hireEl)hireEl.value=s.hireDate||'';
   const pmEl=document.getElementById('f-pmode');if(pmEl)pmEl.value=s.paidMode||'manual';
