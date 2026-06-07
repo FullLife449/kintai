@@ -6231,14 +6231,27 @@ function showAS(sub){
 
 // ═══ 就業規則（会社ごとに保存。後日整理・取り込み予定の暫定メモ） ═══
 // 初期内容は箇条書き。編集すると DB.workRules[会社] に保存される。
-const DEFAULT_WORKRULES=
-'・勤務開始1時間以上前に打刻をしないこと\n'
-+'・夏季休暇（8/11 山の日〜8/15）：常勤は有給1日を有休消化（適用日 8/15）\n'
-+'・冬季休暇（12/29 午後〜1/4）：常勤は有給2日を有休消化（適用日 12/31・1/2 ※1/1は法定休日のため1/2へ）\n'
-+'・「常勤」＝有給付与方式が「自動・常勤」のスタッフ（比例・手動・パートは除く）';
+// シードは項目ごとに版(v)を持ち、ユーザーが未取得(v>保存版)の項目だけを自動追記する。
+// → 既存ユーザーにも新規項目が反映され、かつ後日ユーザーが消した既存項目は再追加しない。
+const WORKRULES_SEED=[
+  {v:1,line:'・勤務開始1時間以上前に打刻をしないこと'},
+  {v:1,line:'・夏季休暇（8/11 山の日〜8/15）：常勤は有給1日を有休消化（適用日 8/15）'},
+  {v:1,line:'・冬季休暇（12/29 午後〜1/4）：常勤は有給2日を有休消化（適用日 12/31・1/2 ※1/1は法定休日のため1/2へ）'},
+  {v:1,line:'・「常勤」＝有給付与方式が「自動・常勤」のスタッフ（比例・手動・パートは除く）'},
+  {v:2,line:'・賞与：成果に応じて支給。12月〜5月の成果分を6月に支給／6月〜11月の成果分を12月に支給'},
+];
+const WORKRULES_SEED_VERSION=2; // 既定項目を追加するたびに +1（その項目の v も同じ番号にする）
 function initWorkRules(){
-  DB.workRules=DB.workRules||{};
-  if(DB.workRules[CO]===undefined)DB.workRules[CO]=DEFAULT_WORKRULES; // 未設定なら初期箇条書き
+  DB.workRules=DB.workRules||{};DB.workRulesVer=DB.workRulesVer||{};
+  let txt=DB.workRules[CO];const stored=DB.workRulesVer[CO]||0;let changed=false;
+  if(txt===undefined){ // 初回：全既定項目
+    txt=WORKRULES_SEED.map(s=>s.line).join('\n');changed=true;
+  }else if(stored<WORKRULES_SEED_VERSION){ // 既存ユーザー：未取得(新版)の項目だけ末尾に追記
+    const add=WORKRULES_SEED.filter(s=>s.v>stored&&txt.indexOf(s.line)===-1).map(s=>s.line);
+    if(add.length){txt=txt.replace(/\s*$/,'')+'\n'+add.join('\n');}
+    changed=true;
+  }
+  if(changed){DB.workRules[CO]=txt;DB.workRulesVer[CO]=WORKRULES_SEED_VERSION;sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();}
   const ta=document.getElementById('wr-text');if(ta)ta.value=DB.workRules[CO];
   const lbl=document.getElementById('wr-co-label');if(lbl)lbl.textContent=(CO==='koyokai'?'香庸会':'フルラフ');
   const st=document.getElementById('wr-status');if(st)st.textContent='';
