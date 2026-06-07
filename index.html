@@ -6460,9 +6460,17 @@ function renderLog(){
 }
 
 // ═══ レポート ═══
-function initMS(){['rm','im'].forEach(id=>{const sel=document.getElementById(id);if(sel.options.length>1)return;const n=new Date();for(let i=0;i<12;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);sel.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}});}
+// 同一idが複数ある場合に備え、表示中(可視)かつ値のある要素を優先して返す
+function _visEl(id){
+  const els=document.querySelectorAll('[id="'+id+'"]');
+  if(els.length<=1)return els[0]||document.getElementById(id);
+  let firstVis=null;
+  for(const el of els){if(el.offsetParent!==null){if(!firstVis)firstVis=el;if(el.value)return el;}}
+  return firstVis||els[0];
+}
+function initMS(){['rm','im'].forEach(id=>{document.querySelectorAll('[id="'+id+'"]').forEach(sel=>{if(sel.options.length>1)return;const n=new Date();let html='';for(let i=0;i<12;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);html+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}sel.innerHTML+=html;});});}
 function renderRep(){
-  const ym=document.getElementById('rm').value;if(!ym)return;
+  const ym=_visEl('rm').value;if(!ym)return;
   const repCo=CO;
   const list=repCo==='all'?DB.staff:DB.staff.filter(s=>s.company===repCo);
   // XLSXの列順に合わせたUI表示（主要項目のみ）
@@ -6525,20 +6533,22 @@ function renderRep(){
 }
 
 function updIS(){
-  const sel=document.getElementById('isel');
-  if(!sel)return;
-  sel.innerHTML='<option value="">スタッフを選択</option>';
-  // レポートの会社選択に応じてスタッフ表示
+  // レポートの会社選択に応じてスタッフ表示（同一idの全コピーへ反映）
   const repCo=CO;
   const list=repCo==='all'?DB.staff:DB.staff.filter(s=>s.company===repCo);
-  list.forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}（${s.company==='koyokai'?'香':'フ'}）</option>`);
+  let html='<option value="">スタッフを選択</option>';
+  list.forEach(s=>html+=`<option value="${s.id}">${s.name}（${s.company==='koyokai'?'香':'フ'}）</option>`);
+  const els=document.querySelectorAll('[id="isel"]');
+  if(!els.length)return;
+  els.forEach(sel=>{sel.innerHTML=html;});
 }
 
 function renderIndPreview(){
-  const sid=parseInt(document.getElementById('isel').value);
-  const ym=document.getElementById('im').value;
-  if(!sid||!ym)return;
-  const staff=DB.staff.find(s=>s.id===sid);if(!staff)return;
+ try{
+  const sid=parseInt(_visEl('isel').value);
+  const ym=_visEl('im').value;
+  if(!sid||!ym){showToast('スタッフと月を選択してください');return;}
+  const staff=DB.staff.find(s=>s.id===sid);if(!staff){showToast('スタッフが見つかりません');return;}
   const dows=['日','月','火','水','木','金','土'];
   // 集計期間: 前月16日〜当月15日
   const term=getTermDates(ym);const termDates=term.dates;
@@ -6552,11 +6562,11 @@ function renderIndPreview(){
     const dt=new Date(date);
     const dow=dows[dt.getDay()];const isSun=dt.getDay()===0,isSat=dt.getDay()===6,isLeg=isLegalHoliday(date);
     const r=adj[date]||{};const bd=r.breakdown||{};
-    const recs=DB.records.filter(x=>x.staffId===sid&&x.date===date).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
+    const recs=(DB.records||[]).filter(x=>x.staffId===sid&&x.date===date).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
     const inR=recs.find(x=>x.type==='in'||x.type==='early');const outR=[...recs].reverse().find(x=>x.type==='out');
-    const pr=DB.paid.find(p=>p.staffId===sid&&p.date===date);
-    const fr=DB.fare.filter(f=>f.staffId===sid&&f.date===date);
-    const lc=DB.lunch.filter(l=>l.staffId===sid&&l.date===date&&l.company===CO);
+    const pr=(DB.paid||[]).find(p=>p.staffId===sid&&p.date===date);
+    const fr=(DB.fare||[]).filter(f=>f.staffId===sid&&f.date===date);
+    const lc=(DB.lunch||[]).filter(l=>l.staffId===sid&&l.date===date&&l.company===CO);
     if(r.total>0){grand+=r.total;wkD++;}
     lT+=(r.lateMin||0);eT+=(r.earlyLeaveMin||0);
     if(pr)pT+=(pr.type==='full'?1:0.5);fT+=fr.length;lcT+=lc.length;
@@ -6584,6 +6594,7 @@ function renderIndPreview(){
   document.getElementById('indm-title').textContent=staff.name+' '+ym+' （'+term.start+' 〜 '+term.end+'）';
   document.getElementById('indm-body').innerHTML=tbl;
   document.getElementById('indm').classList.remove('hidden');
+ }catch(e){showToast('明細表示エラー: '+(e&&e.message?e.message:e));}
 }
 function closeIndM(e){if(!e||e.target===document.getElementById('indm'))document.getElementById('indm').classList.add('hidden');}
 
@@ -6669,7 +6680,7 @@ function rehabSlotDetailRows(list,ym){
   return rows;
 }
 
-function exportXLSX(){const ym=document.getElementById('rm').value;if(!ym){showToast('月を選択してください');return;}showToast('XLSXを生成中...');loadXLSX(()=>doExportMonthly(ym));}
+function exportXLSX(){const ym=_visEl('rm').value;if(!ym){showToast('月を選択してください');return;}showToast('XLSXを生成中...');loadXLSX(()=>doExportMonthly(ym));}
 function doExportMonthly(ym){
   const repCo=CO;
   const list=repCo==='all'?DB.staff:DB.staff.filter(s=>s.company===repCo);
@@ -6721,7 +6732,7 @@ function doExportMonthly(ym){
   showToast('月次XLSXをダウンロードしました');
 }
 
-function exportIndXLSX(){const sid=parseInt(document.getElementById('isel').value);const ym=document.getElementById('im').value;if(!sid||!ym){showToast('スタッフと月を選択してください');return;}showToast('XLSXを生成中...');loadXLSX(()=>doExportInd(sid,ym));}
+function exportIndXLSX(){const sid=parseInt(_visEl('isel').value);const ym=_visEl('im').value;if(!sid||!ym){showToast('スタッフと月を選択してください');return;}showToast('XLSXを生成中...');loadXLSX(()=>doExportInd(sid,ym));}
 function doExportInd(sid,ym){
   const staff=DB.staff.find(s=>s.id===sid);
   const dows=['日','月','火','水','木','金','土'];
@@ -7579,14 +7590,14 @@ function exportLogCSV(){
 
 // レポートタブから一括CSV出力
 function exportAllCSV(){
-  const ym=document.getElementById('rm')?document.getElementById('rm').value:'';
+  const ym=_visEl('rm')?_visEl('rm').value:'';
   if(!ym){showToast('月を選択してください');return;}
   doExportMonthlyCSV(ym);
 }
 
 // レポートタブから個別CSV出力
 function exportSingleCSV(type){
-  const ym=document.getElementById('rm')?document.getElementById('rm').value:'';
+  const ym=_visEl('rm')?_visEl('rm').value:'';
   if(!ym){showToast('月を選択してください');return;}
   const repCo=CO;
   const list=repCo==='all'?DB.staff:DB.staff.filter(s=>s.company===repCo);
