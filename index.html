@@ -1849,7 +1849,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-07e その他タブ：出張日当クラス設定→規約反映'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-07f 出張日当を申請者のクラスで自動計算'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -4248,19 +4248,33 @@ function savePerDiemClasses(){
 function btNum(id){return parseInt((document.getElementById(id)||{}).value)||0;}
 function btVal(id){const e=document.getElementById(id);return e?e.value:'';}
 // 日当：日帰り=規程「日帰り」×1、宿泊=規程「出張1日」×日数（泊数+1）
-function bizTripPerDiem(start,end){
+// 申請者の出張日当クラスの日当（円）。クラス未設定や日当未入力ならnull
+function bizTripStaffPerDiemRate(staff){
+  if(!staff||staff.perDiemClass===''||staff.perDiemClass==null)return null;
+  const pc=(DB.perDiemClasses||{})[String(staff.perDiemClass)];
+  if(!pc)return null;
+  const v=pc.perDiem;
+  if(v===''||v==null||isNaN(Number(v)))return null;
+  return Number(v);
+}
+function bizTripPerDiem(start,end,staff){
   const r=DB.bizTripRates||{};
   const nv=bizTripNights(start,end);
-  let rate,count;
-  if(nv.nights===0){rate=parseInt(r.perDiemTrip)||0;count=1;}
+  const st=staff||(typeof piStaff!=='undefined'?piStaff:null);
+  const classRate=bizTripStaffPerDiemRate(st);
+  let rate,count,byClass=false;
+  if(classRate!=null){ // クラス日当：日帰り/宿泊とも1日あたり同額×日数
+    rate=classRate;count=nv.days;byClass=true;
+  }else if(nv.nights===0){rate=parseInt(r.perDiemTrip)||0;count=1;}
   else{rate=parseInt(r.perDiemDay)||0;count=nv.days;}
-  return {rate,count,amount:rate*count,nights:nv.nights,days:nv.days};
+  return {rate,count,amount:rate*count,nights:nv.nights,days:nv.days,byClass,cls:st?st.perDiemClass:''};
 }
 function updateBizTripPerDiem(){
   const pd=bizTripPerDiem(btVal('pi-bt-start'),btVal('pi-bt-end'));
   const el=document.getElementById('pi-bt-perdiem');
   if(el){
-    el.textContent=pd.rate?(pd.rate.toLocaleString()+'円 × '+pd.count+'日'+(pd.nights===0?'（日帰り）':'')+' = '+pd.amount.toLocaleString()+'円')
+    const cls=pd.byClass?('（クラス'+pd.cls+'）'):'';
+    el.textContent=(pd.rate||pd.byClass)?(pd.rate.toLocaleString()+'円 × '+pd.count+'日'+(pd.nights===0?'（日帰り）':'')+' = '+pd.amount.toLocaleString()+'円'+cls)
       :'規程未設定（0円）';
   }
   return pd.amount;
@@ -4303,7 +4317,7 @@ function submitPIBizTrip(){
   if(!purpose){showToast('出張目的を入力してください');return;}
   if(!startDate){showToast('出張期間（開始）を入力してください');return;}
   const feeConf=btNum('pi-bt-fee'),feeTransport=btNum('pi-bt-transfee'),feeLodging=btNum('pi-bt-lodgefee'),feeOther=btNum('pi-bt-otherfee');
-  const pd=bizTripPerDiem(startDate,endDate);
+  const pd=bizTripPerDiem(startDate,endDate,piStaff);
   const feePerDiem=pd.amount;
   const total=feeConf+feeTransport+feeLodging+feePerDiem+feeOther;
   const nv=bizTripNights(startDate,endDate);
@@ -4323,7 +4337,7 @@ function submitPIBizTrip(){
     lodging:(document.getElementById('pi-bt-lodging').value||'').trim(),
     companion:(document.getElementById('pi-bt-companion').value||'').trim(),
     feeConf,feeTransport,feeLodging,
-    feePerDiem,perDiemRate:pd.rate,perDiemDays:pd.count,
+    feePerDiem,perDiemRate:pd.rate,perDiemDays:pd.count,perDiemClass:pd.cls,
     feeOther,otherNote:(document.getElementById('pi-bt-othernote').value||'').trim(),
     total,
     receipt:btReceiptChecked,
@@ -4422,7 +4436,7 @@ function printBizTrip(id){
     ${row('学会などの費用',yen(t.feeConf))}
     ${row('交通費',yen(t.feeTransport))}
     ${row('宿泊費',yen(t.feeLodging))}
-    ${row('日当',(t.perDiemRate?(Number(t.perDiemRate).toLocaleString()+'円 × '+(t.perDiemDays||0)+'日 = '):'')+yen(t.feePerDiem))}
+    ${row('日当'+(t.perDiemClass?'（クラス'+esc(t.perDiemClass)+'）':''),(t.perDiemRate?(Number(t.perDiemRate).toLocaleString()+'円 × '+(t.perDiemDays||0)+'日 = '):'')+yen(t.feePerDiem))}
     ${row('その他'+(t.otherNote?'（'+esc(t.otherNote)+'）':''),yen(t.feeOther))}
     <tr><th>金額合計</th><td class="total">${yen(t.total)}</td></tr>
   </table>
