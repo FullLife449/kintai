@@ -6588,15 +6588,16 @@ function renderIndPreview(){
     const bg=isLeg?'#FFF5F5':isSat?'#F0F6FF':'#fff';
     const dc=isSun||isLeg?'color:#E24B4A;font-weight:600;':isSat?'color:#0C447C;font-weight:600;':'';
     const otMs=(r.otA||0)+(r.otB||0)+(r.otC||0);
-    const brkR=recs.find(x2=>x2.type==='break');
-    const resR=recs.find(x2=>x2.type==='resume');
     const td=(v,x='')=>`<td style="padding:3px 2px;border:1px solid var(--br);font-size:9px;text-align:center;${x}">${v}</td>`;
     // tsが無い古い/別経路レコードでも tsISO から時刻を復元（エラー防止）
     const hm=r=>r?(r.ts?String(r.ts).substring(0,5):(r.tsISO?pad(new Date(r.tsISO).getHours())+':'+pad(new Date(r.tsISO).getMinutes()):'')):'';
-    rows+=`<tr style="background:${bg};">${td(dt.getDate(),dc)}${td(dow,dc)}${td(hm(inR))}${td(hm(brkR))}${td(hm(resR))}${td(hm(outR))}${td(fmtHM(bd['平日午前'])||'')}${td(fmtHM(bd['平日午後']||bd['平日勤務'])||'')}${td(fmtHM(bd['土曜午前'])||'')}${td(fmtHM(bd['土曜午後']||bd['土曜勤務']||bd['バイト枠'])||'')}${td(r.lateMin||'',r.lateMin?'color:#C62828;font-weight:600;':'')}${td(r.earlyLeaveMin||'',r.earlyLeaveMin?'color:#E65100;font-weight:600;':'')}${td(fmtHM(otMs)||'',otMs?'color:#E65100;':'')}${td(fmtHM(r.total)||'',r.total?'font-weight:700;color:var(--gd);':'')}${td(pr?{full:'全日',am:'午前',pm:'午後'}[pr.type]:'')}${td(fr.length?'○':'')}${td(lcT&&lc.length?lc.length:'','color:#F57F17;')}</tr>`;
+    // 出勤=出勤/早出/再開、退勤=退勤/休憩 を時刻順に最大3組表示（休憩・再開列は廃止）
+    const starts=recs.filter(x2=>x2.type==='in'||x2.type==='early'||x2.type==='resume');
+    const ends=recs.filter(x2=>x2.type==='out'||x2.type==='break');
+    rows+=`<tr style="background:${bg};">${td(dt.getDate(),dc)}${td(dow,dc)}${td(hm(starts[0]))}${td(hm(ends[0]))}${td(hm(starts[1]))}${td(hm(ends[1]))}${td(hm(starts[2]))}${td(hm(ends[2]))}${td(fmtHM(bd['平日午前'])||'')}${td(fmtHM(bd['平日午後']||bd['平日勤務'])||'')}${td(fmtHM(bd['土曜午前'])||'')}${td(fmtHM(bd['土曜午後']||bd['土曜勤務']||bd['バイト枠'])||'')}${td(r.lateMin||'',r.lateMin?'color:#C62828;font-weight:600;':'')}${td(r.earlyLeaveMin||'',r.earlyLeaveMin?'color:#E65100;font-weight:600;':'')}${td(fmtHM(otMs)||'',otMs?'color:#E65100;':'')}${td(fmtHM(r.total)||'',r.total?'font-weight:700;color:var(--gd);':'')}${td(pr?{full:'全日',am:'午前',pm:'午後'}[pr.type]:'')}${td(fr.length?'○':'')}${td(lcT&&lc.length?lc.length:'','color:#F57F17;')}</tr>`;
   }
   rows+=`<tr style="background:#E8F5E9;font-weight:700;font-size:9px;">
-    <td colspan="6" style="padding:4px 4px;border:1px solid var(--br);color:var(--gd);">月合計（${wkD}日）</td>
+    <td colspan="8" style="padding:4px 4px;border:1px solid var(--br);color:var(--gd);">月合計（${wkD}日）</td>
     <td colspan="4" style="padding:4px 2px;border:1px solid var(--br);text-align:center;color:var(--gd);">${fmtHM(grand)}</td>
     <td style="padding:4px 2px;border:1px solid var(--br);text-align:center;color:#C62828;">${lT||''}</td>
     <td style="padding:4px 2px;border:1px solid var(--br);text-align:center;color:#E65100;">${eT||''}</td>
@@ -6605,8 +6606,8 @@ function renderIndPreview(){
     <td style="padding:4px 2px;border:1px solid var(--br);text-align:center;">${fT||''}</td>
     <td style="padding:4px 2px;border:1px solid var(--br);text-align:center;color:#F57F17;">${lcT||''}</td>
   </tr>`;
-  const H=['日','曜','出勤','休憩','再開','退勤','平日AM','平日PM','土曜AM','土曜PM','遅刻','早退','時間外','日合計','有給','交通費','🍱'];
-  const thS=(i)=>i>=6&&i<=9?'background:#E8F5E9;color:var(--gd);':i===13?'background:#E1F5EE;color:#085041;':i>=2&&i<=5?'background:#FFF8E1;color:#5D4037;':'background:var(--gy);color:var(--t2);';
+  const H=['日','曜','出勤1','退勤1','出勤2','退勤2','出勤3','退勤3','平日AM','平日PM','土曜AM','土曜PM','遅刻','早退','時間外','日合計','有給','交通費','🍱'];
+  const thS=(i)=>i>=8&&i<=11?'background:#E8F5E9;color:var(--gd);':i===15?'background:#E1F5EE;color:#085041;':i>=2&&i<=7?'background:#FFF8E1;color:#5D4037;':'background:var(--gy);color:var(--t2);';
   const tbl=`<table style="border-collapse:collapse;min-width:500px;width:100%;"><thead><tr>${H.map((h,i)=>`<th style="${thS(i)}padding:4px 2px;border:1px solid var(--br);font-size:9px;font-weight:600;white-space:nowrap;">${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
   document.getElementById('indm-title').textContent=staff.name+' '+ym+' （'+term.start+' 〜 '+term.end+'）';
   document.getElementById('indm-body').innerHTML=tbl;
@@ -6756,7 +6757,7 @@ function doExportInd(sid,ym){
   // 集計期間: 前月16日〜当月15日
   const term=getTermDates(ym);const termDates=term.dates;
   const[yr,mo]=ym.split('-').map(Number);
-  const IND_HDR=['日付','曜日','祝','出勤','休憩開始','勤務再開','退勤','早出','平日AM','平日PM','土曜AM','土曜PM','休日勤務','時間外(A+B)','深夜','遅刻(分)','早退(分)','日合計','有給','交通費','ランチデリ'];
+  const IND_HDR=['日付','曜日','祝','出勤1','退勤1','出勤2','退勤2','出勤3','退勤3','早出','平日AM','平日PM','土曜AM','土曜PM','休日勤務','時間外(A+B)','深夜','遅刻(分)','早退(分)','日合計','有給','交通費','ランチデリ'];
   const aoa=[[staff.name+' 個人勤務時間明細 '+ym+' （'+term.start+' 〜 '+term.end+'）'],[],IND_HDR];
   let grand=0,wkDays=0,pTotal=0,fTotal=0,lTotal=0,lateTotal=0,earlyTotal=0;
   // 週次OT振り替え込みで計算
@@ -6769,7 +6770,7 @@ function doExportInd(sid,ym){
     const dt=new Date(date);
     const dow=dows[dt.getDay()];const hol=isHoliday(date)?'祝':'';
     const recs=DB.records.filter(r=>r.staffId===sid&&r.date===date).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
-    const inRec=recs.find(r=>r.type==='in'||r.type==='early');const outRec=[...recs].reverse().find(r=>r.type==='out');const earlyRec=recs.find(r=>r.type==='early');
+    const earlyRec=recs.find(r=>r.type==='early');
     const r=adjusted[date]||{};const bd=r.breakdown||{};
     const pr=DB.paid.find(p=>p.staffId===sid&&p.date===date);
     const fr=DB.fare.filter(f=>f.staffId===sid&&f.date===date);
@@ -6777,14 +6778,12 @@ function doExportInd(sid,ym){
     if(r.total>0)wkDays++;grand+=r.total||0;
     if(pr)pTotal+=(pr.type==='full'?1:0.5);fTotal+=fr.length;lTotal+=lc.length;
     lateTotal+=(r.lateMin||0);earlyTotal+=(r.earlyLeaveMin||0);
-        // 打刻一覧（全タイプを時刻順に取得）
-    const brkRec=recs.find(r2=>r2.type==='break');
-    const resRec=recs.find(r2=>r2.type==='resume');
-    aoa.push([mo+'/'+d,dow,hol,
-      inRec?inRec.ts.substring(0,5):'',
-      brkRec?brkRec.ts.substring(0,5):'',
-      resRec?resRec.ts.substring(0,5):'',
-      outRec?outRec.ts.substring(0,5):'',
+    // 出勤=出勤/早出/再開、退勤=退勤/休憩 を時刻順に最大3組（休憩・再開列は廃止）
+    const hmx=rec=>rec?(rec.ts?String(rec.ts).substring(0,5):(rec.tsISO?pad(new Date(rec.tsISO).getHours())+':'+pad(new Date(rec.tsISO).getMinutes()):'')):'';
+    const starts=recs.filter(r2=>r2.type==='in'||r2.type==='early'||r2.type==='resume');
+    const ends=recs.filter(r2=>r2.type==='out'||r2.type==='break');
+    aoa.push([mo+'/'+dt.getDate(),dow,hol,
+      hmx(starts[0]),hmx(ends[0]),hmx(starts[1]),hmx(ends[1]),hmx(starts[2]),hmx(ends[2]),
       earlyRec?'○':'',
       msToHHMM(bd['平日午前'])||'',msToHHMM(bd['平日午後']||bd['平日勤務'])||'',
       msToHHMM(bd['土曜午前'])||'',msToHHMM(bd['土曜午後']||bd['土曜勤務']||bd['バイト枠'])||'',
@@ -6794,7 +6793,7 @@ function doExportInd(sid,ym){
       fr.length?'○':'',lc.length?lc.length:'']);
   }
   aoa.push([]);
-  aoa.push(['月合計','','','','','','','','','','','',lateTotal||'',earlyTotal||'',msToHHMM(grand),pTotal||'',fTotal||'',lTotal||'']);
+  aoa.push(['月合計'].concat(Array(16).fill('')).concat([lateTotal||'',earlyTotal||'',msToHHMM(grand),pTotal||'',fTotal||'',lTotal||'']));
   aoa.push(['出勤日数: '+wkDays+'日']);
   const wb=XLSX.utils.book_new();
   const ws1=XLSX.utils.aoa_to_sheet(aoa);
