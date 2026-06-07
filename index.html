@@ -2651,6 +2651,9 @@ function calcWork(sid,date){
   const dayShiftRec=DB.dayShifts.find(d=>d.staffId===sid&&d.date===date);
   const effectiveType=(dayShiftRec&&dayShiftRec.type)?dayShiftRec.type:staff.type;
   const earlyRec=recs.find(r=>r.type==='early');
+  // inRec/outRec は free1・特別枠の各分岐でも参照するため先頭で宣言（TDZ回避）
+  const inRec=recs.find(r=>r.type==='in'||r.type==='early');
+  const outRec=[...recs].reverse().find(r=>r.type==='out');
   const isLegal=isLegalHoliday(date);
   let segs=[],inT=null,bkT=null;
   recs.forEach(r=>{const t=new Date(r.tsISO).getTime();
@@ -2737,8 +2740,6 @@ function calcWork(sid,date){
     }
     return{total:net,breakdown:{'バイト枠':net},otA:0,otB:0,otC:0,otD:nightMs,otE:0,lateMin:0,earlyLeaveMin:0};
   }
-  const inRec=recs.find(r=>r.type==='in'||r.type==='early');
-  const outRec=[...recs].reverse().find(r=>r.type==='out');
   if(!inRec)return{};
   const inMin=new Date(inRec.tsISO).getHours()*60+new Date(inRec.tsISO).getMinutes();
   const outMin=outRec?new Date(outRec.tsISO).getHours()*60+new Date(outRec.tsISO).getMinutes():null;
