@@ -277,12 +277,12 @@ console.log('Firebase initialized (compat)');
         <div class="fs2">特定の日だけ基本シフトを上書きします</div>
         <div class="frw"><label class="fl">スタッフ</label><select class="fsl" id="ds-s"></select></div>
         <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="ds-d"></div>
-        <div class="frw"><label class="fl">この日の勤務タイプ</label>
+        <div class="frw"><label class="fl">この日の勤務形態</label>
           <select class="fsl" id="ds-type">
             <option value="">スタッフ設定に従う（デフォルト）</option>
-            <option value="contract">契約型</option>
-            <option value="free">フリー型（打刻そのまま）</option>
-            <option value="free1">フリー①型（XX:45自動切り上げ）</option>
+            <option value="contract">契約1（従来の契約型）</option>
+            <option value="free">契約2（フリー型：打刻そのまま）</option>
+            <option value="free1">契約3（フリー①型：XX:45自動切り上げ）</option>
           </select>
         </div>
         <div id="ds-sh"></div>
@@ -1208,13 +1208,13 @@ console.log('Firebase initialized (compat)');
       </div>
       <div id="f-lic-details" style="margin-top:8px;"></div>
     </div>
-    <!-- 勤務情報（勤務タイプ＋曜日別シフト） -->
-    <div class="frw"><label class="fl">勤務タイプ</label>
+    <!-- 勤務情報（勤務形態＋曜日別シフト） -->
+    <div class="frw"><label class="fl">勤務形態</label>
       <select class="fsl" id="ft" onchange="onTC()">
-        <option value="contract">契約型（契約時間から算出）</option>
-        <option value="free">フリー型（打刻時刻そのまま）</option>
-        <option value="free1">フリー①型（XX:45自動切り上げ）</option>
-        <option value="annual">年俸型（総勤務時間のみ）</option>
+        <option value="contract">契約1（従来の契約型：契約時間から算出）</option>
+        <option value="free">契約2（フリー型：打刻時刻そのまま）</option>
+        <option value="free1">契約3（フリー①型：XX:45自動切り上げ）</option>
+        <option value="annual">契約4（年俸型：総勤務時間のみ）</option>
       </select>
     </div>
     <div id="fca">
@@ -6380,8 +6380,9 @@ function renderStaffStartRules(selectedIds){
   const sel=Array.isArray(selectedIds)?selectedIds.map(String):[];
   const opts=id=>'<option value="">（なし）</option>'+(DB.startRules||[]).map(r=>`<option value="${r.id}"${String(r.id)===id?' selected':''}>${esc(startRuleLabel(r))}</option>`).join('');
   let html='';
-  for(let i=0;i<5;i++){html+=`<select class="fsl f-startrule-sel" style="margin-bottom:5px;width:100%;">${opts(sel[i]||'')}</select>`;}
+  for(let i=0;i<5;i++){html+=`<select class="fsl f-startrule-sel" onchange="if(typeof onTC==='function')onTC()" style="margin-bottom:5px;width:100%;">${opts(sel[i]||'')}</select>`;}
   wrap.innerHTML=html;
+  if(typeof onTC==='function')onTC(); // 規定（勤務開始ルール併記）を最新化
 }
 function collectStaffStartRules(){
   return Array.from(document.querySelectorAll('.f-startrule-sel')).map(s=>s.value).filter(Boolean);
@@ -7089,12 +7090,19 @@ function onTC(){
   const noteEl=document.getElementById('ft-payroll-note');
   if(noteEl){
     const notes={
-      contract:'<b>契約型 → 給与計算への反映:</b> 下記の予定勤務形態（契約時間）をもとに勤務時間を算出します。打刻が契約開始より早い場合は契約開始時刻から計算（早出ボタン押下時はその時刻から）。',
-      free:'<b>フリー型 → 給与計算への反映:</b> 打刻時刻をそのまま勤務時間として集計します。予定勤務形態は契約書記載用の参考情報です。',
-      free1:'<b>フリー①型 → 給与計算への反映:</b> 打刻をXX:'+( (document.getElementById('ff1min')&&document.getElementById('ff1min').value)||'45')+'分基準で自動切り上げして集計します。予定勤務形態は契約書記載用の参考情報です。',
-      annual:'<b>年俸型 → 給与計算への反映:</b> 給与は年俸固定で勤務時間に連動しません（総勤務時間のみ集計）。予定勤務形態は契約書記載用です。'
+      contract:'<b>契約1（従来の契約型）→ 給与計算:</b> 予定勤務形態（契約時間）をもとに勤務時間を算出。打刻が契約開始より早い場合は契約開始時刻から計算（早出ボタン押下時はその時刻から）。',
+      free:'<b>契約2（フリー型）→ 給与計算:</b> 打刻時刻をそのまま勤務時間として集計。予定勤務形態は契約書記載用の参考情報です。',
+      free1:'<b>契約3（フリー①型）→ 給与計算:</b> 打刻をXX:'+( (document.getElementById('ff1min')&&document.getElementById('ff1min').value)||'45')+'分基準で自動切り上げして集計。予定勤務形態は契約書記載用の参考情報です。',
+      annual:'<b>契約4（年俸型）→ 給与計算:</b> 給与は年俸固定で勤務時間に連動しません（総勤務時間のみ集計）。予定勤務形態は契約書記載用です。'
     };
-    noteEl.innerHTML=notes[t]||'';
+    let html='<div style="font-weight:700;color:#4527A0;margin-bottom:2px;">― 規定 ―</div>'+(notes[t]||'');
+    // 選択中の勤務開始ルールを規定として併記
+    const rids=(typeof collectStaffStartRules==='function')?collectStaffStartRules():[];
+    if(rids.length){
+      const items=rids.map(id=>{const r=(DB.startRules||[]).find(x=>String(x.id)===String(id));return r?'<br>・'+esc(startRuleLabel(r)):'';}).join('');
+      if(items)html+='<div style="margin-top:4px;"><b>適用する勤務開始ルール:</b>'+items+'</div>';
+    }
+    noteEl.innerHTML=html;
   }
   // 予定勤務形態（曜日別シフト）は全勤務タイプで表示・記録できる
   const isAnnual=false;
