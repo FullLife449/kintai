@@ -3127,7 +3127,7 @@ function renderPunchGrid(){
     if(last&&last.type==='in'){stateBg='#E8F5E9';stateColor='#2E7D32';stateLabel='勤務中';}
     else if(last&&last.type==='out'){stateBg='#FFEBEE';stateColor='#C62828';stateLabel='退勤済';}
     return `<button onclick="punchStaff(${s.id})" style="padding:10px 6px;border:1.5px solid var(--br);border-radius:10px;background:${stateBg};color:${stateColor};cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:75px;">
-      <div style="font-size:9px;opacity:0.6;">${s.id}</div>
+      <div style="font-size:11px;font-weight:700;opacity:0.9;line-height:1;">${s.id}</div>
       <div style="font-size:18px;font-weight:800;line-height:1.1;">${lastName}</div>
       ${initial?`<div style="font-size:10px;opacity:0.7;">${initial}</div>`:''}
       ${stateLabel?`<div style="font-size:9px;font-weight:700;margin-top:2px;">${stateLabel}</div>`:''}
