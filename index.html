@@ -2718,6 +2718,16 @@ function getStdMsForDate(sid,date){
   return Math.min(Math.max(netMin,60),480)*60000;
 }
 
+// 時間外A/B/C を標準ルールで計算（カスタム計算方式から再利用）。total/stdMs はms、holidayWorkMsは法定休日労働ms
+function calcStdOT(total,stdMs,isLegal,holidayWorkMs){
+  const legalMs=8*3600000;
+  return{
+    otA: isLegal?0:Math.max(0,Math.min(total,legalMs)-Math.min(total,stdMs||0)),
+    otB: isLegal?0:Math.max(0,total-legalMs),
+    otC: isLegal?(holidayWorkMs||0):0
+  };
+}
+
 // ═══ 深夜時間計算 ═══
 function calcNight(segs){
   let ms=0;
@@ -2767,6 +2777,20 @@ function calcWork(sid,date){
   if((last.type==='in'||last.type==='resume'||last.type==='early')&&inT)segs.push({start:inT,end:Date.now()});
   const rawMs=segs.reduce((s,sg)=>s+(sg.end-sg.start),0);
   const nightMs=calcNight(segs);
+  // カスタム計算方式：レジストリに compute があれば委譲（builtinはcompute無し→下の既存ロジック）
+  const _cm=(typeof CALC_METHODS!=='undefined')?CALC_METHODS[effectiveType]:null;
+  if(_cm&&typeof _cm.compute==='function'){
+    try{
+      const inMin0=inRec?(new Date(inRec.tsISO).getHours()*60+new Date(inRec.tsISO).getMinutes()):null;
+      const outMin0=outRec?(new Date(outRec.tsISO).getHours()*60+new Date(outRec.tsISO).getMinutes()):null;
+      const ctx={sid,date,staff,recs,segs,rawMs,nightMs,inRec,outRec,earlyRec,isLegal,isSp,
+        inMin:inMin0,outMin:outMin0,shifts:getEffShifts(sid,date),stdMs:getStdMsForDate(sid,date),
+        breakMs:(staff.breakMin||0)*60000,ruleIds,ruleCo,
+        parseHM,snapStartMin,calcStdOT,calcLateEarly};
+      const res=_cm.compute(ctx);
+      if(res)return res;
+    }catch(e){console.error('calc method error:',effectiveType,e);}
+  }
   if(effectiveType==='free'||effectiveType==='free1'||(effectiveType==='annual'&&!isSp)){
     let net=Math.max(0,rawMs-(staff.breakMin||0)*60000);
     // free1: XX:45自動切り上げ
@@ -6418,7 +6442,27 @@ function delNotice(id){
 // ═══ 基本勤務形態（会社ごと・編集可能。名称＋基本計算方式＋規定メモ） ═══
 // DB.workForms: {koyokai:[{id,name,calc,note}], fulllife:[...]}
 // スタッフは workFormId を選び、保存時に staff.type = 形態の calc を派生（計算エンジンは従来通り）。
-const WF_CALC_LABEL={contract:'契約時間から算出',free:'打刻そのまま',free1:'XX:45切上げ',annual:'年俸固定（総勤務のみ）'};
+// ── 計算方式レジストリ ──────────────────────────────────────────
+// ここに1つ登録すれば、管理画面「基本勤務形態」の計算方式ドロップダウンに自動で出て、calcWorkでも使われる。
+// builtin（contract/free/free1/annual）は calcWork 内に既存ロジックがあるため compute 不要。
+// 新しい計算方式を追加する手順（1か所だけ）:
+//   xxx:{ label:'表示名', compute(ctx){
+//          // ctx: {staff,date,recs,segs,rawMs,nightMs,inMin,outMin,shifts,stdMs,breakMs,isLegal,...
+//          //       parseHM,snapStartMin,calcStdOT,calcLateEarly,ruleIds,ruleCo}
+//          // 返り値: {total, breakdown:{ラベル:ms}, otA,otB,otC,otD,otE, lateMin, earlyLeaveMin}
+//          const total=Math.max(0, ctx.rawMs - ctx.breakMs);
+//          const ot=ctx.calcStdOT(total, ctx.stdMs, ctx.isLegal, 0);
+//          return {total, breakdown:{'勤務':total}, otA:ot.otA,otB:ot.otB,otC:ot.otC, otD:ctx.nightMs, otE:0, lateMin:0, earlyLeaveMin:0};
+//        }},
+const CALC_METHODS={
+  contract:{label:'契約時間から算出'}, // builtin
+  free:    {label:'打刻そのまま'},     // builtin
+  free1:   {label:'XX:45切上げ'},       // builtin
+  annual:  {label:'年俸固定（総勤務のみ）'}, // builtin
+  // ↓ 新方式はここに追加（compute を実装）
+};
+// 後方互換：ラベル参照用（CALC_METHODSから派生）
+const WF_CALC_LABEL=Object.keys(CALC_METHODS).reduce((o,k)=>{o[k]=CALC_METHODS[k].label;return o;},{});
 function defaultWorkForms(){return [
   {id:'wf1',name:'契約1（従来の契約型）',calc:'contract',note:'契約時間から勤務時間を算出'},
   {id:'wf2',name:'契約2（フリー型）',calc:'free',note:'打刻時刻そのまま'},
