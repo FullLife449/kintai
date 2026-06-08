@@ -1898,29 +1898,37 @@ function fbLoadAndSync(co) {
   });
 }
 
+// Firebaseはundefinedを含むと同期的に例外を投げる→JSON往復でundefinedを除去。例外も握りつぶし呼び出し側を止めない
+function fbClean(x){try{return JSON.parse(JSON.stringify(x));}catch(e){return x;}}
+
 // Firebase: スタッフ保存
 function fbSaveStaff(co) {
   if(!window.firebaseReady || !window.fbDB) return;
-  const co2 = co || currentCompany;
-  const staffRef = window.fbRef(window.fbDB, co2 + '/staff');
-  window.fbSet(staffRef, DB.staff)
-    .then(() => setSyncStatus('✓ ' + new Date().toLocaleTimeString('ja'), 'var(--gd)'))
-    .catch(e => { console.error(e); setSyncStatus('✗ 保存失敗', 'var(--rd)'); });
+  try{
+    const co2 = co || currentCompany;
+    const staffRef = window.fbRef(window.fbDB, co2 + '/staff');
+    window.fbSet(staffRef, fbClean(DB.staff))
+      .then(() => setSyncStatus('✓ ' + new Date().toLocaleTimeString('ja'), 'var(--gd)'))
+      .catch(e => { console.error(e); setSyncStatus('✗ 保存失敗', 'var(--rd)'); });
+  }catch(e){ console.error('fbSaveStaff error:',e); }
 }
 
 // Firebase: 打刻データ保存（打刻するたびに呼ぶ）
 function fbSaveRecords() {
   if(!window.firebaseReady || !window.fbDB || !currentCompany) return;
-  const recordsRef = window.fbRef(window.fbDB, currentCompany + '/records');
-  window.fbSet(recordsRef, DB.records)
-    .catch(e => console.error('fbSaveRecords error:', e));
+  try{
+    const recordsRef = window.fbRef(window.fbDB, currentCompany + '/records');
+    window.fbSet(recordsRef, fbClean(DB.records))
+      .catch(e => console.error('fbSaveRecords error:', e));
+  }catch(e){ console.error('fbSaveRecords error:',e); }
 }
 
 // Firebase: 設定データ保存
 function fbSaveSettings() {
   if(!window.firebaseReady || !window.fbDB || !currentCompany) return;
+  try{
   const settingsRef = window.fbRef(window.fbDB, currentCompany + '/settings');
-  window.fbSet(settingsRef, {
+  window.fbSet(settingsRef, fbClean({
     dayShifts: DB.dayShifts,
     paid: DB.paid,
     absence: DB.absence||[],
@@ -1958,7 +1966,8 @@ function fbSaveSettings() {
     workRulesVer: DB.workRulesVer||{},
     outpatient: DB.outpatient||{},
     adminPw: DB.adminPw||null
-  }).catch(e => console.error('fbSaveSettings error:', e));
+  })).catch(e => console.error('fbSaveSettings error:', e));
+  }catch(e){ console.error('fbSaveSettings error:',e); }
 }
 
 const TL={in:'出勤',out:'退勤',break:'休憩開始',resume:'勤務再開',early:'早出',fare:'交通費',paid:'有給',lunch:'ランチデリ'};
@@ -4540,8 +4549,9 @@ function submitPIBizTrip(){
     status:'pending',approvedBy:null,
     createdAt:new Date().toISOString()
   });
-  sDB();fbSaveSettings();
-  renderPiBizTripList();
+  sDB();
+  renderPiBizTripList(); // 先に履歴を即時更新（保存の成否に関わらず反映）
+  fbSaveSettings();
   // 入力欄クリア（出発地は香里園駅に戻す）
   ['pi-bt-purpose','pi-bt-place','pi-bt-address','pi-bt-station','pi-bt-transport','pi-bt-lodging','pi-bt-companion','pi-bt-fee','pi-bt-transfee','pi-bt-lodgefee','pi-bt-otherfee','pi-bt-othernote','pi-bt-memo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('pi-bt-end').value='';
