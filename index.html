@@ -244,6 +244,7 @@ console.log('Firebase initialized (compat)');
       <button class="at" id="atab-paydef" onclick="showAS('paydef')" style="background:#EDE7F6;">📋 項目定義</button>
       <button class="at" id="atab-workrules" onclick="showAS('workrules')" style="background:#EDE7F6;">📖 就業規則</button>
       <button class="at" id="atab-startrules" onclick="showAS('startrules')" style="background:#E0F2F1;">🕒 勤務ルール</button>
+      <button class="at" id="atab-notice" onclick="showAS('notice')" style="background:#FFF8E1;">📢 注意事項</button>
       <button class="at" id="atab-data" onclick="showAS('data')">データ移行</button><button class="at" id="atab-pw" onclick="showAS('pw')">PW管理</button><button class="at" id="atab-devset" onclick="showAS('devset')">端末表示設定</button><button class="at" id="atab-other" onclick="showAS('other')" style="display:none;">その他</button>
       <!-- シフト管理（両社共通） -->
       <button class="at" id="atab-pattern" onclick="showAS('pattern')" style="background:#E8F5E9;">勤務パターン</button>
@@ -771,12 +772,26 @@ console.log('Firebase initialized (compat)');
       </div>
       </div>
     </div>
+    <!-- 注意事項（個人画面に表示。会社ごと） -->
+    <div class="asc" id="asc-notice">
+      <div class="pad">
+      <div class="card">
+        <div class="cl" style="color:#F57F17;">📢 注意事項（<span id="notice-co-label">-</span>）</div>
+        <div class="fs2" style="margin-bottom:8px;">個人画面の「📢 注意事項」タブに表示されます。会社ごとに保存されます。</div>
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+          <textarea id="notice-input" rows="2" placeholder="例: 欠勤は所属長に申請をして下さい" style="flex:1;border:1px solid var(--br);border-radius:7px;padding:7px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+          <button class="ab" onclick="addNotice()" style="white-space:nowrap;">＋ 追加</button>
+        </div>
+        <div id="notice-admin-list"></div>
+      </div>
+      </div>
+    </div>
     <!-- 勤務ルール（出勤時刻の丸め／フリー時間帯の選択肢を作成） -->
     <div class="asc" id="asc-startrules">
       <div class="pad">
       <div class="card">
-        <div class="cl" style="color:#00695C;">🧩 基本勤務形態（編集）</div>
-        <div class="fs2" style="margin-bottom:8px;">スタッフ編集の「勤務形態」で選べる形態を作成・編集します。<b>基本計算方式が給与計算に反映されます</b>（規定メモは契約書・表示用で計算には未反映）。計算方式を変更すると、その形態を使うスタッフの計算にも反映されます。</div>
+        <div class="cl" style="color:#00695C;">🧩 基本勤務形態（編集）　<span id="sr-co-label" style="font-size:11px;color:#1565C0;">-</span></div>
+        <div class="fs2" style="margin-bottom:8px;"><b>会社ごとに別々に運用します。</b>スタッフ編集の「勤務形態」で選べる形態を作成・編集します。<b>基本計算方式が給与計算に反映されます</b>（規定メモは契約書・表示用で計算には未反映）。計算方式を変更すると、その形態を使うスタッフの計算にも反映されます。</div>
         <div id="wf-list" style="margin-bottom:8px;"></div>
         <button class="ab" onclick="addWorkForm()">＋ 勤務形態を追加</button>
       </div>
@@ -868,6 +883,7 @@ console.log('Firebase initialized (compat)');
       <!-- タブ -->
       <div style="display:flex;gap:4px;margin-bottom:9px;overflow-x:auto;padding-bottom:2px;">
         <button class="ptab active" id="pi-tab-log" onclick="showPITab('log')">打刻ログ</button>
+        <button class="ptab" id="pi-tab-notice" onclick="showPITab('notice')" style="background:#FFF8E1;">📢 注意事項</button>
         <button class="ptab" id="pi-tab-paid" onclick="showPITab('paid')">有給</button>
         <button class="ptab" id="pi-tab-sub" onclick="showPITab('sub')">代休</button>
         <button class="ptab pi-fl-only" id="pi-tab-ot" onclick="showPITab('ot')" style="background:#FFF3E0;">時間外</button>
@@ -877,6 +893,12 @@ console.log('Firebase initialized (compat)');
         <button class="ptab" id="pi-tab-expense" onclick="showPITab('expense')">経費精算</button>
         <button class="ptab" id="pi-tab-biztrip" onclick="showPITab('biztrip')">出張申請</button>
         <button class="ptab" id="pi-tab-pw" onclick="showPITab('pw')">PW変更</button>
+      </div>
+      <!-- 注意事項（管理画面から追加・編集／個人は閲覧のみ） -->
+      <div id="pi-view-notice" class="card" style="display:none;">
+        <div class="cl">📢 注意事項</div>
+        <div class="fs2" style="margin-bottom:8px;">職員へのお知らせ・注意事項です。</div>
+        <div id="pi-notice-list"></div>
       </div>
       <!-- 打刻ログ -->
       <div id="pi-view-log" class="card">
@@ -1870,8 +1892,13 @@ function fbLoadAndSync(co) {
     DB.workplaces      = pickL(DB.workplaces, s.workplaces);
     DB.duties          = pickL(DB.duties, s.duties);
     DB.contractClauses = pickL(DB.contractClauses, s.contractClauses);
-    DB.workForms       = pickL(DB.workForms, s.workForms);
-    DB.startRules      = pickL(DB.startRules, s.startRules);
+    // 勤務形態・勤務ルール・注意事項は会社別（co単位）に保持
+    DB.workForms = (DB.workForms&&typeof DB.workForms==='object'&&!Array.isArray(DB.workForms))?DB.workForms:{};
+    DB.startRules= (DB.startRules&&typeof DB.startRules==='object'&&!Array.isArray(DB.startRules))?DB.startRules:{};
+    DB.notices   = (DB.notices&&typeof DB.notices==='object'&&!Array.isArray(DB.notices))?DB.notices:{};
+    DB.workForms[co] = pickL(DB.workForms[co], s.workForms);
+    DB.startRules[co]= pickL(DB.startRules[co], s.startRules);
+    DB.notices[co]   = pickL(DB.notices[co], s.notices);
     DB.workRules       = pickO(DB.workRules, s.workRules);
     DB.workRulesVer    = pickO(DB.workRulesVer, s.workRulesVer);
     DB.outpatient      = pickO(DB.outpatient, s.outpatient);
@@ -1960,11 +1987,12 @@ function fbSaveSettings() {
     dayDefaults: DB.dayDefaults||[],
     patternUsage: DB.patternUsage||[],
     staffOrder: DB.staffOrder||[],
-    workForms: DB.workForms||[],
-    startRules: DB.startRules||[],
+    workForms: (DB.workForms&&DB.workForms[currentCompany])||[],
+    startRules: (DB.startRules&&DB.startRules[currentCompany])||[],
     workRules: DB.workRules||{},
     workRulesVer: DB.workRulesVer||{},
     outpatient: DB.outpatient||{},
+    notices: (DB.notices&&DB.notices[currentCompany])||[],
     adminPw: DB.adminPw||null
   })).catch(e => console.error('fbSaveSettings error:', e));
   }catch(e){ console.error('fbSaveSettings error:',e); }
@@ -2726,8 +2754,8 @@ function calcWork(sid,date){
   const outRec=[...recs].reverse().find(r=>r.type==='out');
   const isLegal=isLegalHoliday(date);
   // 勤務開始ルール（出勤時刻の丸め/フリー）。出勤系の打刻時刻をルールで正規化する
-  const ruleIds=staff.startRuleIds||[];
-  const snapTs=ts=>{if(!ruleIds.length)return ts;const d=new Date(ts);const mm=d.getHours()*60+d.getMinutes();const sm=snapStartMin(mm,ruleIds);if(sm===mm)return ts;const nd=new Date(ts);nd.setHours(Math.floor(sm/60),sm%60,0,0);return nd.getTime();};
+  const ruleIds=staff.startRuleIds||[];const ruleCo=staff.company||CO;
+  const snapTs=ts=>{if(!ruleIds.length)return ts;const d=new Date(ts);const mm=d.getHours()*60+d.getMinutes();const sm=snapStartMin(mm,ruleIds,ruleCo);if(sm===mm)return ts;const nd=new Date(ts);nd.setHours(Math.floor(sm/60),sm%60,0,0);return nd.getTime();};
   let segs=[],inT=null,bkT=null;
   recs.forEach(r=>{const t=new Date(r.tsISO).getTime();
     if(r.type==='in'||r.type==='resume'||r.type==='early')inT=snapTs(t);
@@ -2815,7 +2843,7 @@ function calcWork(sid,date){
   }
   if(!inRec)return{};
   let inMin=new Date(inRec.tsISO).getHours()*60+new Date(inRec.tsISO).getMinutes();
-  if(ruleIds.length)inMin=snapStartMin(inMin,ruleIds); // 勤務開始ルールで出勤時刻を正規化
+  if(ruleIds.length)inMin=snapStartMin(inMin,ruleIds,ruleCo); // 勤務開始ルールで出勤時刻を正規化（会社別）
   const outMin=outRec?new Date(outRec.tsISO).getHours()*60+new Date(outRec.tsISO).getMinutes():null;
   const shifts=getEffShifts(sid,date).sort((a,b)=>parseHM(a.s)-parseHM(b.s));
   const dk=dowKey(new Date(date).getDay());
@@ -3823,7 +3851,7 @@ function exportContract(){
     ? {name:'株式会社フルラフ', repTitle:'代表取締役', repName:'三上 純', addr:'大阪府寝屋川市成田西町1-29', shortName:'会社'}
     : {name:'医療法人香庸会', repTitle:'理事長', repName:'川口 琢也', addr:'大阪府枚方市香里園町9-25-202', shortName:'クリニック'};
   // 勤務タイプ
-  const wtype=(typeof wfCalc==='function')?wfCalc(g('ft')):g('ft');
+  const wtype=(typeof wfCalc==='function')?wfCalc(g('ft'),CO):g('ft');
   // 年俸制契約書は「年俸型」スタッフのみ発行（年俸額入力だけでは発行しない）
   const isAnnual = (wtype==='annual');
 
@@ -6287,7 +6315,7 @@ function showAS(sub){
   if(typeof updateCompanyHeader==='function')updateCompanyHeader();
   // フルラフ専用タブの表示/非表示をCOに同期（毎回再適用）
   if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
-  ['staff','shift','rec','paid','special','biztrip','log','report','paydef','workrules','startrules','data','pw','devset','pattern','shiftcal','allshift','group','ot','outpat','other'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
+  ['staff','shift','rec','paid','special','biztrip','log','report','paydef','workrules','startrules','notice','data','pw','devset','pattern','shiftcal','allshift','group','ot','outpat','other'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
   if(sub==='pw')initPwmStaffSelect();
   if(sub==='devset')initDevset();
   if(sub==='pattern')initWPAdmin();
@@ -6301,6 +6329,7 @@ function showAS(sub){
   if(sub==='rehab')initRehabAdmin();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}
   if(sub==='workrules')initWorkRules();
   if(sub==='startrules')initStartRules();
+  if(sub==='notice')initNoticeAdmin();
   // 打刻修正・日次シフト・特別枠のスタッフ選択肢を会社別に更新
   if(sub==='rec'||sub==='shift'||sub==='special'){if(typeof loadAS==='function')loadAS();}
   if(sub==='shift'&&typeof renderDSL==='function')renderDSL();
@@ -6343,82 +6372,128 @@ function saveWorkRules(val){
   const st=document.getElementById('wr-status');if(st){st.textContent='保存しました ✓';st.style.color='#2E7D32';}
 }
 
-// ═══ 基本勤務形態（編集可能。名称＋基本計算方式＋規定メモ） ═══
-// DB.workForms: [{id,name,calc:'contract'|'free'|'free1'|'annual',note}]
+// ═══ 注意事項（個人画面に表示・管理画面で追加。会社ごと） ═══
+// DB.notices: {koyokai:[{id,text}], fulllife:[...]}
+function ensureNotices(co){
+  co=co||CO;
+  if(Array.isArray(DB.notices)){const old=DB.notices;DB.notices={koyokai:JSON.parse(JSON.stringify(old)),fulllife:JSON.parse(JSON.stringify(old))};}
+  DB.notices=DB.notices||{};
+  if(DB.notices[co]===undefined)DB.notices[co]=[{id:'nt'+Date.now(),text:'欠勤は所属長に申請をして下さい'}];
+  return DB.notices[co];
+}
+function renderPiNotices(){
+  const el=document.getElementById('pi-notice-list');if(!el)return;
+  const co=(typeof piStaff!=='undefined'&&piStaff&&piStaff.company)||CO;
+  const list=ensureNotices(co);
+  if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:11px;text-align:center;padding:14px;">注意事項はありません</div>';return;}
+  el.innerHTML=list.map(n=>`<div style="display:flex;gap:8px;padding:9px 4px;border-bottom:1px solid #f0f0f0;font-size:12px;line-height:1.6;"><span style="color:#F57F17;flex-shrink:0;">●</span><span>${esc(n.text).replace(/\n/g,'<br>')}</span></div>`).join('');
+}
+function initNoticeAdmin(){ensureNotices(CO);renderNoticeAdmin();}
+function renderNoticeAdmin(){
+  const el=document.getElementById('notice-admin-list');if(!el)return;
+  const list=ensureNotices(CO);
+  const coLbl=document.getElementById('notice-co-label');if(coLbl)coLbl.textContent=(CO==='koyokai'?'香庸会':'フルラフ');
+  if(!list.length){el.innerHTML='<div class="fs2" style="text-align:center;padding:12px;">注意事項なし</div>';return;}
+  el.innerHTML=list.map(n=>`<div class="spit" style="align-items:flex-start;"><div class="sii" style="flex:1;"><textarea onchange="updNotice('${n.id}',this.value)" rows="2" style="width:100%;border:1px solid var(--br);border-radius:6px;padding:5px 7px;font-size:11px;font-family:inherit;resize:vertical;box-sizing:border-box;">${esc(n.text)}</textarea></div><button class="fd" onclick="delNotice('${n.id}')" style="margin-left:6px;">削除</button></div>`).join('');
+}
+function addNotice(){
+  ensureNotices(CO);
+  const inp=document.getElementById('notice-input');const text=(inp.value||'').trim();
+  if(!text){showToast('注意事項を入力してください');return;}
+  DB.notices[CO].push({id:'nt'+Date.now(),text});
+  sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();inp.value='';renderNoticeAdmin();showToast('追加しました');
+}
+function updNotice(id,text){
+  ensureNotices(CO);
+  const n=DB.notices[CO].find(x=>String(x.id)===String(id));if(!n)return;
+  n.text=text;sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();showToast('保存しました');
+}
+function delNotice(id){
+  ensureNotices(CO);
+  if(!confirm('この注意事項を削除しますか？'))return;
+  DB.notices[CO]=DB.notices[CO].filter(x=>String(x.id)!==String(id));
+  sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();renderNoticeAdmin();showToast('削除しました');
+}
+
+// ═══ 基本勤務形態（会社ごと・編集可能。名称＋基本計算方式＋規定メモ） ═══
+// DB.workForms: {koyokai:[{id,name,calc,note}], fulllife:[...]}
 // スタッフは workFormId を選び、保存時に staff.type = 形態の calc を派生（計算エンジンは従来通り）。
 const WF_CALC_LABEL={contract:'契約時間から算出',free:'打刻そのまま',free1:'XX:45切上げ',annual:'年俸固定（総勤務のみ）'};
-function ensureWorkForms(){
-  if(!DB.workForms){
-    DB.workForms=[
-      {id:'wf1',name:'契約1（従来の契約型）',calc:'contract',note:'契約時間から勤務時間を算出'},
-      {id:'wf2',name:'契約2（フリー型）',calc:'free',note:'打刻時刻そのまま'},
-      {id:'wf3',name:'契約3（フリー①型）',calc:'free1',note:'XX:45自動切り上げ'},
-      {id:'wf4',name:'契約4（年俸型）',calc:'annual',note:'総勤務時間のみ・年俸固定'},
-    ];
-    sDB();
-  }
-  return DB.workForms;
+function defaultWorkForms(){return [
+  {id:'wf1',name:'契約1（従来の契約型）',calc:'contract',note:'契約時間から勤務時間を算出'},
+  {id:'wf2',name:'契約2（フリー型）',calc:'free',note:'打刻時刻そのまま'},
+  {id:'wf3',name:'契約3（フリー①型）',calc:'free1',note:'XX:45自動切り上げ'},
+  {id:'wf4',name:'契約4（年俸型）',calc:'annual',note:'総勤務時間のみ・年俸固定'},
+];}
+function ensureWorkForms(co){
+  co=co||CO;
+  if(Array.isArray(DB.workForms)){const old=DB.workForms;DB.workForms={koyokai:JSON.parse(JSON.stringify(old)),fulllife:JSON.parse(JSON.stringify(old))};}
+  DB.workForms=DB.workForms||{};
+  if(!DB.workForms[co]||!DB.workForms[co].length){DB.workForms[co]=defaultWorkForms();sDB();}
+  return DB.workForms[co];
 }
-function getWorkForm(id){return (DB.workForms||[]).find(f=>String(f.id)===String(id));}
+function getWorkForm(id,co){return ensureWorkForms(co||CO).find(f=>String(f.id)===String(id));}
 // formId または旧type(contract等)を受け取り、計算方式(contract/free/free1/annual)を返す
-function wfCalc(v){const f=getWorkForm(v);if(f)return f.calc;if(['contract','free','free1','annual'].indexOf(v)>=0)return v;return 'contract';}
-function formIdForType(t){const f=(DB.workForms||[]).find(x=>x.calc===t);return f?f.id:(((DB.workForms||[])[0]||{}).id||'wf1');}
-// スタッフ編集の勤務形態select(#ft)を勤務形態リストから描画
+function wfCalc(v,co){const f=getWorkForm(v,co);if(f)return f.calc;if(['contract','free','free1','annual'].indexOf(v)>=0)return v;return 'contract';}
+function formIdForType(t,co){const list=ensureWorkForms(co||CO);const f=list.find(x=>x.calc===t);return f?f.id:((list[0]||{}).id||'wf1');}
+// スタッフ編集の勤務形態select(#ft)を現在会社(CO)の勤務形態リストから描画
 function renderWorkFormSelect(selectedId){
-  ensureWorkForms();
+  const list=ensureWorkForms(CO);
   const sel=document.getElementById('ft');if(!sel)return;
   const cur=selectedId||sel.value;
-  sel.innerHTML=(DB.workForms||[]).map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
-  if(cur&&getWorkForm(cur))sel.value=cur;else if(DB.workForms&&DB.workForms[0])sel.value=DB.workForms[0].id;
+  sel.innerHTML=list.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
+  if(cur&&getWorkForm(cur,CO))sel.value=cur;else if(list[0])sel.value=list[0].id;
 }
-// 管理タブ：勤務形態の一覧・追加・編集・削除
-function initWorkForms(){ensureWorkForms();renderWorkFormsList();}
+// 管理タブ：勤務形態の一覧・追加・編集・削除（現在会社）
+function initWorkForms(){ensureWorkForms(CO);renderWorkFormsList();}
 function renderWorkFormsList(){
   const wrap=document.getElementById('wf-list');if(!wrap)return;
-  const list=ensureWorkForms();
+  const list=ensureWorkForms(CO);
+  const calcOpts=f=>Object.keys(WF_CALC_LABEL).map(k=>`<option value="${k}"${f.calc===k?' selected':''}>${WF_CALC_LABEL[k]}</option>`).join('');
   wrap.innerHTML=list.map(f=>`<div class="spit" style="align-items:flex-start;"><div class="sii" style="flex:1;">
     <input value="${esc(f.name)}" onchange="updWorkForm('${f.id}','name',this.value)" style="width:100%;font-weight:600;margin-bottom:3px;border:1px solid var(--br);border-radius:5px;padding:4px 6px;font-family:inherit;">
     <div style="font-size:9px;color:var(--t2);margin:2px 0;">基本計算方式（給与計算に反映）</div>
-    <select onchange="updWorkForm('${f.id}','calc',this.value)" style="font-size:11px;padding:4px;width:100%;font-family:inherit;">${Object.keys(WF_CALC_LABEL).map(k=>`<option value="${k}"${f.calc===k?' selected':''}>${WF_CALC_LABEL[k]}</option>`).join('')}</select>
+    <select onchange="updWorkForm('${f.id}','calc',this.value)" style="font-size:11px;padding:4px;width:100%;font-family:inherit;">${calcOpts(f)}</select>
     <input value="${esc(f.note||'')}" onchange="updWorkForm('${f.id}','note',this.value)" placeholder="規定メモ（契約書・表示用／計算には未反映）" style="width:100%;margin-top:4px;font-size:10px;border:1px solid var(--br);border-radius:5px;padding:4px 6px;font-family:inherit;">
   </div><button class="fd" onclick="delWorkForm('${f.id}')" style="margin-left:6px;">削除</button></div>`).join('');
 }
 function addWorkForm(){
-  ensureWorkForms();
-  DB.workForms.push({id:'wf'+Date.now(),name:'契約'+(DB.workForms.length+1),calc:'contract',note:''});
+  const list=ensureWorkForms(CO);
+  list.push({id:'wf'+Date.now(),name:'契約'+(list.length+1),calc:'contract',note:''});
   sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();renderWorkFormsList();showToast('勤務形態を追加しました');
 }
 function updWorkForm(id,key,val){
-  const f=getWorkForm(id);if(!f)return;
+  const f=getWorkForm(id,CO);if(!f)return;
   f[key]=val;
-  if(key==='calc'){ // 計算方式を変えたら、この形態を使うスタッフのtypeも更新（給与計算に反映）
-    (DB.staff||[]).forEach(s=>{if(String(s.workFormId)===String(id))s.type=val;});
+  if(key==='calc'){ // 計算方式を変えたら、この形態を使う（同社）スタッフのtypeも更新
+    (DB.staff||[]).forEach(s=>{if(s.company===CO&&String(s.workFormId)===String(id))s.type=val;});
   }
   sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();showToast('保存しました');
 }
 function delWorkForm(id){
-  ensureWorkForms();
-  if(DB.workForms.length<=1){showToast('最低1つは必要です');return;}
-  const used=(DB.staff||[]).filter(s=>String(s.workFormId)===String(id));
+  const list=ensureWorkForms(CO);
+  if(list.length<=1){showToast('最低1つは必要です');return;}
+  const used=(DB.staff||[]).filter(s=>s.company===CO&&String(s.workFormId)===String(id));
   if(!confirm('この勤務形態を削除しますか？'+(used.length?'\n※'+used.length+'名が使用中（その人は計算方式が保持されます）':'')))return;
-  DB.workForms=DB.workForms.filter(f=>String(f.id)!==String(id));
+  DB.workForms[CO]=list.filter(f=>String(f.id)!==String(id));
   sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();renderWorkFormsList();showToast('削除しました');
 }
 
-// ═══ 勤務ルール（出勤時刻の丸め／フリー時間帯） ═══
-// DB.startRules: [{id,kind:'anchor',time:'08:45',beforeMin:60} | {id,kind:'free',from:'12:00',to:'15:44'}]
-// staff.startRuleIds: 選択したルールidの配列（最大5）。全スタッフ共通の選択肢。
-function ensureStartRules(){
-  if(!DB.startRules){
-    DB.startRules=[
-      {id:1,kind:'anchor',time:'08:45',beforeMin:60},
-      {id:2,kind:'anchor',time:'13:45',beforeMin:60},
-      {id:3,kind:'anchor',time:'15:45',beforeMin:60},
-      {id:4,kind:'free',from:'12:00',to:'15:44'},
-    ];
-    sDB();
-  }
-  return DB.startRules;
+// ═══ 勤務ルール（会社ごと・出勤時刻の丸め／フリー時間帯） ═══
+// DB.startRules: {koyokai:[{id,kind:'anchor'|'free',...}], fulllife:[...]}
+// staff.startRuleIds: 選択したルールidの配列（最大5）。選択肢は会社別。
+function defaultStartRules(){return [
+  {id:1,kind:'anchor',time:'08:45',beforeMin:60},
+  {id:2,kind:'anchor',time:'13:45',beforeMin:60},
+  {id:3,kind:'anchor',time:'15:45',beforeMin:60},
+  {id:4,kind:'free',from:'12:00',to:'15:44'},
+];}
+function ensureStartRules(co){
+  co=co||CO;
+  if(Array.isArray(DB.startRules)){const old=DB.startRules;DB.startRules={koyokai:JSON.parse(JSON.stringify(old)),fulllife:JSON.parse(JSON.stringify(old))};}
+  DB.startRules=DB.startRules||{};
+  if(DB.startRules[co]===undefined){DB.startRules[co]=defaultStartRules();sDB();}
+  return DB.startRules[co];
 }
 function startRuleLabel(r){
   if(!r)return'';
@@ -6427,9 +6502,10 @@ function startRuleLabel(r){
   const b=Math.max(0,a-(r.beforeMin||60));
   return r.time+'勤務開始（'+pad(Math.floor(b/60))+':'+pad(b%60)+'以降の出勤は'+r.time+'から）';
 }
-// 出勤時刻(分)をルールで正規化：フリー帯内は打刻通り、丸め基準の窓内なら基準時刻へ繰り上げ
-function snapStartMin(min,ruleIds){
-  const rules=(ruleIds||[]).map(id=>(DB.startRules||[]).find(r=>String(r.id)===String(id))).filter(Boolean);
+// 出勤時刻(分)をルールで正規化（co=対象会社）：フリー帯内は打刻通り、丸め窓内なら基準時刻へ繰り上げ
+function snapStartMin(min,ruleIds,co){
+  const all=ensureStartRules(co||CO);
+  const rules=(ruleIds||[]).map(id=>all.find(r=>String(r.id)===String(id))).filter(Boolean);
   for(const r of rules){if(r.kind==='free'){const f=parseHM(r.from),t=parseHM(r.to);if(f!=null&&t!=null&&min>=f&&min<=t)return min;}}
   for(const r of rules){if(r.kind==='anchor'){const a=parseHM(r.time);if(a!=null&&min>=a-(r.beforeMin||60)&&min<=a)return a;}}
   return min;
@@ -6440,7 +6516,7 @@ function srKindChange(){
   document.getElementById('sr-free-fields').style.display=k==='free'?'':'none';
 }
 function addStartRule(){
-  ensureStartRules();
+  const list=ensureStartRules(CO);
   const k=document.getElementById('sr-kind').value;
   let rule;
   if(k==='anchor'){
@@ -6452,30 +6528,30 @@ function addStartRule(){
     if(!from||!to){showToast('開始・終了を入力してください');return;}
     rule={id:Date.now(),kind:'free',from,to};
   }
-  DB.startRules.push(rule);sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();
+  list.push(rule);sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();
   renderStartRules();showToast('ルールを追加しました');
 }
 function delStartRule(id){
   if(!confirm('このルールを削除しますか？（各スタッフの選択からも外れます）'))return;
-  DB.startRules=(DB.startRules||[]).filter(r=>String(r.id)!==String(id));
-  // スタッフの選択からも除去
-  (DB.staff||[]).forEach(s=>{if(Array.isArray(s.startRuleIds))s.startRuleIds=s.startRuleIds.filter(x=>String(x)!==String(id));});
+  DB.startRules[CO]=ensureStartRules(CO).filter(r=>String(r.id)!==String(id));
+  // 同社スタッフの選択からも除去
+  (DB.staff||[]).forEach(s=>{if(s.company===CO&&Array.isArray(s.startRuleIds))s.startRuleIds=s.startRuleIds.filter(x=>String(x)!==String(id));});
   sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();
   renderStartRules();showToast('削除しました');
 }
 function renderStartRules(){
   const wrap=document.getElementById('sr-list');if(!wrap)return;
-  const list=ensureStartRules();
+  const list=ensureStartRules(CO);
   if(!list.length){wrap.innerHTML='<div class="fs2" style="text-align:center;padding:12px;">ルールがありません</div>';return;}
   wrap.innerHTML=list.map(r=>`<div class="spit"><div class="sii"><span style="font-weight:600;color:${r.kind==='free'?'#00695C':'#E65100'};">${r.kind==='free'?'フリー':'丸め'}</span>　${esc(startRuleLabel(r))}</div><button class="fd" onclick="delStartRule('${r.id}')">削除</button></div>`).join('');
 }
-function initStartRules(){ensureWorkForms();renderWorkFormsList();ensureStartRules();srKindChange();renderStartRules();}
-// スタッフ編集フォームの5つの選択欄を描画
+function initStartRules(){const lbl=document.getElementById('sr-co-label');if(lbl)lbl.textContent=(CO==='koyokai'?'香庸会':'フルラフ');ensureWorkForms(CO);renderWorkFormsList();ensureStartRules(CO);srKindChange();renderStartRules();}
+// スタッフ編集フォームの5つの選択欄を描画（現在会社COの選択肢）
 function renderStaffStartRules(selectedIds){
   const wrap=document.getElementById('f-startrules');if(!wrap)return;
-  ensureStartRules();
+  const all=ensureStartRules(CO);
   const sel=Array.isArray(selectedIds)?selectedIds.map(String):[];
-  const opts=id=>'<option value="">（なし）</option>'+(DB.startRules||[]).map(r=>`<option value="${r.id}"${String(r.id)===id?' selected':''}>${esc(startRuleLabel(r))}</option>`).join('');
+  const opts=id=>'<option value="">（なし）</option>'+all.map(r=>`<option value="${r.id}"${String(r.id)===id?' selected':''}>${esc(startRuleLabel(r))}</option>`).join('');
   let html='';
   for(let i=0;i<5;i++){html+=`<select class="fsl f-startrule-sel" onchange="if(typeof onTC==='function')onTC()" style="margin-bottom:5px;width:100%;">${opts(sel[i]||'')}</select>`;}
   wrap.innerHTML=html;
@@ -7179,7 +7255,7 @@ function openEdit(id){const s=DB.staff.find(x=>x.id===id);if(!s)return;eSid=id;d
   onTC();initPanels(s.dowShifts);selDow('mon',document.querySelector('.dow-tab'));selSat(1,document.querySelector('.sat-tab'));document.getElementById('stm').classList.remove('hidden');}
 function closeSTM(e){if(!e||e.target===document.getElementById('stm'))document.getElementById('stm').classList.add('hidden');}
 function onTC(){
-  const t=(typeof wfCalc==='function')?wfCalc(document.getElementById('ft').value):document.getElementById('ft').value;
+  const t=(typeof wfCalc==='function')?wfCalc(document.getElementById('ft').value,CO):document.getElementById('ft').value;
   document.getElementById('fca').style.display=t==='contract'?'':'none';
   const f1=document.getElementById('free1-opt');
   if(f1)f1.style.display=t==='free1'?'block':'none';
@@ -7196,7 +7272,8 @@ function onTC(){
     // 選択中の勤務開始ルールを規定として併記
     const rids=(typeof collectStaffStartRules==='function')?collectStaffStartRules():[];
     if(rids.length){
-      const items=rids.map(id=>{const r=(DB.startRules||[]).find(x=>String(x.id)===String(id));return r?'<br>・'+esc(startRuleLabel(r)):'';}).join('');
+      const _srAll=(typeof ensureStartRules==='function')?ensureStartRules(CO):[];
+      const items=rids.map(id=>{const r=_srAll.find(x=>String(x.id)===String(id));return r?'<br>・'+esc(startRuleLabel(r)):'';}).join('');
       if(items)html+='<div style="margin-top:4px;"><b>適用する勤務開始ルール:</b>'+items+'</div>';
     }
     noteEl.innerHTML=html;
@@ -7259,7 +7336,7 @@ function setFft(val){
     box.innerHTML='';
   }
 }
-function saveSt(){const name=document.getElementById('fn').value.trim();if(!name){showToast('名前を入力してください');return;}const eid=parseInt(document.getElementById('feid').value)||null;const workFormId=document.getElementById('ft').value;const type=(typeof wfCalc==='function')?wfCalc(workFormId):workFormId;const stdMin=480;
+function saveSt(){const name=document.getElementById('fn').value.trim();if(!name){showToast('名前を入力してください');return;}const eid=parseInt(document.getElementById('feid').value)||null;const workFormId=document.getElementById('ft').value;const type=(typeof wfCalc==='function')?wfCalc(workFormId,CO):workFormId;const stdMin=480;
 const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)?0:Math.max(0,bkRaw);const fareRaw=parseInt(document.getElementById('ff').value);const fare=isNaN(fareRaw)?0:Math.max(0,fareRaw);const freeEnd=document.getElementById('fft').value==='1';
   const free1MinEl=document.getElementById('ff1min');
   const free1Min=free1MinEl?parseInt(free1MinEl.value):45;
@@ -8827,12 +8904,13 @@ function logoutPersonalInline(){
 }
 
 function showPITab(tab){
-  ['log','paid','sub','ot','rehab','rehab2','fare','expense','biztrip','pw'].forEach(t=>{
+  ['log','notice','paid','sub','ot','rehab','rehab2','fare','expense','biztrip','pw'].forEach(t=>{
     const v=document.getElementById('pi-view-'+t);
     const b=document.getElementById('pi-tab-'+t);
     if(v)v.style.display=t===tab?'block':'none';
     if(b)b.classList.toggle('active',t===tab);
   });
+  if(tab==='notice')renderPiNotices();
   if(tab==='log'){initPILogMonth();renderPILog();setPISub('month');}
   if(tab==='paid')renderPIList('paid');
   if(tab==='fare')renderPIList('fare');
