@@ -8439,6 +8439,11 @@ function importData(){
 const GH_OWNER='fulllife449';
 const GH_REPO='kintai';
 const GH_DATA_FILE='kintai_data.json';
+// [SECURITY] 公開リポジトリ(Public)へのデータ書き戻しを無効化する。
+// 職員の氏名・社員番号・パスワード等のPII(個人情報)が公開リポジトリに出るのを防ぐため。
+// データ同期はFirebaseに一本化する。GitHubへの永続化を再開する場合は、必ずリポジトリを
+// 非公開化したうえで判断すること。
+const GH_WRITE_ENABLED=false;
 function getGHToken(){return localStorage.getItem('kintai_gh_token')||'';}
 function setGHToken(t){localStorage.setItem('kintai_gh_token',t);}
 
@@ -8462,6 +8467,7 @@ async function ghGetFile(filename){
 }
 
 async function ghPutFile(filename,data,sha){
+  if(!GH_WRITE_ENABLED){console.warn('[security] 公開リポジトリへの書き込みは無効化されています:',filename);return false;}
   try{
     // Unicodeエスケープで保存（文字化け防止）
     const jsonStr=JSON.stringify(data,null,0).replace(/[\u0080-\uffff]/g,ch=>'\\u'+('0000'+ch.charCodeAt(0).toString(16)).slice(-4));
@@ -8520,6 +8526,7 @@ async function syncFromGitHub(){
 
 // GitHubへデータを書き込む（スタッフ・設定のみ）
 async function syncToGitHub(){
+  if(!GH_WRITE_ENABLED){setSyncStatus('✓ Firebaseで同期（GitHub書き戻しは無効）','var(--gd)');return;}
   setSyncStatus('↑ 保存中...');
   try{
     const dataToSync={staff:DB.staff,dayShifts:DB.dayShifts,specials:DB.specials,lunchEnabled:DB.lunchEnabled,adminPw:DB.adminPw};
@@ -8610,6 +8617,7 @@ function openDataTab(){
 const GH_RECORDS_FILE='kintai_records.json';
 
 async function syncRecordsToGitHub(){
+  if(!GH_WRITE_ENABLED){setSyncStatus('\u2713 Firebase\u3067\u540c\u671f\uff08GitHub\u66f8\u304d\u623b\u3057\u306f\u7121\u52b9\uff09','var(--gd)');return;}
   setSyncStatus('\u2191 \u6253\u523b\u4fdd\u5b58\u4e2d...');
   try{
     const dataToSync={
