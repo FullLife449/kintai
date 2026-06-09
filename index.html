@@ -8769,7 +8769,7 @@ function loginPersonal(){
   // 内部IDで検索（社員番号は会社間で重複するため、一意な内部IDで識別する）
   const staff=DB.staff.find(s=>String(s.id)===eid);
   if(!staff){document.getElementById('personal-err').textContent='スタッフが見つかりません';return;}
-  if((staff.pw||'0000')!==pw){document.getElementById('personal-err').textContent='PWが違います';return;}
+  if(String(staff.pw||'0000')!==pw){document.getElementById('personal-err').textContent='PWが違います';return;}
   personalStaff=staff;
   document.getElementById('personal-login-view').style.display='none';
   document.getElementById('personal-main-view').style.display='block';
@@ -8923,12 +8923,15 @@ function changePersonalPw(){
   const old=document.getElementById('p-pw-old').value;
   const nw=document.getElementById('p-pw-new').value;
   const nw2=document.getElementById('p-pw-new2').value;
-  if((personalStaff.pw||'0000')!==old){showToast('現在のPWが違います');return;}
+  if(String(personalStaff.pw||'0000')!==old){showToast('現在のPWが違います');return;}
   if(nw!==nw2){showToast('新PWが一致しません');return;}
   if(nw.length<4){showToast('4文字以上で設定してください');return;}
   const idx=DB.staff.findIndex(s=>s.id===personalStaff.id);
   if(idx>=0){DB.staff[idx].pw=nw;personalStaff=DB.staff[idx];}
-  sDB();fbSaveStaff();showToast('PWを変更しました ✓');
+  sDB();
+  // 両社ノードへ反映（端末の選択会社に依らず確実に保存）。同期失敗でもローカルは保存済み
+  try{ fbSaveStaff('koyokai'); fbSaveStaff('fulllife'); }catch(e){ console.warn('pw sync:',e); }
+  showToast('PWを変更しました ✓');
   ['p-pw-old','p-pw-new','p-pw-new2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
 
@@ -9155,7 +9158,7 @@ function loginPersonalInline(){
   if(!eid||!pw){document.getElementById('pi-err').textContent='入力してください';return;}
   const staff=DB.staff.find(s=>String(s.id)===eid);
   if(!staff){document.getElementById('pi-err').textContent='スタッフが見つかりません';return;}
-  if((staff.pw||'0000')!==pw){document.getElementById('pi-err').textContent='PWが違います';return;}
+  if(String(staff.pw||'0000')!==pw){document.getElementById('pi-err').textContent='PWが違います';return;}
   piStaff=staff;
   if(typeof applyPiFlOnlyVisibility==='function')applyPiFlOnlyVisibility();
   if(typeof applyPiRehabVisibility==='function')applyPiRehabVisibility();
@@ -9619,12 +9622,15 @@ function changePIpw(){
   const old=document.getElementById('pi-pw-old').value;
   const nw=document.getElementById('pi-pw-new').value;
   const nw2=document.getElementById('pi-pw-new2').value;
-  if((piStaff.pw||'0000')!==old){showToast('現在のPWが違います');return;}
+  if(String(piStaff.pw||'0000')!==old){showToast('現在のPWが違います');return;}
   if(nw!==nw2){showToast('新PWが一致しません');return;}
   if(nw.length<4){showToast('4文字以上で設定してください');return;}
   const idx=DB.staff.findIndex(s=>s.id===piStaff.id);
   if(idx>=0){DB.staff[idx].pw=nw;piStaff=DB.staff[idx];}
-  sDB();fbSaveStaff();showToast('PWを変更しました ✓');
+  sDB();
+  // 両社ノードへ反映（端末の選択会社に依らず確実に保存）。同期失敗でもローカルは保存済み
+  try{ fbSaveStaff('koyokai'); fbSaveStaff('fulllife'); }catch(e){ console.warn('pw sync:',e); }
+  showToast('PWを変更しました ✓');
   ['pi-pw-old','pi-pw-new','pi-pw-new2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
 
