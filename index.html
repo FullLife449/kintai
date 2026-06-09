@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#1a1a2e">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -12,7 +12,7 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 
 
-:root{--nv:#1a1a2e;--gn:#1D9E75;--gl:#E1F5EE;--gd:#085041;--rd:#E24B4A;--rl:#FCEBEB;--am:#EF9F27;--al:#FAEEDA;--bl:#378ADD;--bll:#E6F1FB;--pu:#7F77DD;--pul:#EEEDFE;--gy:#f5f5f3;--br:#e0ddd6;--tx:#1a1a18;--t2:#6b6b66;}
+:root{--nv:#1a1a2e;--gn:#1D9E75;--gl:#E1F5EE;--gd:#085041;--rd:#E24B4A;--rl:#FCEBEB;--am:#EF9F27;--al:#FAEEDA;--bl:#378ADD;--bll:#E6F1FB;--pu:#7F77DD;--pul:#EEEDFE;--gy:#f5f5f3;--br:#e0ddd6;--tx:#1a1a18;--t2:#595956;}
 body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif;background:var(--gy);color:var(--tx);min-height:100vh;}
 #cs{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:var(--nv);}
 #cs h1{color:#fff;font-size:24px;font-weight:700;margin-bottom:8px;}
@@ -62,7 +62,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 .lr:last-child{border-bottom:none;}
 .lw{font-weight:500;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}.lt{color:var(--t2);font-size:10px;}
 .frw{margin-bottom:11px;}.fl{font-size:11px;font-weight:600;color:var(--t2);margin-bottom:4px;display:block;}
-.fi{width:100%;padding:9px 11px;border:1px solid var(--br);border-radius:8px;font-size:13px;font-family:inherit;color:var(--tx);background:#fff;}
+.fi{width:100%;padding:9px 11px;border:1px solid var(--br);border-radius:8px;font-size:16px;font-family:inherit;color:var(--tx);background:#fff;}
 .fi:focus{outline:none;border-color:var(--nv);}
 .fsl{width:100%;padding:9px 11px;border:1px solid var(--br);border-radius:8px;font-size:13px;font-family:inherit;color:var(--tx);background:#fff;}
 .fs2{background:var(--bll);border-radius:8px;padding:9px 11px;margin-bottom:11px;font-size:11px;color:#0C447C;line-height:1.7;}
@@ -123,7 +123,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 .toast{position:fixed;bottom:75px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--nv);color:#fff;padding:10px 20px;border-radius:999px;font-size:12px;white-space:nowrap;transition:transform 0.3s,opacity 0.3s;opacity:0;z-index:500;pointer-events:none;max-width:90vw;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 .bnav{background:#fff;border-bottom:2px solid var(--br);border-top:none;display:flex;flex-shrink:0;}
-.nb{flex:1;padding:9px 4px 7px;border:none;background:none;cursor:pointer;font-size:9px;color:var(--t2);font-weight:500;display:flex;flex-direction:column;align-items:center;gap:2px;-webkit-tap-highlight-color:transparent;font-family:inherit;}
+.nb{flex:1;padding:9px 4px 7px;border:none;background:none;cursor:pointer;font-size:11px;color:var(--t2);font-weight:500;display:flex;flex-direction:column;align-items:center;gap:2px;-webkit-tap-highlight-color:transparent;font-family:inherit;}
+/* [UI] 打刻・個人画面の視認性向上（該当画面に限定して上書き／管理画面の密度は維持） */
+#pg-personal .cl{font-size:12px;}
+#pg-personal .fl,#personal-modal .fl{font-size:12px;}
+#pg-personal .fb,#personal-modal .fb,#personal-modal .fc{min-height:44px;}
 .nb.active{color:var(--nv);font-weight:700;}.ni{font-size:19px;line-height:1;}
 .hidden{display:none!important;}
 .late-warn{color:#C62828;font-size:10px;font-weight:600;}
@@ -227,7 +231,7 @@ console.log('Firebase initialized (compat)');
   <!-- ヘッダー -->
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;">
     <div style="font-size:13px;font-weight:700;color:var(--nv);">名前をタップして打刻</div>
-    <div style="font-size:10px;color:var(--t2);" id="punch-today-label"></div>
+    <div style="font-size:12px;color:var(--t2);" id="punch-today-label"></div>
   </div>
   
   <!-- スタッフグリッド -->
@@ -886,7 +890,7 @@ console.log('Firebase initialized (compat)');
         <div class="frw"><label class="fl">パスワード（初期: 0000）</label>
           <input class="fi" id="pi-pw" type="password" maxlength="8" placeholder="パスワード" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
-        <div id="pi-err" style="color:var(--rd);font-size:11px;height:16px;margin-bottom:7px;"></div>
+        <div id="pi-err" style="color:var(--rd);font-size:12px;height:16px;margin-bottom:7px;"></div>
         <button class="fb" style="width:100%;" onclick="loginPersonalInline()">ログイン</button>
       </div>
     </div>
@@ -895,7 +899,7 @@ console.log('Firebase initialized (compat)');
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <div>
             <div style="font-size:15px;font-weight:700;" id="pi-name"></div>
-            <div style="font-size:10px;color:var(--t2);" id="pi-co"></div>
+            <div style="font-size:12px;color:var(--t2);" id="pi-co"></div>
           </div>
           <button onclick="logoutPersonalInline()" style="padding:5px 10px;border:1px solid var(--br);border-radius:7px;background:#fff;font-size:11px;cursor:pointer;font-family:inherit;">ログアウト</button>
         </div>
@@ -1666,7 +1670,7 @@ console.log('Firebase initialized (compat)');
       <div class="frw"><label class="fl">パスワード（初期: 0000）</label>
         <input class="fi" id="personal-pw" type="password" maxlength="8" placeholder="パスワード" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
       </div>
-      <div id="personal-err" style="color:var(--rd);font-size:11px;height:16px;margin-bottom:7px;"></div>
+      <div id="personal-err" style="color:var(--rd);font-size:12px;height:16px;margin-bottom:7px;"></div>
       <div class="btr">
         <button class="fc" onclick="closePersonalModal()">閉じる</button>
         <button class="fb" onclick="loginPersonal()">ログイン</button>
@@ -1676,7 +1680,7 @@ console.log('Firebase initialized (compat)');
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">
         <div>
           <div class="mt" id="personal-name" style="margin-bottom:0;"></div>
-          <div style="font-size:10px;color:var(--t2);" id="personal-co"></div>
+          <div style="font-size:12px;color:var(--t2);" id="personal-co"></div>
         </div>
         <button onclick="logoutPersonal()" style="padding:5px 10px;border:1px solid var(--br);border-radius:7px;background:#fff;font-size:11px;cursor:pointer;font-family:inherit;">ログアウト</button>
       </div>
@@ -3134,8 +3138,8 @@ function renderPunchGrid(){
     return `<button onclick="punchStaff(${s.id})" style="padding:10px 6px;border:1.5px solid var(--br);border-radius:10px;background:${stateBg};color:${stateColor};cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:75px;">
       <div style="font-size:13px;font-weight:700;opacity:0.9;line-height:1;">${s.id}</div>
       <div style="font-size:18px;font-weight:800;line-height:1.1;">${esc(lastName)}</div>
-      ${initial?`<div style="font-size:10px;opacity:0.7;">${esc(initial)}</div>`:''}
-      ${stateLabel?`<div style="font-size:9px;font-weight:700;margin-top:2px;">${stateLabel}</div>`:''}
+      ${initial?`<div style="font-size:12px;opacity:0.7;">${esc(initial)}</div>`:''}
+      ${stateLabel?`<div style="font-size:12px;font-weight:700;margin-top:2px;">${stateLabel}</div>`:''}
     </button>`;
   }).join('');
   // 表示メンバー未設定（または未選択）の案内
