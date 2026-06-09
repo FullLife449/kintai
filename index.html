@@ -3102,6 +3102,12 @@ function autoStart(){
 }
 
 // ═══ 名前タップ式打刻 ═══
+// 打刻画面に表示する番号。香庸会は社員番号(=id)。フルラフは10000台の社員番号：
+// employeeIdが10000台（手入力の社員番号）ならそれを、未設定/小さい値なら内部id(=10000台)を表示。
+function punchNo(s){
+  if(s.company==='fulllife'){const e=Number(s.employeeId);return (e>=10000)?e:s.id;}
+  return s.employeeId||s.id;
+}
 function renderPunchGrid(){
   const grid=document.getElementById('punch-grid');
   if(!grid)return;
@@ -3130,7 +3136,7 @@ function renderPunchGrid(){
     displayStaff=[];
   }
   // 社員番号順
-  displayStaff.sort((a,b)=>a.id-b.id);
+  displayStaff.sort((a,b)=>punchNo(a)-punchNo(b));
   // 本日のラベル
   const dw=new Date();const days=['日','月','火','水','木','金','土'];
   const lbl=document.getElementById('punch-today-label');
@@ -3149,7 +3155,7 @@ function renderPunchGrid(){
     if(last&&last.type==='in'){stateBg='#E8F5E9';stateColor='#2E7D32';stateLabel='勤務中';}
     else if(last&&last.type==='out'){stateBg='#FFEBEE';stateColor='#C62828';stateLabel='退勤済';}
     return `<button onclick="punchStaff(${s.id})" style="padding:10px 6px;border:1.5px solid var(--br);border-radius:10px;background:${stateBg};color:${stateColor};cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:75px;">
-      <div style="font-size:13px;font-weight:700;opacity:0.9;line-height:1;">${s.id}</div>
+      <div style="font-size:13px;font-weight:700;opacity:0.9;line-height:1;">${punchNo(s)}</div>
       <div style="font-size:18px;font-weight:800;line-height:1.1;">${lastName}</div>
       ${initial?`<div style="font-size:10px;opacity:0.7;">${initial}</div>`:''}
       ${stateLabel?`<div style="font-size:9px;font-weight:700;margin-top:2px;">${stateLabel}</div>`:''}
@@ -3191,7 +3197,7 @@ function showPunchFlash(s,action){
   actEl.textContent=actL[action]||action;
   actEl.style.color=actColor[action]||'#fff';
   nameEl.textContent=s.name+' さん';
-  idEl.textContent='社員番号 '+s.id;
+  idEl.textContent='社員番号 '+punchNo(s);
   flash.style.display='flex';
   setTimeout(()=>{flash.style.display='none';},2000);
 }
