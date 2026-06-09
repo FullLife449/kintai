@@ -171,6 +171,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 <!-- Firebase SDK (compat版 - グローバルスコープ対応) -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" integrity="sha384-yuGdyIzzYtOBlBG6JOWn+Ey9kpq7HocusNuxEGyyohr1eEyXpeEyehIIXC/hznw4" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js" integrity="sha384-M6AmjBRXEjkdGzRN1Y94xtkmblFbYBSLkqzyZ8rPvpRM2c48nhjIRFXVvUM/VATL" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js" integrity="sha384-lI+CxEx/bCvWP1b0OK13j5HTrTZP7yf1xle8TVOFq2smz6KC1RChTarRV/RHP5PP" crossorigin="anonymous"></script>
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyDiI2ihk_P2-n4-I7ZL09phNJFvxI2-7Ug",
@@ -190,9 +191,30 @@ window.fbGet = function(ref){ return ref.get(); };
 window.fbOnValue = function(ref, cb){ ref.on('value', cb); };
 window.fbOff = function(ref){ try{ ref.off('value'); }catch(e){} };
 window.fbUpdate = function(ref, data){ return ref.update(data); };
-window.firebaseReady = true;
 // [SECURITY] 旧GitHub同期で端末に残った個人アクセストークンを起動時に削除（Firebaseに一本化）
 try{ localStorage.removeItem('kintai_gh_token'); }catch(e){}
+// [SECURITY] 匿名認証でサインインしてからDBアクセスを許可する。
+//  ・DBルールを auth!=null に閉じても稼働を継続できるようにするのが目的。
+//  ・認証完了までは firebaseReady=false（既存の fbLoadAndSync / fbSave* が自然に認証待ちになる）。
+//  ・移行中（ルール開放のまま）は認証が遅延/失敗してもローカルで稼働。最終的に ready 化して同期を継続。
+(function(){
+  function ready(reason){
+    if(window.firebaseReady) return;
+    window.firebaseReady = true;
+    console.log('Firebase ready:', reason);
+    try{ if(typeof fbLoadAndSync==='function' && typeof currentCompany!=='undefined' && currentCompany){ fbLoadAndSync(currentCompany); } }catch(e){}
+  }
+  if(!firebase.auth){ ready('auth-sdk-missing(fallback)'); return; }
+  firebase.auth().onAuthStateChanged(function(user){ if(user) ready('anonymous'); });
+  var tries=0;
+  (function signIn(){
+    firebase.auth().signInAnonymously().catch(function(e){
+      console.warn('anonymous sign-in failed:', e && e.code);
+      if(tries++ < 5){ setTimeout(signIn, Math.min(1000*Math.pow(2,tries), 15000)); }
+      else { ready('auth-failed(fallback)'); }
+    });
+  })();
+})();
 console.log('Firebase initialized (compat)');
 </script>
 </head>
