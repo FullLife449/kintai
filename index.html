@@ -2556,7 +2556,7 @@ function renderSubGrants(){
     const subs=(DB.substitute||[]).filter(x=>x.staffId===s.id).reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
     const offs=(DB.subOff||[]).filter(x=>x.staffId===s.id).reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
     const remain=grants+subs-offs;
-    return `<tr><td>${s.id}</td><td>${s.name}</td><td>${grants.toFixed(1)}</td><td>${subs.toFixed(1)}</td><td>${offs.toFixed(1)}</td><td style="font-weight:700;color:${remain<0?'#C62828':'#2E7D32'};">${remain.toFixed(1)}</td><td><button class="bg" onclick="editSubGrant(${s.id})">付与</button></td></tr>`;
+    return `<tr><td>${s.id}</td><td>${esc(s.name)}</td><td>${grants.toFixed(1)}</td><td>${subs.toFixed(1)}</td><td>${offs.toFixed(1)}</td><td style="font-weight:700;color:${remain<0?'#C62828':'#2E7D32'};">${remain.toFixed(1)}</td><td><button class="bg" onclick="editSubGrant(${s.id})">付与</button></td></tr>`;
   }).join('');
 }
 
@@ -2602,7 +2602,7 @@ function renderSH(){
     const kindLbl=x.kind==='substitute'?'<span style="color:#558B2F;">代理出勤</span>':'<span style="color:#C62828;">代休</span>';
     const unit=x.unit==='half'?'半日':'全日';
     const replacer=x.replacer||'-';
-    return `<tr><td>${x.date}</td><td>${s?s.name:'?'}</td><td>${kindLbl}</td><td>${unit}</td><td>${replacer}</td><td style="white-space:nowrap;"><button class="fd" onclick="openEditSubModal('${x.kind}',${x.staffId},'${x.date}')" style="background:#1565C0;color:#fff;border-color:#1565C0;margin-right:4px;">編集</button><button class="fd" onclick="delSubEntry('${x.kind}',${x.staffId},'${x.date}')">削除</button></td></tr>`;
+    return `<tr><td>${x.date}</td><td>${esc(s?s.name:'?')}</td><td>${kindLbl}</td><td>${unit}</td><td>${esc(replacer)}</td><td style="white-space:nowrap;"><button class="fd" onclick="openEditSubModal('${x.kind}',${x.staffId},'${x.date}')" style="background:#1565C0;color:#fff;border-color:#1565C0;margin-right:4px;">編集</button><button class="fd" onclick="delSubEntry('${x.kind}',${x.staffId},'${x.date}')">削除</button></td></tr>`;
   }).join('');
   const subCount=all.filter(x=>x.kind==='substitute').reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
   const offCount=all.filter(x=>x.kind==='suboff').reduce((a,b)=>a+(b.unit==='half'?0.5:1),0);
@@ -2639,7 +2639,7 @@ function renderPaidGrants(){
     const modeColor={manual:'#757575',auto_full:'#2E7D32',auto_part:'#1565C0'}[s.paidMode||'manual'];
     return`<tr>
       <td style="font-size:9px;color:var(--t2);">${s.employeeId||s.id}</td>
-      <td>${s.name}</td>
+      <td>${esc(s.name)}</td>
       <td style="font-size:10px;color:${modeColor};">${modeLbl}</td>
       <td style="text-align:center;color:#757575;">${bal.prevRemain.toFixed(1)}/${bal.prevGrant}日</td>
       <td style="text-align:center;font-weight:600;">${bal.currentGrant}日</td>
@@ -3132,8 +3132,8 @@ function renderPunchGrid(){
     else if(last&&last.type==='out'){stateBg='#FFEBEE';stateColor='#C62828';stateLabel='退勤済';}
     return `<button onclick="punchStaff(${s.id})" style="padding:10px 6px;border:1.5px solid var(--br);border-radius:10px;background:${stateBg};color:${stateColor};cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:75px;">
       <div style="font-size:13px;font-weight:700;opacity:0.9;line-height:1;">${s.id}</div>
-      <div style="font-size:18px;font-weight:800;line-height:1.1;">${lastName}</div>
-      ${initial?`<div style="font-size:10px;opacity:0.7;">${initial}</div>`:''}
+      <div style="font-size:18px;font-weight:800;line-height:1.1;">${esc(lastName)}</div>
+      ${initial?`<div style="font-size:10px;opacity:0.7;">${esc(initial)}</div>`:''}
       ${stateLabel?`<div style="font-size:9px;font-weight:700;margin-top:2px;">${stateLabel}</div>`:''}
     </button>`;
   }).join('');
@@ -3314,7 +3314,7 @@ function renderDevsetStaffList(selectedIds){
     return `<label style="display:flex;align-items:center;gap:9px;padding:6px 4px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:11px;">
       <input type="checkbox" class="devset-cb" data-sid="${s.id}" ${checked} style="width:18px;height:18px;">
       <span style="min-width:38px;color:var(--t2);">${s.id}</span>
-      <span style="font-weight:600;">${s.name}</span>
+      <span style="font-weight:600;">${esc(s.name)}</span>
       <span style="margin-left:auto;font-size:9px;color:var(--t2);">${coTag}</span>
     </label>`;
   }).join('');
@@ -4152,7 +4152,7 @@ function renderMeJobs(){
   const el=document.getElementById('me-jobs-list');
   if(!el)return;
   if(!DB.jobs||!DB.jobs.length){el.innerHTML='<div style="color:var(--t2);text-align:center;padding:14px;font-size:11px;">職種未登録</div>';return;}
-  el.innerHTML=DB.jobs.map((j,i)=>`<div style="display:flex;align-items:center;gap:6px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${j.name}</span>${moveBtns('jobs',j.id,i,DB.jobs.length)}<button class="fd" onclick="delJob(${j.id})">削除</button></div>`).join('');
+  el.innerHTML=DB.jobs.map((j,i)=>`<div style="display:flex;align-items:center;gap:6px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${esc(j.name)}</span>${moveBtns('jobs',j.id,i,DB.jobs.length)}<button class="fd" onclick="delJob(${j.id})">削除</button></div>`).join('');
 }
 
 function addLicense(){
@@ -4191,7 +4191,7 @@ function renderMeWorkplaces(){
   const el=document.getElementById('me-wp-list');
   if(!el)return;
   if(!DB.workplaces||!DB.workplaces.length){el.innerHTML='<div style="color:var(--t2);text-align:center;padding:14px;font-size:11px;">就業場所未登録</div>';return;}
-  el.innerHTML=DB.workplaces.map((w,i)=>`<div style="display:flex;align-items:center;gap:6px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${w.name}</span>${moveBtns('workplaces',w.id,i,DB.workplaces.length)}<button class="fd" onclick="delWorkplace(${w.id})">削除</button></div>`).join('');
+  el.innerHTML=DB.workplaces.map((w,i)=>`<div style="display:flex;align-items:center;gap:6px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${esc(w.name)}</span>${moveBtns('workplaces',w.id,i,DB.workplaces.length)}<button class="fd" onclick="delWorkplace(${w.id})">削除</button></div>`).join('');
 }
 
 function addDuty(){
@@ -4217,7 +4217,7 @@ function renderMeDuties(){
   const el=document.getElementById('me-duty-list');
   if(!el)return;
   if(!DB.duties||!DB.duties.length){el.innerHTML='<div style="color:var(--t2);text-align:center;padding:14px;font-size:11px;">業務内容未登録</div>';return;}
-  el.innerHTML=DB.duties.map((d,i)=>`<div style="display:flex;align-items:center;gap:6px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${d.name}</span>${moveBtns('duties',d.id,i,DB.duties.length)}<button class="fd" onclick="delDuty(${d.id})">削除</button></div>`).join('');
+  el.innerHTML=DB.duties.map((d,i)=>`<div style="display:flex;align-items:center;gap:6px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${esc(d.name)}</span>${moveBtns('duties',d.id,i,DB.duties.length)}<button class="fd" onclick="delDuty(${d.id})">削除</button></div>`).join('');
 }
 
 // プルダウンに反映
@@ -4250,7 +4250,7 @@ function renderMeLics(){
   const el=document.getElementById('me-lics-list');
   if(!el)return;
   if(!DB.licenses||!DB.licenses.length){el.innerHTML='<div style="color:var(--t2);text-align:center;padding:14px;font-size:11px;">資格未登録</div>';return;}
-  el.innerHTML=DB.licenses.map((l,i)=>`<div style="display:flex;align-items:center;gap:6px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${l.name}</span>${moveBtns('licenses',l.id,i,DB.licenses.length)}<button class="fd" onclick="delLicense(${l.id})">削除</button></div>`).join('');
+  el.innerHTML=DB.licenses.map((l,i)=>`<div style="display:flex;align-items:center;gap:6px;padding:6px;border-bottom:1px solid #f0f0f0;font-size:11px;"><span style="flex:1;">${esc(l.name)}</span>${moveBtns('licenses',l.id,i,DB.licenses.length)}<button class="fd" onclick="delLicense(${l.id})">削除</button></div>`).join('');
 }
 
 // 編集中スタッフのチップ描画
@@ -4279,7 +4279,7 @@ function openJobsPicker(){
   }else{
     el.innerHTML=DB.jobs.map(j=>{
       const checked=(pickerStaffJobs||[]).includes(j.id)?'checked':'';
-      return `<label style="display:flex;align-items:center;gap:9px;padding:7px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:11px;"><input type="checkbox" class="job-cb" data-id="${j.id}" ${checked} style="width:18px;height:18px;"><span>${j.name}</span></label>`;
+      return `<label style="display:flex;align-items:center;gap:9px;padding:7px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:11px;"><input type="checkbox" class="job-cb" data-id="${j.id}" ${checked} style="width:18px;height:18px;"><span>${esc(j.name)}</span></label>`;
     }).join('');
   }
   document.getElementById('jobs-picker-modal').style.display='flex';
@@ -4696,7 +4696,7 @@ function renderPiBizTripList(){
           ${canDel?`<button class="fd" onclick="delPiBizTrip('${t.id}')" style="font-size:10px;padding:3px 8px;">削除</button>`:''}
         </span>
       </div>
-      <div style="color:var(--t2);margin-top:3px;">${t.purpose||''}${t.place?'／'+t.place:''}</div>
+      <div style="color:var(--t2);margin-top:3px;">${esc(t.purpose||'')}${esc(t.place?'／'+t.place:'')}</div>
       <div style="color:var(--t2);margin-top:2px;">学会${(t.feeConf||0).toLocaleString()} / 交通${(t.feeTransport||0).toLocaleString()} / 宿泊${(t.feeLodging||0).toLocaleString()} / 日当${(t.feePerDiem||0).toLocaleString()} / その他${(t.feeOther||0).toLocaleString()}${t.otherNote?'（'+t.otherNote+'）':''}</div>
     </div>`;
   }).join('');
@@ -4820,14 +4820,14 @@ function renderRehabSlotAdmin(){
   });
   const sumEl=document.getElementById('rsl-summary');
   if(sumEl){
-    const arr=Object.values(summary).map(s=>`${s.name}: ${s.total}枠 (${s.days}日)`);
+    const arr=Object.values(summary).map(s=>`${esc(s.name)}: ${s.total}枠 (${s.days}日)`);
     sumEl.innerHTML=arr.length?'<b>スタッフ別合計：</b> '+arr.join(' / '):'<span style="color:var(--t2);">該当なし</span>';
   }
   const el=document.getElementById('rsl-list');
   if(!el)return;
   el.innerHTML=list.length?list.map(r=>{
     const st=DB.staff.find(x=>x.id===r.staffId);
-    return `<div class="spit"><div class="sii"><b>${st?st.name:(r.staffName||'?')}</b> ${r.date} — <span style="color:#1B5E20;font-weight:700;">${r.slots}枠</span></div><div style="display:flex;gap:5px;"><button class="bg" style="font-size:10px;padding:3px 8px;" onclick="editRehabSlot('${r.id}')">編集</button><button class="fd" onclick="delRehabSlotAdmin('${r.id}')">削除</button></div></div>`;
+    return `<div class="spit"><div class="sii"><b>${esc(st?st.name:(r.staffName||'?'))}</b> ${r.date} — <span style="color:#1B5E20;font-weight:700;">${r.slots}枠</span></div><div style="display:flex;gap:5px;"><button class="bg" style="font-size:10px;padding:3px 8px;" onclick="editRehabSlot('${r.id}')">編集</button><button class="fd" onclick="delRehabSlotAdmin('${r.id}')">削除</button></div></div>`;
   }).join(''):'<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div>';
 }
 
@@ -4883,7 +4883,7 @@ function renderRehabAdmin(){
   });
   const sumEl=document.getElementById('rha-summary');
   if(sumEl){
-    const sumArr=Object.entries(summary).map(([sid,s])=>`${s.name}: ${s.total}人 (${s.count}日)`);
+    const sumArr=Object.entries(summary).map(([sid,s])=>`${esc(s.name)}: ${s.total}人 (${s.count}日)`);
     sumEl.innerHTML=sumArr.length?'<b>スタッフ別合計：</b> '+sumArr.join(' / '):'<span style="color:var(--t2);">該当なし</span>';
   }
   
@@ -4892,7 +4892,7 @@ function renderRehabAdmin(){
     return;
   }
   tb.innerHTML=list.map(r=>{
-    return `<tr><td>${r.date}</td><td>${r.staffName||'?'}</td><td style="text-align:center;font-weight:700;color:#1B5E20;">${r.count}人</td><td style="font-size:10px;color:var(--t2);">${(r.createdAt||'').substring(0,10)}</td><td><button class="fd" onclick="delRehab('${r.id}')">削除</button></td></tr>`;
+    return `<tr><td>${r.date}</td><td>${esc(r.staffName||'?')}</td><td style="text-align:center;font-weight:700;color:#1B5E20;">${r.count}人</td><td style="font-size:10px;color:var(--t2);">${(r.createdAt||'').substring(0,10)}</td><td><button class="fd" onclick="delRehab('${r.id}')">削除</button></td></tr>`;
   }).join('');
 }
 
@@ -4947,7 +4947,7 @@ function openLicsPicker(){
   }else{
     el.innerHTML=DB.licenses.map(j=>{
       const checked=(pickerStaffLics||[]).includes(j.id)?'checked':'';
-      return `<label style="display:flex;align-items:center;gap:9px;padding:7px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:11px;"><input type="checkbox" class="lic-cb" data-id="${j.id}" ${checked} style="width:18px;height:18px;"><span>${j.name}</span></label>`;
+      return `<label style="display:flex;align-items:center;gap:9px;padding:7px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:11px;"><input type="checkbox" class="lic-cb" data-id="${j.id}" ${checked} style="width:18px;height:18px;"><span>${esc(j.name)}</span></label>`;
     }).join('');
   }
   document.getElementById('lics-picker-modal').style.display='flex';
@@ -5400,7 +5400,7 @@ function renderGRList(){
   el.innerHTML=list.map(g=>{
     const memberCount=(DB.staffGroup||[]).filter(sg=>sg.groupId===g.id).length;
     return `<div style="display:flex;align-items:center;gap:9px;padding:7px 9px;border-bottom:1px solid #f0f0f0;font-size:11px;">
-      <div style="flex:1;"><b>${g.name}</b> <span style="color:var(--t2);font-size:10px;">（${memberCount}名）</span></div>
+      <div style="flex:1;"><b>${esc(g.name)}</b> <span style="color:var(--t2);font-size:10px;">（${memberCount}名）</span></div>
       <button class="fd" onclick="delGroup(${g.id})">削除</button>
     </div>`;
   }).join('');
@@ -5420,10 +5420,10 @@ function renderGRStaffList(){
     const currentGId=sg?sg.groupId:'';
     return `<div style="display:flex;align-items:center;gap:9px;padding:6px 4px;border-bottom:1px solid #f0f0f0;font-size:11px;">
       <span style="min-width:50px;color:var(--t2);">${s.id}</span>
-      <span style="flex:1;font-weight:600;">${s.name}</span>
+      <span style="flex:1;font-weight:600;">${esc(s.name)}</span>
       <select onchange="updateStaffGroup(${s.id},this.value)" style="padding:4px 7px;border:1px solid var(--br);border-radius:6px;font-size:11px;font-family:inherit;">
         <option value="">未割当</option>
-        ${groups.map(g=>`<option value="${g.id}"${currentGId==g.id?' selected':''}>${g.name}</option>`).join('')}
+        ${groups.map(g=>`<option value="${g.id}"${currentGId==g.id?' selected':''}>${esc(g.name)}</option>`).join('')}
       </select>
     </div>`;
   }).join('');
@@ -5497,7 +5497,7 @@ function renderAllShiftGroupTabs(){
   let html=`<button onclick="filterAllShift(null)" style="padding:5px 11px;border:1px solid ${asState.groupId===null?'#E65100':'var(--br)'};border-radius:6px;background:${asState.groupId===null?'#FFF3E0':'#fff'};color:${asState.groupId===null?'#E65100':'var(--t2)'};font-size:11px;font-weight:${asState.groupId===null?700:400};cursor:pointer;font-family:inherit;">全員</button>`;
   groups.forEach(g=>{
     const sel=asState.groupId===g.id;
-    html+=`<button onclick="filterAllShift(${g.id})" style="padding:5px 11px;border:1px solid ${sel?'#E65100':'var(--br)'};border-radius:6px;background:${sel?'#FFF3E0':'#fff'};color:${sel?'#E65100':'var(--t2)'};font-size:11px;font-weight:${sel?700:400};cursor:pointer;font-family:inherit;">${g.name}</button>`;
+    html+=`<button onclick="filterAllShift(${g.id})" style="padding:5px 11px;border:1px solid ${sel?'#E65100':'var(--br)'};border-radius:6px;background:${sel?'#FFF3E0':'#fff'};color:${sel?'#E65100':'var(--t2)'};font-size:11px;font-weight:${sel?700:400};cursor:pointer;font-family:inherit;">${esc(g.name)}</button>`;
   });
   // 未割当タブ
   const unassignedCount=DB.staff.filter(s=>s.company===CO&&!(DB.staffGroup||[]).find(sg=>sg.staffId===s.id)).length;
@@ -5564,7 +5564,7 @@ function renderAllShift(){
   
   // 各スタッフ行
   staff.forEach(s=>{
-    html+=`<tr><td draggable="true" ondragstart="asDragStart(event,${s.id})" ondragover="asDragOver(event)" ondrop="asDrop(event,${s.id})" style="border:1px solid #ddd;padding:6px;min-width:110px;position:sticky;left:0;background:#fff;z-index:1;cursor:move;font-size:11px;">${s.id} ${s.name}</td>`;
+    html+=`<tr><td draggable="true" ondragstart="asDragStart(event,${s.id})" ondragover="asDragOver(event)" ondrop="asDrop(event,${s.id})" style="border:1px solid #ddd;padding:6px;min-width:110px;position:sticky;left:0;background:#fff;z-index:1;cursor:move;font-size:11px;">${s.id} ${esc(s.name)}</td>`;
     for(let d=1;d<=lastDay;d++){
       const dateStr=ym+'-'+pad(d);
       const dt=new Date(y,m-1,d);
@@ -6164,7 +6164,7 @@ function renderPiOTList(){
     else statusLbl='<span style="color:#C62828;font-weight:700;">却下</span>';
     return `<div style="padding:6px 8px;border-bottom:1px solid #f0f0f0;font-size:11px;">
       ${r.date} ${r.startTime}〜${r.endTime} ${statusLbl}<br>
-      <span style="color:var(--t2);font-size:10px;">${r.reason||''}</span>
+      <span style="color:var(--t2);font-size:10px;">${esc(r.reason||'')}</span>
     </div>`;
   }).join('');
 }
@@ -6249,7 +6249,7 @@ function renderOTReqs(){
       statusLbl='<span style="color:#C62828;font-weight:700;">却下</span>';
       ops=`<button class="bn" onclick="revertOT('${r.id}')">取消</button>`;
     }
-    return `<tr><td>${r.date}</td><td>${s?s.name:'?'}</td><td>${r.startTime}〜${r.endTime}</td><td style="font-size:10px;">${r.reason||''}</td><td>${statusLbl}</td><td>${ops}</td></tr>`;
+    return `<tr><td>${r.date}</td><td>${esc(s?s.name:'?')}</td><td>${r.startTime}〜${r.endTime}</td><td style="font-size:10px;">${esc(r.reason||'')}</td><td>${statusLbl}</td><td>${ops}</td></tr>`;
   }).join('');
 }
 
@@ -6321,7 +6321,7 @@ function renderEarlyReqs(){
       statusLbl='<span style="color:#C62828;font-weight:700;">却下</span>';
       ops=`<button class="bn" onclick="revertEarly('${r.id}')">取消</button>`;
     }
-    return `<tr><td>${r.date}</td><td>${s?s.name:'?'}</td><td style="font-size:10px;">${esc(r.reason||'')}</td><td>${statusLbl}</td><td>${ops}</td></tr>`;
+    return `<tr><td>${r.date}</td><td>${esc(s?s.name:'?')}</td><td style="font-size:10px;">${esc(r.reason||'')}</td><td>${statusLbl}</td><td>${ops}</td></tr>`;
   }).join('');
 }
 function approveEarly(id){
@@ -6404,7 +6404,7 @@ function renderBizTripReqs(){
     }else{
       ops=`<button class="bn" onclick="revertBizTrip('${t.id}')">取消</button> <button class="bg" onclick="printBizTrip('${t.id}')">🖨</button>`;
     }
-    return `<tr><td>${period}</td><td>${s?s.name:(t.staffName||'?')}</td><td style="font-size:10px;">${t.purpose||''}${t.place?'<br>'+t.place:''}</td><td style="text-align:right;font-weight:700;">${(t.total||0).toLocaleString()}円</td><td>${btStatusBadge(t.status||'pending')}</td><td style="white-space:nowrap;">${ops}</td></tr>`;
+    return `<tr><td>${period}</td><td>${esc(s?s.name:(t.staffName||'?'))}</td><td style="font-size:10px;">${esc(t.purpose||'')}${t.place?'<br>'+esc(t.place):''}</td><td style="text-align:right;font-weight:700;">${(t.total||0).toLocaleString()}円</td><td>${btStatusBadge(t.status||'pending')}</td><td style="white-space:nowrap;">${ops}</td></tr>`;
   }).join('');
 }
 function approveBizTrip(id){
@@ -6810,7 +6810,7 @@ function renderSG(){
     // ランチデリチェック済みタグ
     if(isLunchEnabled(t)&&hasLunchCheck(s.id,t))tags+='<span class="tag" style="background:#FFF8E1;color:#F57F17;">🍱✓</span>';
     if(lateMin>0)tags+='<span class="tag tlate">遅刻'+lateMin+'分</span>';
-    return`<button class="sb ${stc}" onclick="tapS(${s.id})"><div class="av">${ini(s.name)}</div><div class="sn">${s.name}${tags}</div><div class="ss">${stLbl(st)}${wStr?' '+wStr:''}</div></button>`;
+    return`<button class="sb ${stc}" onclick="tapS(${s.id})"><div class="av">${esc(ini(s.name))}</div><div class="sn">${esc(s.name)}${tags}</div><div class="ss">${stLbl(st)}${wStr?' '+wStr:''}</div></button>`;
   }).join('');
 }
 
@@ -6913,7 +6913,7 @@ function renderPunchWarnings(){
   card.style.display='block';
   const items=warnings.map(w=>{
     const coTag=w.company==='koyokai'?'香':'フ';
-    return `<div style="padding:6px 9px;border-bottom:1px solid #FFE0B2;font-size:11px;display:flex;justify-content:space-between;align-items:center;gap:8px;"><span style="flex:1;"><b>${w.sid}</b> ${w.name}（${coTag}） ${w.date}</span><span style="color:#C62828;font-weight:600;">${w.msg}</span><button onclick="gotoRecFix(${w.sid},'${w.date}')" style="padding:4px 11px;border:1px solid #E65100;border-radius:6px;background:#fff;color:#E65100;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">修正</button></div>`;
+    return `<div style="padding:6px 9px;border-bottom:1px solid #FFE0B2;font-size:11px;display:flex;justify-content:space-between;align-items:center;gap:8px;"><span style="flex:1;"><b>${w.sid}</b> ${esc(w.name)}（${coTag}） ${w.date}</span><span style="color:#C62828;font-weight:600;">${w.msg}</span><button onclick="gotoRecFix(${w.sid},'${w.date}')" style="padding:4px 11px;border:1px solid #E65100;border-radius:6px;background:#fff;color:#E65100;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">修正</button></div>`;
   }).join('');
   card.innerHTML=`<div style="background:#FFF3E0;border:2px solid #FFB74D;border-radius:9px;padding:11px;"><div style="color:#E65100;font-weight:700;font-size:12px;margin-bottom:8px;">⚠️ 打刻不完全（要確認）<span style="font-size:10px;font-weight:normal;color:#5D4037;margin-left:6px;">${warnings.length}件</span></div>${items}</div>`;
 }
@@ -6987,7 +6987,7 @@ function renderLog(){
   const el=document.getElementById('ll');const t=todayStr();
   const all=[...DB.records.filter(r=>r.date===t&&r.company===CO),...DB.fare.filter(f=>f.date===t&&f.company===CO).map(f=>({...f,type:'fare',ts:'--:--:--'})),...DB.paid.filter(p=>p.date===t&&p.company===CO).map(p=>({...p,type:'paid',ts:'--:--:--'}))].sort((a,b)=>a.ts<b.ts?1:-1);
   const cls={in:'b-in',out:'b-out',break:'b-break',resume:'b-resume',early:'b-early',fare:'b-fare',paid:'b-paid'};
-  el.innerHTML=all.length?all.map(r=>`<div class="lr"><span class="badge ${cls[r.type]||'b-in'}">${TL[r.type]||r.type}</span><span class="lw">${r.staffName}</span><span class="lt">${r.ts}</span></div>`).join(''):'<div style="color:var(--t2);font-size:12px;padding:14px;text-align:center;">本日の打刻がありません</div>';
+  el.innerHTML=all.length?all.map(r=>`<div class="lr"><span class="badge ${cls[r.type]||'b-in'}">${TL[r.type]||r.type}</span><span class="lw">${esc(r.staffName)}</span><span class="lt">${r.ts}</span></div>`).join(''):'<div style="color:var(--t2);font-size:12px;padding:14px;text-align:center;">本日の打刻がありません</div>';
 }
 
 // ═══ レポート ═══
@@ -7048,7 +7048,7 @@ function renderRep(){
     };
     html+=`<tr>
       <td style="font-size:9px;color:var(--t2);">${s.employeeId||s.id}</td>
-      <td>${s.name}</td>
+      <td>${esc(s.name)}</td>
       ${labels.map(l=>`<td>${fmtVal(row[l.k],l.fmt)}</td>`).join('')}
       <td>${m.weekdays+m.holdays}</td>
     </tr>`;
@@ -7068,7 +7068,7 @@ function updIS(){
   const repCo=CO;
   const list=repCo==='all'?DB.staff:DB.staff.filter(s=>s.company===repCo);
   let html='<option value="">スタッフを選択</option>';
-  list.forEach(s=>html+=`<option value="${s.id}">${s.name}（${s.company==='koyokai'?'香':'フ'}）</option>`);
+  list.forEach(s=>html+=`<option value="${s.id}">${esc(s.name)}（${s.company==='koyokai'?'香':'フ'}）</option>`);
   const els=document.querySelectorAll('[id="isel"]');
   if(!els.length)return;
   els.forEach(sel=>{sel.innerHTML=html;});
@@ -7338,7 +7338,7 @@ function renderAL(){
   if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:12px;padding:14px;text-align:center;">スタッフが登録されていません</div>';return;}
   el.innerHTML=list.map(s=>{
     let ss='';if(s.type==='contract'&&s.dowShifts){const wds=['mon','tue','wed','thu','fri'];const wdA=wds.map(d=>(s.dowShifts[d]||[]).map(sh=>sh.s+'〜'+sh.e).join(',')).filter(Boolean);const uniq=[...new Set(wdA)];if(uniq.length===1)ss='<br><b>平日:</b> '+uniq[0];else if(uniq.length>1)ss='<br><b>平日:</b> 曜日別設定あり';if(s.dowShifts.sat){const sa=Object.entries(s.dowShifts.sat).filter(([_,v])=>v&&v.length>0);if(sa.length)ss+='<br><b>土曜:</b> 第'+sa.map(([k,v])=>k+'('+v.map(x=>x.s+'〜'+x.e).join(')')).join(' 第');}}
-    return`<div class="si"><div class="sh"><div class="sav">${ini(s.name)}</div><div><div class="sni">${s.name}</div><div class="sdp">${tl[s.type]||''} / 社員番号:${s.employeeId||'-'} / 所定${Math.floor((s.stdMin||480)/60)}h${(s.stdMin||480)%60?(s.stdMin||480)%60+'m':''}</div></div><button class="fe" onclick="openEdit(${s.id})">編集</button><button class="fd" onclick="delSt(${s.id})">削除</button></div><div class="sde"><b>タイプ:</b> ${tl[s.type]||''}${s.freeEnd?'<span style="color:var(--bl);font-size:9px;font-weight:600;margin-left:4px;">終了フリー</span>':''}${s.type==='contract'?'<br><b>休憩:</b> '+s.breakMin+'分':''}${ss}</div></div>`;
+    return`<div class="si"><div class="sh"><div class="sav">${esc(ini(s.name))}</div><div><div class="sni">${esc(s.name)}</div><div class="sdp">${tl[s.type]||''} / 社員番号:${s.employeeId||'-'} / 所定${Math.floor((s.stdMin||480)/60)}h${(s.stdMin||480)%60?(s.stdMin||480)%60+'m':''}</div></div><button class="fe" onclick="openEdit(${s.id})">編集</button><button class="fd" onclick="delSt(${s.id})">削除</button></div><div class="sde"><b>タイプ:</b> ${tl[s.type]||''}${s.freeEnd?'<span style="color:var(--bl);font-size:9px;font-weight:600;margin-left:4px;">終了フリー</span>':''}${s.type==='contract'?'<br><b>休憩:</b> '+s.breakMin+'分':''}${ss}</div></div>`;
   }).join('');
 }
 function selDow(dow,btn){document.querySelectorAll('.dow-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.dow-panel').forEach(p=>p.classList.remove('active'));document.getElementById('dp-'+dow).classList.add('active');}
@@ -7640,11 +7640,11 @@ const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)
 function delSt(id){const s=DB.staff.find(x=>x.id===id);if(!s||!confirm(s.name+'を削除しますか？'))return;DB.staff=DB.staff.filter(x=>x.id!==id);sDB();showToast(s.name+'を削除しました');renderAL();renderSG();}
 
 // ═══ 日次シフト ═══
-function loadAS(){const list=DB.staff.filter(s=>s.company===CO);['ds-s','rsl-s','rs-s'].forEach(id=>{const sel=document.getElementById(id);if(!sel)return;sel.innerHTML='<option value="">スタッフを選択</option>';list.forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}</option>`);});const dd=document.getElementById('ds-d');if(dd)dd.value=todayStr();const rsld=document.getElementById('rsl-d');if(rsld)rsld.value=todayStr();const rsd=document.getElementById('rs-d');if(rsd)rsd.value=todayStr();}
+function loadAS(){const list=DB.staff.filter(s=>s.company===CO);['ds-s','rsl-s','rs-s'].forEach(id=>{const sel=document.getElementById(id);if(!sel)return;sel.innerHTML='<option value="">スタッフを選択</option>';list.forEach(s=>sel.innerHTML+=`<option value="${s.id}">${esc(s.name)}</option>`);});const dd=document.getElementById('ds-d');if(dd)dd.value=todayStr();const rsld=document.getElementById('rsl-d');if(rsld)rsld.value=todayStr();const rsd=document.getElementById('rs-d');if(rsd)rsd.value=todayStr();}
 function addDSRow(data){dsCnt++;const id='dsr'+dsCnt;const c=document.getElementById('ds-sh');const row=document.createElement('div');row.className='shift-row';row.id=id;row.innerHTML=`<div><label class="fl">開始</label><select class="tsel">${makeTimeOpts(data?data.s:'')}</select></div><div><label class="fl">終了</label><select class="tsel">${makeTimeOpts(data?data.e:'')}</select></div><button class="del-btn" onclick="document.getElementById('${id}').remove()">削除</button>`;c.appendChild(row);}
 function saveDS(){const sid=parseInt(document.getElementById('ds-s').value);const date=document.getElementById('ds-d').value;if(!sid||!date){showToast('スタッフと日付を選択してください');return;}const shifts=readRows('ds-sh');DB.dayShifts=DB.dayShifts.filter(d=>!(d.staffId===sid&&d.date===date));const dsType=document.getElementById('ds-type').value;
   DB.dayShifts.push({id:Date.now(),staffId:sid,date,shifts,type:dsType||null});sDB();showToast('日次シフトを登録しました');dsCnt=0;document.getElementById('ds-sh').innerHTML='';renderDSL();}
-function renderDSL(){const el=document.getElementById('dsl');const list=DB.dayShifts.filter(d=>{const s=DB.staff.find(x=>x.id===d.staffId);return s&&s.company===CO;}).sort((a,b)=>a.date<b.date?1:-1);el.innerHTML=list.length?list.map(d=>{const s=DB.staff.find(x=>x.id===d.staffId);return`<div class="spit"><div class="sii"><b>${s?s.name:'?'}</b> ${d.date}<br><span style="color:var(--t2);font-size:10px;">${d.shifts.map(sh=>sh.s+'〜'+sh.e).join('、')}</span></div><button class="fd" onclick="delDS(${d.id})">削除</button></div>`;}).join(''):'<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div>';}
+function renderDSL(){const el=document.getElementById('dsl');const list=DB.dayShifts.filter(d=>{const s=DB.staff.find(x=>x.id===d.staffId);return s&&s.company===CO;}).sort((a,b)=>a.date<b.date?1:-1);el.innerHTML=list.length?list.map(d=>{const s=DB.staff.find(x=>x.id===d.staffId);return`<div class="spit"><div class="sii"><b>${esc(s?s.name:'?')}</b> ${d.date}<br><span style="color:var(--t2);font-size:10px;">${d.shifts.map(sh=>sh.s+'〜'+sh.e).join('、')}</span></div><button class="fd" onclick="delDS(${d.id})">削除</button></div>`;}).join(''):'<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div>';}
 function delDS(id){DB.dayShifts=DB.dayShifts.filter(d=>d.id!==id);sDB();renderDSL();showToast('削除しました');}
 
 // ═══ 打刻修正 ═══
@@ -7658,7 +7658,7 @@ function delR(id){if(!confirm('この打刻を削除しますか？'))return;DB.
 // ═══ 有給履歴 ═══
 function initPH(){const sel=document.getElementById('ph-s');sel.innerHTML='<option value="">全スタッフ</option>';let staffList=DB.staff.slice();
   if(currentAdmin&&currentAdmin.role!=='super')staffList=staffList.filter(s=>s.company===currentAdmin.company);
-  staffList.sort((a,b)=>a.id-b.id).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.id} ${s.name}</option>`);const ms=document.getElementById('ph-m');if(ms.options.length>1)return;const n=new Date();for(let i=0;i<6;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);ms.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}renderPH();}
+  staffList.sort((a,b)=>a.id-b.id).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.id} ${esc(s.name)}</option>`);const ms=document.getElementById('ph-m');if(ms.options.length>1)return;const n=new Date();for(let i=0;i<6;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);ms.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}renderPH();}
 
 // ═══ 管理画面：有給/代休 追加モーダル ═══
 let paidEditId=null; // 有給：編集中の申請id（nullなら新規追加）
@@ -7819,7 +7819,7 @@ function renderPH(){const sid=parseInt(document.getElementById('ph-s').value)||n
   // 一般管理者は自社のみ、スーパー管理者は全社
   if(currentAdmin&&currentAdmin.role!=='super'){
     list=list.filter(p=>{const st=DB.staff.find(s=>s.id===p.staffId);return st&&st.company===currentAdmin.company;});
-  }if(sid)list=list.filter(p=>p.staffId===sid);if(ym)list=list.filter(p=>p.date.startsWith(ym));list.sort((a,b)=>a.date<b.date?-1:1);const tb=document.getElementById('ph-tb');if(!list.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">有給申請履歴がありません</td></tr>';document.getElementById('ph-sum').textContent='';return;}tb.innerHTML=list.map(p=>{const dt=new Date(p.date);const d=dw[dt.getDay()];const we=isLegalHoliday(p.date);return`<tr><td style="${we?'color:#E24B4A;font-weight:500;':''}">${p.date}</td><td style="${we?'color:#E24B4A;':''}">${d}</td><td>${p.staffName}</td><td><span class="badge b-paid">${tl[p.type]||p.type}</span></td><td style="color:var(--t2);font-size:10px;">${p.memo||''}</td><td style="white-space:nowrap;"><button class="fd" onclick="openEditPaidModal(${p.id})" style="background:#1565C0;color:#fff;border-color:#1565C0;margin-right:4px;">編集</button><button class="fd" onclick="delPD(${p.id})">削除</button></td></tr>`;}).join('');let f=0,h=0;list.forEach(p=>{if(p.type==='full')f++;else h++;});document.getElementById('ph-sum').innerHTML=`全日: <b>${f}日</b>　半日: <b>${h}回</b>　合計: <b>${f+h*0.5}日</b>`;}
+  }if(sid)list=list.filter(p=>p.staffId===sid);if(ym)list=list.filter(p=>p.date.startsWith(ym));list.sort((a,b)=>a.date<b.date?-1:1);const tb=document.getElementById('ph-tb');if(!list.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">有給申請履歴がありません</td></tr>';document.getElementById('ph-sum').textContent='';return;}tb.innerHTML=list.map(p=>{const dt=new Date(p.date);const d=dw[dt.getDay()];const we=isLegalHoliday(p.date);return`<tr><td style="${we?'color:#E24B4A;font-weight:500;':''}">${p.date}</td><td style="${we?'color:#E24B4A;':''}">${d}</td><td>${esc(p.staffName)}</td><td><span class="badge b-paid">${tl[p.type]||p.type}</span></td><td style="color:var(--t2);font-size:10px;">${esc(p.memo||'')}</td><td style="white-space:nowrap;"><button class="fd" onclick="openEditPaidModal(${p.id})" style="background:#1565C0;color:#fff;border-color:#1565C0;margin-right:4px;">編集</button><button class="fd" onclick="delPD(${p.id})">削除</button></td></tr>`;}).join('');let f=0,h=0;list.forEach(p=>{if(p.type==='full')f++;else h++;});document.getElementById('ph-sum').innerHTML=`全日: <b>${f}日</b>　半日: <b>${h}回</b>　合計: <b>${f+h*0.5}日</b>`;}
 function delPD(id){if(!confirm('この有給申請を削除しますか？'))return;DB.paid=DB.paid.filter(p=>p.id!==id);sDB();renderPH();if(typeof renderPaidGrants==='function')renderPaidGrants();showToast('削除しました');fbSaveSettings();}
 
 // ═══ 管理画面：欠勤（有給と同じ作り） ═══
@@ -7829,7 +7829,7 @@ function initKekkin(){
   sel.innerHTML='<option value="">全スタッフ</option>';
   let staffList=DB.staff.slice();
   if(currentAdmin&&currentAdmin.role!=='super')staffList=staffList.filter(s=>s.company===currentAdmin.company);
-  staffList.sort((a,b)=>a.id-b.id).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.id} ${s.name}</option>`);
+  staffList.sort((a,b)=>a.id-b.id).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.id} ${esc(s.name)}</option>`);
   const ms=document.getElementById('ke-m');
   if(ms&&ms.options.length===0){const n=new Date();for(let i=0;i<6;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);ms.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}}
   renderKE();
@@ -7846,7 +7846,7 @@ function renderKE(){
   list.sort((a,b)=>a.date<b.date?-1:1);
   const tb=document.getElementById('ke-tb');
   if(!list.length){tb.innerHTML='<tr><td colspan="6" style="color:var(--t2);text-align:center;padding:14px;">欠勤履歴がありません</td></tr>';document.getElementById('ke-sum').textContent='';return;}
-  tb.innerHTML=list.map(p=>{const dt=new Date(p.date);const d=dw[dt.getDay()];const we=isLegalHoliday(p.date);return`<tr><td style="${we?'color:#E24B4A;font-weight:500;':''}">${p.date}</td><td style="${we?'color:#E24B4A;':''}">${d}</td><td>${p.staffName}</td><td><span class="badge" style="background:#FCE4EC;color:#B71C1C;">${tl[p.type]||p.type}</span></td><td style="color:var(--t2);font-size:10px;">${p.memo||''}</td><td><button class="fd" onclick="delKE(${p.id})">削除</button></td></tr>`;}).join('');
+  tb.innerHTML=list.map(p=>{const dt=new Date(p.date);const d=dw[dt.getDay()];const we=isLegalHoliday(p.date);return`<tr><td style="${we?'color:#E24B4A;font-weight:500;':''}">${p.date}</td><td style="${we?'color:#E24B4A;':''}">${d}</td><td>${esc(p.staffName)}</td><td><span class="badge" style="background:#FCE4EC;color:#B71C1C;">${tl[p.type]||p.type}</span></td><td style="color:var(--t2);font-size:10px;">${esc(p.memo||'')}</td><td><button class="fd" onclick="delKE(${p.id})">削除</button></td></tr>`;}).join('');
   let f=0,h=0;list.forEach(p=>{if(p.type==='full')f++;else h++;});
   document.getElementById('ke-sum').innerHTML=`全日: <b>${f}日</b>　半日: <b>${h}回</b>　合計: <b>${f+h*0.5}日</b>`;
 }
@@ -8093,7 +8093,7 @@ function renderSPL(){
     const etPart=s.freeEnd?'打刻':(s.endTime||'打刻');
     const timeInfo=` [${ruleLabel}] ${stPart}〜${etPart}`;
     const brkInfo=s.breakMin?` 休憩${s.breakMin}分`:'';
-    return`<div class="spit"><div class="sii"><b>${st?st.name:'?'}</b> ${s.date}${timeInfo}${brkInfo}${s.memo?' — '+s.memo:''}</div><button class="fd" onclick="delSP(${s.id})">削除</button></div>`;
+    return`<div class="spit"><div class="sii"><b>${esc(st?st.name:'?')}</b> ${s.date}${timeInfo}${brkInfo}${esc(s.memo?' — '+s.memo:'')}</div><button class="fd" onclick="delSP(${s.id})">削除</button></div>`;
   }).join(''):'<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし</div>';
 }
 function delSP(id){DB.specials=DB.specials.filter(s=>s.id!==id);sDB();renderSPL();showToast('削除しました');}
@@ -9446,7 +9446,7 @@ function renderPiSubList(){
     const unit=item.unit==='half'?'0.5日':'1日';
     const kindLbl=item.kind==='sub'?'<span style="color:#558B2F;font-weight:700;">代理出勤 +'+unit+'</span>':'<span style="color:#C62828;font-weight:700;">代休 -'+unit+'</span>';
     const replacer=item.replacer?' / 交代: '+item.replacer:'';
-    return `<div style="padding:6px 8px;border-bottom:1px solid #f0f0f0;font-size:11px;">${item.date} ${kindLbl}${replacer}</div>`;
+    return `<div style="padding:6px 8px;border-bottom:1px solid #f0f0f0;font-size:11px;">${item.date} ${kindLbl}${esc(replacer)}</div>`;
   }).join('');
 }
 
