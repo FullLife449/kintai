@@ -161,8 +161,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 
 
 <!-- Firebase SDK (compat版 - グローバルスコープ対応) -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" integrity="sha384-yuGdyIzzYtOBlBG6JOWn+Ey9kpq7HocusNuxEGyyohr1eEyXpeEyehIIXC/hznw4" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js" integrity="sha384-M6AmjBRXEjkdGzRN1Y94xtkmblFbYBSLkqzyZ8rPvpRM2c48nhjIRFXVvUM/VATL" crossorigin="anonymous"></script>
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyDiI2ihk_P2-n4-I7ZL09phNJFvxI2-7Ug",
@@ -183,6 +183,8 @@ window.fbOnValue = function(ref, cb){ ref.on('value', cb); };
 window.fbOff = function(ref){ try{ ref.off('value'); }catch(e){} };
 window.fbUpdate = function(ref, data){ return ref.update(data); };
 window.firebaseReady = true;
+// [SECURITY] 旧GitHub同期で端末に残った個人アクセストークンを起動時に削除（Firebaseに一本化）
+try{ localStorage.removeItem('kintai_gh_token'); }catch(e){}
 console.log('Firebase initialized (compat)');
 </script>
 </head>
@@ -2138,6 +2140,8 @@ function ini(n){return(n||'?').charAt(0);}
 // ═══ システムテスト用関数 ═══
 // コンソールで runTests() を実行すると、主要機能のチェックを一括実行
 window.runTests = function(){
+  // [SECURITY] テスト関数は本番で無効化（コンソールからのDB操作・テストデータ投入・情報取得を防止）
+  return {ok:0,ng:0,details:[]};
   const results=[];
   const log=(name,ok,detail)=>{
     results.push({name,ok,detail});
@@ -2245,7 +2249,7 @@ window.runTests = function(){
   }
   return{ok,ng,details:results};
 };
-console.log('💡 ヒント: コンソールで runTests() を実行すると主要機能の自動チェックができます');
+// [SECURITY] テスト関数のコンソールヒント表示は削除
 
 
 function showToast(m){
@@ -8170,7 +8174,7 @@ function exportSingleCSV(type){
         const fareCount=DB.fare.filter(f=>f.staffId===s.id&&termM.dates.includes(f.date)).length;
         payRows.push(makePayRow(s,{...m,fareCount},0));
       }catch(err){
-        console.error('給与取込 集計エラー:',s&&s.name,err);
+        console.error('給与取込 集計エラー: staffId=',s&&s.id,err);
         payRows.push([s.employeeId||s.id,s.name||''].concat(Array(Math.max(0,PAY_HDR.length-2)).fill('')));
       }
     });
@@ -8181,7 +8185,7 @@ function exportSingleCSV(type){
       try{
         pay2Rows.push(makePayRow2(s,calcMonthSummary(s.id,ym)));
       }catch(err){
-        console.error('給与取込2 集計エラー:',s&&s.name,err);
+        console.error('給与取込2 集計エラー: staffId=',s&&s.id,err);
         pay2Rows.push([s.employeeId||s.id,s.name||''].concat(Array(Math.max(0,payHdr2().length-2)).fill('')));
       }
     });
@@ -8444,8 +8448,9 @@ const GH_DATA_FILE='kintai_data.json';
 // データ同期はFirebaseに一本化する。GitHubへの永続化を再開する場合は、必ずリポジトリを
 // 非公開化したうえで判断すること。
 const GH_WRITE_ENABLED=false;
-function getGHToken(){return localStorage.getItem('kintai_gh_token')||'';}
-function setGHToken(t){localStorage.setItem('kintai_gh_token',t);}
+// [SECURITY] GitHub個人アクセストークン(PAT)機能は撤去。トークンは保存・使用しない（同期はFirebaseに一本化）。
+function getGHToken(){return '';}
+function setGHToken(t){ /* no-op: トークンは保存しない */ }
 
 async function ghGetFile(filename){
   try{
@@ -8689,6 +8694,7 @@ function switchCompany(){
   }
   // 確認なしで即座に会社選択画面へ
   currentCompany='';
+  currentAdmin=null;personalStaff=null; // [SECURITY] ログアウト（会社選択へ戻る）時にセッション情報をクリア
   localStorage.removeItem('kintai_company');
   document.getElementById('ms').style.display='none';
   document.getElementById('cs').style.display='flex';
