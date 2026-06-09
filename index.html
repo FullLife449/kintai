@@ -9194,8 +9194,14 @@ function loginPersonalInline(){
   if(!eid||!pw){document.getElementById('pi-err').textContent='入力してください';return;}
   // 社員番号は香庸会・フルラフで重複し得るため、'f'接頭辞を無視して候補を集め、
   // 現在の会社→PW一致で正しい職員を特定する（重複によりフルラフ職員がログインできない不具合の対策）
+  // フルラフは打刻画面に表示される番号が内部id(10000台)＝employeeId(2,4…)と異なるため、
+  // 職員が見ている番号(punchNo=内部id)でもログインできるよう employeeId・内部id・punchNo のいずれか一致で候補に含める。
   const norm=v=>String(v==null?'':v).replace(/^f/,'');
-  const matches=DB.staff.filter(s=>norm(s.employeeId)===norm(eid));
+  const ne=norm(eid);
+  const matches=DB.staff.filter(s=>{
+    const cands=[norm(s.employeeId), String(s.id), String(typeof punchNo==='function'?punchNo(s):s.id)];
+    return cands.includes(ne);
+  });
   if(!matches.length){document.getElementById('pi-err').textContent='スタッフが見つかりません';return;}
   const staff = matches.find(s=>s.company===currentCompany&&(s.pw||'0000')===pw)
              || matches.find(s=>(s.pw||'0000')===pw)
