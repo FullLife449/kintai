@@ -1836,6 +1836,7 @@ function selectCompany(co) {
 
 // 現在アクティブな records リアルタイムリスナーの参照（会社切替時に解除する）
 let fbRecordsRefActive = null;
+let fbStaffRefActive = null;
 
 // Firebase: データ読み込み＋リアルタイム監視
 function fbLoadAndSync(co) {
@@ -1850,6 +1851,7 @@ function fbLoadAndSync(co) {
 
   // 前会社のリアルタイムリスナーを必ず解除（多重登録・データ上書き防止）
   if(fbRecordsRefActive && typeof window.fbOff==='function'){ window.fbOff(fbRecordsRefActive); }
+  if(fbStaffRefActive && typeof window.fbOff==='function'){ window.fbOff(fbStaffRefActive); }
 
   const arr=v=>Array.isArray(v)?v:Object.values(v);
 
@@ -1959,6 +1961,23 @@ function fbLoadAndSync(co) {
       setSyncStatus('✓ ' + new Date().toLocaleTimeString('ja'), 'var(--gd)');
     }
   });
+
+  // リアルタイム監視: スタッフ名簿を即時反映（追加・編集・削除の反映遅延を解消し、複数端末で整合）
+  fbStaffRefActive = staffRef;
+  window.fbOnValue(staffRef, snap => {
+    if(!snap.exists()) return;
+    const data = snap.val();
+    const arrd = Array.isArray(data) ? data : Object.values(data);
+    // 重複idは1つに集約（保険）。最新の名簿（全社分）へ置き換える。
+    const byId=new Map(); arrd.forEach(s=>{if(s&&s.id!=null)byId.set(Number(s.id),s);});
+    DB.staff = Array.from(byId.values());
+    if(typeof ensureSuperAdmins==='function')ensureSuperAdmins();
+    if(typeof sortStaffByEmployeeId==='function')sortStaffByEmployeeId();
+    sDB();
+    if(typeof renderAL==='function')renderAL();
+    if(typeof renderSG==='function')renderSG();
+    if(typeof renderPunchGrid==='function')renderPunchGrid();
+  });
 }
 
 // Firebaseはundefinedを含むと同期的に例外を投げる→JSON往復でundefinedを除去。例外も握りつぶし呼び出し側を止めない
@@ -1968,11 +1987,14 @@ function fbClean(x){try{return JSON.parse(JSON.stringify(x));}catch(e){return x;
 function fbSaveStaff(co) {
   if(!window.firebaseReady || !window.fbDB) return;
   try{
-    const co2 = co || currentCompany;
-    const staffRef = window.fbRef(window.fbDB, co2 + '/staff');
-    window.fbSet(staffRef, fbClean(DB.staff))
-      .then(() => setSyncStatus('✓ ' + new Date().toLocaleTimeString('ja'), 'var(--gd)'))
-      .catch(e => { console.error(e); setSyncStatus('✗ 保存失敗', 'var(--rd)'); });
+    // DB.staff は両社の全名簿。両社ノードへ同じ全名簿を書き込み、ノード間の不整合（削除の復活等）を防ぐ。
+    const data = fbClean(DB.staff);
+    ['koyokai','fulllife'].forEach(c=>{
+      const ref = window.fbRef(window.fbDB, c + '/staff');
+      window.fbSet(ref, data)
+        .then(() => setSyncStatus('✓ ' + new Date().toLocaleTimeString('ja'), 'var(--gd)'))
+        .catch(e => { console.error(e); setSyncStatus('✗ 保存失敗', 'var(--rd)'); });
+    });
   }catch(e){ console.error('fbSaveStaff error:',e); }
 }
 
@@ -7572,7 +7594,44 @@ function setFft(val){
     box.innerHTML='';
   }
 }
-function saveSt(){const name=document.getElementById('fn').value.trim();if(!name){showToast('名前を入力してください');return;}const eid=parseInt(document.getElementById('feid').value)||null;const workFormId=document.getElementById('ft').value;const type=(typeof wfCalc==='function')?wfCalc(workFormId,CO):workFormId;const stdMin=480;
+// ── スタッフID 厳格保護 ─────────────────────────────────────
+// 既存スタッフの id は全社で一意（一度登録したidは絶対に再利用・上書きしない）。
+// 新規採番は、与えられた名簿(pool)のどのidとも衝突しない番号を返す。
+function nextStaffId(co,pool){
+  const all=(pool||DB.staff||[]);
+  const used=new Set(all.map(s=>Number(s.id)).filter(n=>!isNaN(n)));
+  let base;
+  if(co==='fulllife'){
+    const f=all.filter(s=>s.company==='fulllife').map(s=>Number(s.id)).filter(n=>!isNaN(n));
+    base=(f.length?Math.max(...f):10000)+1; if(base<10001)base=10001;
+  }else{
+    const k=all.filter(s=>s.company==='koyokai').map(s=>Number(s.id)).filter(n=>!isNaN(n));
+    base=(k.length?Math.max(...k):0)+1; if(base<1)base=1;
+  }
+  while(used.has(base))base++; // 全社のどのidとも衝突しない最小の空き番号
+  return base;
+}
+// リモート最新スタッフ名簿を取得（配列／取得不可ならnull）
+function fbGetStaffArray(){
+  return new Promise(res=>{
+    try{
+      if(!window.firebaseReady||!window.fbDB||!currentCompany){res(null);return;}
+      const ref=window.fbRef(window.fbDB,currentCompany+'/staff');
+      window.fbGet(ref).then(snap=>{
+        if(!snap.exists()){res([]);return;}
+        const v=snap.val();res(Array.isArray(v)?v:Object.values(v));
+      }).catch(()=>res(null));
+    }catch(e){res(null);}
+  });
+}
+// idをキーに名簿を統合（remote優先、localにしか無い未同期分は保持）。重複idは集約。
+function mergeStaffById(localArr,remoteArr){
+  const byId=new Map();
+  (remoteArr||[]).forEach(s=>{if(s&&s.id!=null)byId.set(Number(s.id),s);});
+  (localArr||[]).forEach(s=>{if(s&&s.id!=null&&!byId.has(Number(s.id)))byId.set(Number(s.id),s);});
+  return Array.from(byId.values());
+}
+async function saveSt(){const name=document.getElementById('fn').value.trim();if(!name){showToast('名前を入力してください');return;}const eid=parseInt(document.getElementById('feid').value)||null;const workFormId=document.getElementById('ft').value;const type=(typeof wfCalc==='function')?wfCalc(workFormId,CO):workFormId;const stdMin=480;
 const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)?0:Math.max(0,bkRaw);const fareRaw=parseInt(document.getElementById('ff').value);const fare=isNaN(fareRaw)?0:Math.max(0,fareRaw);const freeEnd=document.getElementById('fft').value==='1';
   const free1MinEl=document.getElementById('ff1min');
   const free1Min=free1MinEl?parseInt(free1MinEl.value):45;
@@ -7615,15 +7674,15 @@ const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)
       DB.staff[idx]=updates;
     }
   }else{
-    // 新規追加
+    // 新規追加：既存IDを厳守。リモート最新名簿を取り込んでから、全社で一意なidを採番する
+    // （反映遅延中の別端末追加や古い状態でも、既に登録済みのidを絶対に上書きしない）。
+    const remote=await fbGetStaffArray();
+    if(remote){ DB.staff=mergeStaffById(DB.staff,remote); }
     let nid;
-    if(CO==='fulllife'){
-      // フルラフは10001から
-      const fulllifeIds=DB.staff.filter(s=>s.company==='fulllife').map(s=>s.id);
-      nid=fulllifeIds.length?Math.max(...fulllifeIds)+1:10001;
+    if(CO==='koyokai' && eid && !DB.staff.some(s=>Number(s.id)===Number(eid))){
+      nid=eid; // 香庸会は社員番号と一致させる（その番号が未使用の場合のみ）
     }else{
-      // 香庸会は社員番号と一致
-      nid=eid||(Math.max(0,...DB.staff.filter(s=>s.company==='koyokai').map(s=>s.id))+1);
+      nid=nextStaffId(CO,DB.staff); // 衝突しない一意id（香庸会で番号衝突時もここで安全に採番）
     }
     const newSt={id:nid,name,employeeId:eid||nid,company:CO,type,workFormId,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min,hireDate,paidMode,weeklyDays,jobs,licenses,commuteRoute,commuteOnce,commutePass,...masterFields};
     if(isCurrSuper&&adminRole){
@@ -7633,7 +7692,7 @@ const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)
     }
     DB.staff.push(newSt);
   }sDB();document.getElementById('stm').classList.add('hidden');showToast(name+'を保存しました');renderAL();renderSG();fbSaveStaff();fbSaveSettings();}
-function delSt(id){const s=DB.staff.find(x=>x.id===id);if(!s||!confirm(s.name+'を削除しますか？'))return;DB.staff=DB.staff.filter(x=>x.id!==id);sDB();showToast(s.name+'を削除しました');renderAL();renderSG();}
+function delSt(id){const s=DB.staff.find(x=>x.id===id);if(!s||!confirm(s.name+'を削除しますか？'))return;DB.staff=DB.staff.filter(x=>x.id!==id);sDB();fbSaveStaff();showToast(s.name+'を削除しました');renderAL();renderSG();}
 
 // ═══ 日次シフト ═══
 function loadAS(){const list=DB.staff.filter(s=>s.company===CO);['ds-s','rsl-s','rs-s'].forEach(id=>{const sel=document.getElementById(id);if(!sel)return;sel.innerHTML='<option value="">スタッフを選択</option>';list.forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.name}</option>`);});const dd=document.getElementById('ds-d');if(dd)dd.value=todayStr();const rsld=document.getElementById('rsl-d');if(rsld)rsld.value=todayStr();const rsd=document.getElementById('rs-d');if(rsd)rsd.value=todayStr();}
