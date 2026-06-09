@@ -6704,12 +6704,10 @@ function initWorkForms(){ensureWorkForms(CO);renderWorkFormsList();}
 function renderWorkFormsList(){
   const wrap=document.getElementById('wf-list');if(!wrap)return;
   const list=ensureWorkForms(CO);
-  const calcOpts=f=>Object.keys(WF_CALC_LABEL).map(k=>`<option value="${k}"${f.calc===k?' selected':''}>${WF_CALC_LABEL[k]}</option>`).join('');
+  // 計算方式は形態ごとに確定（選択不可・固定表示）。名前＋計算方式の2項目のみ表示。
   wrap.innerHTML=list.map(f=>`<div class="spit" style="align-items:flex-start;"><div class="sii" style="flex:1;">
     <input value="${esc(f.name)}" onchange="updWorkForm('${f.id}','name',this.value)" style="width:100%;font-weight:600;margin-bottom:3px;border:1px solid var(--br);border-radius:5px;padding:4px 6px;font-family:inherit;">
-    <div style="font-size:9px;color:var(--t2);margin:2px 0;">基本計算方式（給与計算に反映）</div>
-    <select onchange="updWorkForm('${f.id}','calc',this.value)" style="font-size:11px;padding:4px;width:100%;font-family:inherit;">${calcOpts(f)}</select>
-    <input value="${esc(f.note||'')}" onchange="updWorkForm('${f.id}','note',this.value)" placeholder="規定メモ（契約書・表示用／計算には未反映）" style="width:100%;margin-top:4px;font-size:10px;border:1px solid var(--br);border-radius:5px;padding:4px 6px;font-family:inherit;">
+    <div style="font-size:11px;color:var(--t2);">計算方式：<b style="color:var(--tx);">${esc(WF_CALC_LABEL[f.calc]||f.calc)}</b></div>
   </div><button class="fd" onclick="delWorkForm('${f.id}')" style="margin-left:6px;">削除</button></div>`).join('');
 }
 function addWorkForm(){
