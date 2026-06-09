@@ -21,6 +21,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 #ms{display:none;flex-direction:column;min-height:100vh;}
 .hd{background:var(--nv);padding:11px 15px;display:flex;align-items:center;gap:10px;flex-shrink:0;}
 .hco{color:rgba(255,255,255,0.5);font-size:10px;}.ht{color:#fff;font-size:14px;font-weight:700;flex:1;}.hk{color:rgba(255,255,255,0.8);font-size:13px;}
+/* [UI] 文字サイズ 小/中/大 切替ボタン（端末ごとに保存） */
+.fs-ctrl{display:flex;gap:3px;margin-left:auto;flex-shrink:0;}
+.fs-btn{min-width:32px;min-height:30px;padding:4px 8px;border:1px solid rgba(255,255,255,0.35);background:transparent;color:rgba(255,255,255,0.85);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;line-height:1;-webkit-tap-highlight-color:transparent;}
+.fs-btn.fs-active{background:#fff;color:var(--nv);border-color:#fff;}
 .tabs{display:flex;background:#fff;border-bottom:1px solid var(--br);overflow-x:auto;}
 .tabs::-webkit-scrollbar{display:none;}
 
@@ -213,6 +217,11 @@ console.log('Firebase initialized (compat)');
 <div id="ms">
   <div class="hd">
     <div><div class="hco" id="hco-label">勤怠タッチ Pro</div><div class="ht" id="hco-name">-</div></div>
+    <div class="fs-ctrl" role="group" aria-label="文字サイズ">
+      <button type="button" class="fs-btn" id="fs-s" onclick="setFontScale('s')" aria-label="文字サイズ 小">小</button>
+      <button type="button" class="fs-btn" id="fs-m" onclick="setFontScale('m')" aria-label="文字サイズ 中">中</button>
+      <button type="button" class="fs-btn" id="fs-l" onclick="setFontScale('l')" aria-label="文字サイズ 大">大</button>
+    </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;"><div class="hk" id="hk">--:--</div><div style="color:rgba(255,255,255,0.45);font-size:9px;" id="ver-label">build-20260602j</div></div>
   </div>
   <div class="bnav">
@@ -9633,6 +9642,21 @@ function changePIpw(){
   showToast('PWを変更しました ✓');
   ['pi-pw-old','pi-pw-new','pi-pw-new2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
+
+// ═══ 文字サイズ（小/中/大・端末ごとにlocalStorage保存） ═══
+function setFontScale(sz){
+  const map={s:0.9,m:1.0,l:1.2};
+  const z=(map[sz]!=null)?map[sz]:1.0;
+  try{ document.documentElement.style.zoom=z; }catch(e){}
+  try{ localStorage.setItem('kintai_font_scale',sz); }catch(e){}
+  ['s','m','l'].forEach(function(k){ var b=document.getElementById('fs-'+k); if(b) b.classList.toggle('fs-active', k===sz); });
+}
+function initFontScale(){
+  var sz='m'; try{ sz=localStorage.getItem('kintai_font_scale')||'m'; }catch(e){}
+  if(!{s:1,m:1,l:1}[sz]) sz='m';
+  setFontScale(sz);
+}
+if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', initFontScale); } else { initFontScale(); }
 
 // ═══ 時計 ═══
 function tick(){const d=new Date();const el=document.getElementById('hk');if(el)el.textContent=pad(d.getHours())+':'+pad(d.getMinutes());if(document.getElementById('pg-punch').classList.contains('active'))renderSG();}
