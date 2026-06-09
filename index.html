@@ -410,6 +410,7 @@ console.log('Firebase initialized (compat)');
           <textarea id="import-data" class="fi" rows="4" placeholder="エクスポートしたデータをここに貼り付け..." style="font-size:10px;font-family:monospace;resize:vertical;"></textarea>
           <button class="fb" style="width:100%;margin-top:7px;background:#E65100;" onclick="importData()">📥 データをインポート（上書き）</button>
           <div style="font-size:10px;color:#E65100;margin-top:5px;">⚠ 現在のデータが上書きされます。必要に応じてエクスポートしてから実行してください。</div>
+          <button class="fb" style="width:100%;margin-top:7px;background:var(--t2);" onclick="restoreLastImportBackup()">↩ 直近のインポートを元に戻す</button>
         </div>
       </div>
     </div>
@@ -8426,16 +8427,39 @@ function fallbackCopy(text){
 function importData(){
   const text=document.getElementById('import-data').value.trim();
   if(!text){showToast('データを貼り付けてください');return;}
-  if(!confirm('現在のデータをすべて上書きしますか？\nこの操作は元に戻せません。')){return;}
-  try{
-    const parsed=JSON.parse(text);
-    if(!parsed.staff){showToast('データ形式が正しくありません');return;}
-    DB=Object.assign({staff:[],records:[],dayShifts:[],specials:[],paid:[],fare:[],lunch:[],lunchEnabled:[],adminPw:'0000'},parsed);
-    sDB();
-    document.getElementById('import-data').value='';
-    showToast('インポートが完了しました ✓ リロードしてご確認ください');
-    setTimeout(()=>location.reload(),2000);
-  }catch(e){showToast('データの解析に失敗しました。正しいデータを貼り付けてください');}
+  // 1) パース（失敗してもDBは無傷のまま中断）
+  let parsed;
+  try{ parsed=JSON.parse(text); }
+  catch(e){ showToast('データの解析に失敗しました。正しいデータを貼り付けてください'); return; }
+  // 2) スキーマ検証（不正な構造はDBを変更せず拒否）
+  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)||!Array.isArray(parsed.staff)){
+    showToast('データ形式が正しくありません（有効なバックアップを貼り付けてください）');return;
+  }
+  // 3) 既知キーの型を検証（配列であるべきキーが配列でなければ採用しない・不正な型は破棄）
+  const ARR=['staff','records','dayShifts','specials','paid','fare','lunch','lunchEnabled','admins','expenses','paidGrants','substitute','subOff','subGrants','workPatterns','shiftCalendar','groups','staffGroup','otRequests','dayDefaults','patternUsage','staffOrder','paidGrantsV2','paidHistory','jobs','licenses','rehab','rehabSlots','bizTrips','workplaces','duties','absence'];
+  ARR.forEach(k=>{ if((k in parsed)&&!Array.isArray(parsed[k])) delete parsed[k]; });
+  if(parsed.bizTripRates!=null&&(typeof parsed.bizTripRates!=='object'||Array.isArray(parsed.bizTripRates))) delete parsed.bizTripRates;
+  if(parsed.adminPw!=null&&typeof parsed.adminPw==='object') delete parsed.adminPw;
+  const base={bizTripRates:{},adminPw:'0000'}; ARR.forEach(k=>base[k]=[]);
+  const next=Object.assign(base,parsed);
+  // 4) 取り込み件数を提示して最終確認
+  if(!confirm('現在のデータを上書きします。\n職員 '+next.staff.length+' 名 / 打刻 '+next.records.length+' 件 を取り込みます。\n現在のデータは自動バックアップされ、後から元に戻せます。よろしいですか？')){return;}
+  // 5) 上書き前に現状を自動バックアップ（復元用）
+  try{ const cur=localStorage.getItem('kintai_ky_v3'); if(cur)localStorage.setItem('kintai_ky_v3_backup',cur); }catch(e){}
+  // 6) 反映
+  DB=next;
+  sDB();
+  document.getElementById('import-data').value='';
+  showToast('インポート完了 ✓（元データは復元用に保存済）リロードします');
+  setTimeout(()=>location.reload(),2000);
+}
+// 直近のインポート前データへ戻す（自動バックアップから復元）
+function restoreLastImportBackup(){
+  let b=null; try{ b=localStorage.getItem('kintai_ky_v3_backup'); }catch(e){}
+  if(!b){ showToast('復元できるバックアップがありません'); return; }
+  if(!confirm('直近のインポート前のデータに戻しますか？\n（現在のデータは破棄されます）')){return;}
+  try{ localStorage.setItem('kintai_ky_v3',b); showToast('復元しました ✓ リロードします'); setTimeout(()=>location.reload(),1500); }
+  catch(e){ showToast('復元に失敗しました'); }
 }
 
 
