@@ -9111,8 +9111,15 @@ function loginPersonalInline(){
   const eid=document.getElementById('pi-id').value.trim();
   const pw=document.getElementById('pi-pw').value;
   if(!eid||!pw){document.getElementById('pi-err').textContent='入力してください';return;}
-  const staff=DB.staff.find(s=>String(s.employeeId)===eid||String(s.employeeId)==='f'+eid.replace(/^f/,''));
-  if(!staff){document.getElementById('pi-err').textContent='スタッフが見つかりません';return;}
+  // 社員番号は香庸会・フルラフで重複し得るため、'f'接頭辞を無視して候補を集め、
+  // 現在の会社→PW一致で正しい職員を特定する（重複によりフルラフ職員がログインできない不具合の対策）
+  const norm=v=>String(v==null?'':v).replace(/^f/,'');
+  const matches=DB.staff.filter(s=>norm(s.employeeId)===norm(eid));
+  if(!matches.length){document.getElementById('pi-err').textContent='スタッフが見つかりません';return;}
+  const staff = matches.find(s=>s.company===currentCompany&&(s.pw||'0000')===pw)
+             || matches.find(s=>(s.pw||'0000')===pw)
+             || matches.find(s=>s.company===currentCompany)
+             || matches[0];
   if((staff.pw||'0000')!==pw){document.getElementById('pi-err').textContent='PWが違います';return;}
   piStaff=staff;
   if(typeof applyPiFlOnlyVisibility==='function')applyPiFlOnlyVisibility();
