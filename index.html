@@ -818,13 +818,26 @@ console.log('Firebase initialized (compat)');
     <div class="asc" id="asc-startrules">
       <div class="pad">
       <div class="card">
-        <div class="cl" style="color:#00695C;">🧩 基本勤務形態（編集）　<span id="sr-co-label" style="font-size:11px;color:#1565C0;">-</span></div>
-        <div class="fs2" style="margin-bottom:8px;"><b>会社ごとに別々に運用します。</b>スタッフ編集の「勤務形態」で選べる形態を作成・編集します。<b>基本計算方式が給与計算に反映されます</b>（規定メモは契約書・表示用で計算には未反映）。計算方式を変更すると、その形態を使うスタッフの計算にも反映されます。</div>
+        <div class="cl" style="color:#00695C;">🧩 勤務形態（編集）　<span id="sr-co-label" style="font-size:11px;color:#1565C0;">-</span></div>
+        <div class="fs2" style="margin-bottom:8px;"><b>会社ごとに別々に運用します。</b>スタッフ編集の「勤務形態」で選べる形態を作成・編集します。<b>計算方式が給与計算に反映されます</b>。計算方式を変更すると、その形態を使うスタッフの計算にも反映されます。</div>
         <div id="wf-list" style="margin-bottom:8px;"></div>
         <button class="ab" onclick="addWorkForm()">＋ 勤務形態を追加</button>
       </div>
-      <!-- 「勤務ルール（選択肢の作成）」カードは削除（ユーザー指示・2026-06-10）。
-           勤務開始ルールの計算ロジック/スタッフ編集の選択欄は維持。 -->
+      <!-- 勤務形態メモ（一番下）：契約型1〜4の内容と「開始厳守」の定義 -->
+      <div class="card" style="background:#FFFDE7;border:1px solid #FFE082;">
+        <div class="cl" style="color:#F57F17;font-size:12px;">📝 勤務形態メモ</div>
+        <div style="font-size:11px;line-height:1.9;color:#5D4037;">
+          <b>契約型1（開始厳守・終了フリー）</b>：開始は厳守。終了は打刻時刻まで。<br>
+          <b>契約型2（開始厳守・終了厳守）</b>：開始・終了とも予定時刻で計算。<br>
+          <b>契約型3（開始厳守・2回目開始フリー）</b>：1回目（朝）の開始は厳守。<b>昼休憩後の2回目の勤務開始は打刻通り</b>。終了はフリー。<br>
+          <b>契約型4（フリー）</b>：打刻時刻をそのまま集計。<br>
+          <div style="margin-top:8px;padding:9px 10px;background:#fff;border-radius:7px;border:1px solid #FFE082;">
+            <b>「開始厳守」とは</b><br>
+            予定勤務開始時刻の1時間前〜開始時刻に打刻した人は、<b>全員その開始時刻から計算</b>します。<br>
+            例）予定開始 8:45 の場合、<b>7:46〜8:45 の打刻は全員 8:45 開始</b>として計算。
+          </div>
+        </div>
+      </div>
       </div>
     </div>
     <div class="asc" id="asc-report">
@@ -6677,10 +6690,10 @@ function fulllifeWorkForms(){return [
 ];}
 // 香庸会：契約型4種類（労務確定の運用）
 function koyokaiWorkForms(){return [
-  {id:'ko_c1', name:'契約型（開始厳守・終了フリー）', calc:'contractFE', note:'予定勤務開始時刻から計算（開始1時間前〜開始の打刻は予定開始から）。終了は打刻まで。早出は申請（承認制）で打刻時刻から。'},
-  {id:'ko_cse',name:'契約型（開始終了厳守）',          calc:'contractSE', note:'予定勤務開始・終了時刻で計算。'},
-  {id:'ko_c2', name:'契約型（亀田/前田）',             calc:'contract2',  note:'1回目開始厳守・2回目開始フリー（昼休憩明けの再開打刻そのまま）・終了フリー。'},
-  {id:'ko_free',name:'フリー/年俸型（開始終了フリー）',calc:'free',       note:'打刻時刻そのまま。'},
+  {id:'ko_c1', name:'契約型1（開始厳守・終了フリー）', calc:'contractFE', note:'予定勤務開始時刻から計算（開始1時間前〜開始の打刻は予定開始から）。終了は打刻まで。早出は申請（承認制）で打刻時刻から。'},
+  {id:'ko_cse',name:'契約型2（開始厳守・終了厳守）',          calc:'contractSE', note:'予定勤務開始・終了時刻で計算。'},
+  {id:'ko_c2', name:'契約型3（開始厳守・2回目開始フリー）',             calc:'contract2',  note:'1回目開始厳守・2回目開始フリー（昼休憩明けの再開打刻そのまま）・終了フリー。'},
+  {id:'ko_free',name:'契約型4（フリー）',calc:'free',       note:'打刻時刻そのまま。'},
 ];}
 function defaultWorkForms(co){return (co||CO)==='koyokai'?koyokaiWorkForms():fulllifeWorkForms();}
 function ensureWorkForms(co){
