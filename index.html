@@ -235,6 +235,7 @@ console.log('Firebase initialized (compat)');
       <button class="at active" id="atab-staff" onclick="showAS('staff')">マスタ管理</button>
       <button class="at" id="atab-shift" onclick="showAS('shift')">日次シフト</button>
       <button class="at" id="atab-rec" onclick="showAS('rec')">打刻修正</button>
+      <button class="at" id="atab-apps" onclick="showAS('apps')" style="background:#FFEBEE;">📥 申請一覧<span id="apps-badge" style="color:#C62828;font-weight:700;"></span></button>
       <button class="at" id="atab-paid" onclick="showAS('paid')">有給・代休</button>
       <button class="at" id="atab-biztrip" onclick="showAS('biztrip')">出張承認</button>
       <button class="at ko-only" id="atab-early" onclick="showAS('early')" style="background:#EDE7F6;">🌅 早出承認</button>
@@ -302,6 +303,13 @@ console.log('Firebase initialized (compat)');
         </div>
         <div style="overflow-x:auto;"><table class="rt2"><thead><tr><th>種別</th><th>時刻</th><th>操作</th></tr></thead><tbody id="rtb2"><tr><td colspan="3" style="color:var(--t2);text-align:center;padding:14px;">選択してください</td></tr></tbody></table></div>
         <button class="fa" style="margin-top:8px;" onclick="openAddRec()">＋ 打刻を追加</button>
+      </div>
+    </div>
+    <div class="asc" id="asc-apps">
+      <div class="card">
+        <div class="cl" style="color:#C62828;">📥 申請一覧（<span id="apps-co-label">-</span>）</div>
+        <div class="fs2" style="margin-bottom:10px;">承認待ちの申請（出張・早出・時間外）をまとめて表示します。各申請をタップすると、その承認画面へ移動します。</div>
+        <div id="apps-list"></div>
       </div>
     </div>
     <div class="asc" id="asc-paid">
@@ -1794,6 +1802,7 @@ function selectCompany(co) {
   if(typeof loadAS==='function')loadAS();
   if(typeof renderDSL==='function')renderDSL();
   if(typeof renderSPL==='function')renderSPL();
+  if(typeof updateAppsBadge==='function')updateAppsBadge();
   if(typeof renderPunchGrid==='function')renderPunchGrid();
   if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
   if(typeof renderPunchWarnings==='function')setTimeout(renderPunchWarnings,300);
@@ -1924,6 +1933,8 @@ function fbLoadAndSync(co) {
     if(typeof renderDSL==='function')renderDSL();
     if(typeof renderSPL==='function')renderSPL();
     if(typeof updateCompanyHeader==='function')updateCompanyHeader();
+    if(typeof updateAppsBadge==='function')updateAppsBadge();
+    if(document.getElementById('asc-apps')&&document.getElementById('asc-apps').classList.contains('active')&&typeof renderAppsList==='function')renderAppsList();
     setSyncStatus('✓ ' + new Date().toLocaleTimeString('ja'), 'var(--gd)');
   });
 
@@ -6487,7 +6498,7 @@ function showAS(sub){
   if(typeof updateCompanyHeader==='function')updateCompanyHeader();
   // フルラフ専用タブの表示/非表示をCOに同期（毎回再適用）
   if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
-  ['staff','shift','rec','paid','special','biztrip','early','log','report','paydef','workrules','startrules','notice','data','pw','devset','pattern','shiftcal','allshift','group','ot','outpat','other'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
+  ['staff','shift','rec','apps','paid','special','biztrip','early','log','report','paydef','workrules','startrules','notice','data','pw','devset','pattern','shiftcal','allshift','group','ot','outpat','other'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
   if(sub==='pw')initPwmStaffSelect();
   if(sub==='devset')initDevset();
   if(sub==='pattern')initWPAdmin();
@@ -6503,6 +6514,7 @@ function showAS(sub){
   if(sub==='workrules')initWorkRules();
   if(sub==='startrules')initStartRules();
   if(sub==='notice')initNoticeAdmin();
+  if(sub==='apps')renderAppsList();
   // 打刻修正・日次シフト・特別枠のスタッフ選択肢を会社別に更新
   if(sub==='rec'||sub==='shift'||sub==='special'){if(typeof loadAS==='function')loadAS();}
   if(sub==='shift'&&typeof renderDSL==='function')renderDSL();
@@ -6590,6 +6602,53 @@ function delNotice(id){
   if(!confirm('この注意事項を削除しますか？'))return;
   DB.notices[CO]=DB.notices[CO].filter(x=>String(x.id)!==String(id));
   sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();renderNoticeAdmin();showToast('削除しました');
+}
+
+// ═══ 申請一覧（出張・早出・時間外の承認待ちを集約。打刻修正の次のタブ。各行→該当承認画面へ） ═══
+function pendingApps(co){
+  co=co||CO;
+  const nameOf=id=>{const s=DB.staff.find(x=>x.id===id);return s?s.name:'?';};
+  const inCo=id=>{const s=DB.staff.find(x=>x.id===id);return s&&s.company===co;};
+  const out=[];
+  // 出張（両社）
+  (DB.bizTrips||[]).filter(t=>t.status==='pending'&&(inCo(t.staffId)||t.company===co)).forEach(t=>{
+    const dt=(t.startDate||'')+(t.endDate&&t.endDate!==t.startDate?'〜'+t.endDate:'');
+    out.push({icon:'🚄',label:'出張',tab:'biztrip',name:t.staffName||nameOf(t.staffId),date:dt,detail:t.place||t.purpose||''});
+  });
+  // 早出（香庸会のみ）
+  if(co==='koyokai')(DB.earlyReqs||[]).filter(r=>r.status==='pending'&&inCo(r.staffId)).forEach(r=>{
+    out.push({icon:'🌅',label:'早出',tab:'early',name:nameOf(r.staffId),date:r.date||'',detail:r.reason||''});
+  });
+  // 時間外（フルラフのみ）
+  if(co==='fulllife')(DB.otRequests||[]).filter(r=>r.status==='pending'&&(inCo(r.staffId)||r.company==='fulllife')).forEach(r=>{
+    out.push({icon:'⏰',label:'時間外',tab:'ot',name:nameOf(r.staffId),date:r.date||'',detail:(r.startTime||'')+'〜'+(r.endTime||'')});
+  });
+  return out;
+}
+function renderAppsList(){
+  const el=document.getElementById('apps-list');if(!el)return;
+  const lbl=document.getElementById('apps-co-label');if(lbl)lbl.textContent=(CO==='koyokai'?'香庸会':'フルラフ');
+  const list=pendingApps(CO);
+  updateAppsBadge();
+  if(!list.length){el.innerHTML='<div class="fs2" style="text-align:center;padding:20px;color:var(--t2);">現在、承認待ちの申請はありません</div>';return;}
+  // 種別ごとの件数サマリー
+  const counts={};list.forEach(a=>counts[a.label]=(counts[a.label]||0)+1);
+  const summary=Object.keys(counts).map(k=>k+' '+counts[k]+'件').join('　/　');
+  el.innerHTML='<div style="font-weight:700;color:#C62828;font-size:13px;margin-bottom:10px;">📢 承認待ち '+list.length+'件　<span style="font-size:11px;color:var(--t2);font-weight:400;">('+summary+')</span></div>'
+    + list.map(a=>`
+    <div onclick="showAS('${a.tab}')" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid #FFCDD2;border-radius:9px;margin-bottom:8px;cursor:pointer;background:#fff;">
+      <span style="font-size:20px;flex-shrink:0;">${a.icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:13px;">${a.label}申請　<span style="color:#F57C00;">承認待ち</span></div>
+        <div style="font-size:11px;color:var(--t2);">${esc(a.name)}${a.date?'　'+esc(a.date):''}${a.detail?'　'+esc(a.detail):''}</div>
+      </div>
+      <span style="color:var(--bl);font-size:20px;flex-shrink:0;">›</span>
+    </div>`).join('');
+}
+function updateAppsBadge(){
+  let n=0;try{n=pendingApps(CO).length;}catch(e){}
+  const b=document.getElementById('apps-badge');if(b)b.textContent=n>0?(' '+n):'';
+  const btn=document.getElementById('atab-apps');if(btn)btn.style.background=n>0?'#FFCDD2':'#FFEBEE';
 }
 
 // ═══ 基本勤務形態（会社ごと・編集可能。名称＋基本計算方式＋規定メモ） ═══
