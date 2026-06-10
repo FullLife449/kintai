@@ -2189,7 +2189,7 @@ window.runTests = function(){
   
   // 6. 有給申請履歴 表示テスト（保存せず、try/finallyで確実にクリーンアップ）
   try{
-    const testEntry={staffId:1,date:'2099-12-31',type:'full',memo:'_TEST_',staffName:'川口 琢也',company:'koyokai',id:99999999};
+    const testEntry={staffId:1,date:'2099-12-31',type:'full',memo:'_TEST_',staffName:'テスト 太郎',company:'koyokai',id:99999999};
     DB.paid.push(testEntry);
     try{
       if(document.getElementById('ph-s'))document.getElementById('ph-s').value='1';
@@ -2209,7 +2209,7 @@ window.runTests = function(){
   // 7. 代休申請履歴 表示テスト
   try{
     if(!DB.substitute)DB.substitute=[];
-    const testSub={staffId:1,date:'2099-12-30',unit:'full',replacer:'_TEST_',staffName:'川口 琢也',company:'koyokai'};
+    const testSub={staffId:1,date:'2099-12-30',unit:'full',replacer:'_TEST_',staffName:'テスト 太郎',company:'koyokai'};
     DB.substitute.push(testSub);
     try{
       if(document.getElementById('sh-s'))document.getElementById('sh-s').value='1';
