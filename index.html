@@ -1268,17 +1268,9 @@ console.log('Firebase initialized (compat)');
     <div id="fca">
       <div class="fs2">契約時間より早い打刻は契約開始時刻から計算。早出ボタン押下時はその時刻から計算。</div>
     </div>
-    <!-- 追加勤務時間規則（勤務開始ルール＋規定をまとめる。選択肢は「🕒 勤務ルール」タブで作成） -->
-    <div class="cl" style="margin-bottom:4px;color:#00695C;">⏱ 追加勤務時間規則</div>
-    <div style="margin:4px 0 12px;padding:9px 10px;background:#E0F2F1;border:1px solid #80CBC4;border-radius:8px;">
-      <div id="f-startrules-box">
-        <div style="font-size:11px;font-weight:700;color:#00695C;margin-bottom:4px;">🕒 勤務開始ルール（最大5・全スタッフ適用可）</div>
-        <div class="fs2" style="margin-bottom:6px;">出勤時刻の丸め・フリー時間帯のルールを最大5つ選べます。選択肢は「🕒 勤務ルール」タブで作成します。</div>
-        <div id="f-startrules"></div>
-      </div>
-      <!-- 規定（計算方式＋適用ルール。onTCで内容更新） -->
-      <div id="ft-payroll-note" style="margin:8px 0 0;padding:8px 10px;background:#EDE7F6;border:1px solid #B39DDB;border-radius:7px;font-size:10px;line-height:1.6;color:#4527A0;"></div>
-    </div>
+    <!-- 「⏱ 追加勤務時間規則（勤務開始ルール）」はユーザー指示で削除（2026-06-10）。規定（計算方式の説明）は残す。 -->
+    <!-- 規定（計算方式の説明。onTCで内容更新） -->
+    <div id="ft-payroll-note" style="margin:4px 0 12px;padding:8px 10px;background:#EDE7F6;border:1px solid #B39DDB;border-radius:7px;font-size:10px;line-height:1.6;color:#4527A0;"></div>
     <!-- 予定勤務形態（曜日別シフト） -->
     <div class="cl" style="margin-bottom:4px;">📅 予定勤務形態（曜日別・15分刻み）</div>
     <div class="fs2" style="margin-bottom:8px;">全スタッフで契約上の予定勤務時間を記録できます（例: 月 8:45-12:45 / 15:45-19:45、土曜は第1〜5週ごと）。</div>
