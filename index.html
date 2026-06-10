@@ -797,9 +797,9 @@ console.log('Firebase initialized (compat)');
       <div class="pad">
       <div class="card">
         <div class="cl" style="color:#F57F17;">📢 注意事項（<span id="notice-co-label">-</span>）</div>
-        <div class="fs2" style="margin-bottom:8px;">個人画面の「📢 注意事項」タブに表示されます。会社ごとに保存されます。</div>
+        <div class="fs2" style="margin-bottom:8px;">個人画面の「📢 注意事項」タブに表示されます。会社ごとに保存されます。<b>改行で複数行を入力すると、1行＝1項目（●）としてまとめて追加できます。</b></div>
         <div style="display:flex;gap:6px;margin-bottom:10px;">
-          <textarea id="notice-input" rows="2" placeholder="例: 欠勤は所属長に申請をして下さい" style="flex:1;border:1px solid var(--br);border-radius:7px;padding:7px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+          <textarea id="notice-input" rows="3" placeholder="箇条書きで入力（1行に1項目）&#10;例:&#10;欠勤は所属長に申請をして下さい&#10;遅刻時は必ず連絡を入れて下さい" style="flex:1;border:1px solid var(--br);border-radius:7px;padding:7px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
           <button class="ab" onclick="addNotice()" style="white-space:nowrap;">＋ 追加</button>
         </div>
         <div id="notice-admin-list"></div>
@@ -6571,10 +6571,14 @@ function renderNoticeAdmin(){
 }
 function addNotice(){
   ensureNotices(CO);
-  const inp=document.getElementById('notice-input');const text=(inp.value||'').trim();
-  if(!text){showToast('注意事項を入力してください');return;}
-  DB.notices[CO].push({id:'nt'+Date.now(),text});
-  sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();inp.value='';renderNoticeAdmin();showToast('追加しました');
+  const inp=document.getElementById('notice-input');const raw=(inp.value||'');
+  // 箇条書き：改行で区切り1行＝1項目（●）として複数追加。先頭の「・- ● * •」記号は自動除去。
+  const lines=raw.split(/\r?\n/).map(l=>l.replace(/^\s*[・\-●*•‐－]\s*/,'').trim()).filter(l=>l);
+  if(!lines.length){showToast('注意事項を入力してください');return;}
+  const base=Date.now();
+  lines.forEach((text,i)=>DB.notices[CO].push({id:'nt'+base+'_'+i,text}));
+  sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();inp.value='';renderNoticeAdmin();
+  showToast(lines.length>1?lines.length+'件を追加しました':'追加しました');
 }
 function updNotice(id,text){
   ensureNotices(CO);
