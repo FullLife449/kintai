@@ -815,30 +815,8 @@ console.log('Firebase initialized (compat)');
         <div id="wf-list" style="margin-bottom:8px;"></div>
         <button class="ab" onclick="addWorkForm()">＋ 勤務形態を追加</button>
       </div>
-      <div class="card">
-        <div class="cl" style="color:#00695C;">🕒 勤務ルール（選択肢の作成）</div>
-        <div class="fs2" style="margin-bottom:8px;">出勤時刻の丸めルール・フリー時間帯を作成します。ここで作った選択肢が、スタッフ編集の「予定勤務形態 → 勤務開始ルール」の5つの欄で選べます（全スタッフ適用可）。</div>
-        <div style="padding:10px;background:#F1F8F7;border:1px solid #B2DFDB;border-radius:8px;margin-bottom:10px;">
-          <div class="frw"><label class="fl">種別</label>
-            <select class="fsl" id="sr-kind" onchange="srKindChange()">
-              <option value="anchor">出勤丸め（基準時刻に繰り上げ）</option>
-              <option value="free">フリー時間帯（打刻通り）</option>
-            </select>
-          </div>
-          <div id="sr-anchor-fields">
-            <div class="frw"><label class="fl">基準開始時刻</label><input class="fi" id="sr-time" type="time" value="08:45"></div>
-            <div class="frw"><label class="fl">何分前から</label><input class="fi" id="sr-before" type="number" value="60" min="0"></div>
-            <div class="fs2">例: 8:45・60分前 → 7:45以降の出勤は8:45からの勤務開始とする</div>
-          </div>
-          <div id="sr-free-fields" style="display:none;">
-            <div class="frw"><label class="fl">開始</label><input class="fi" id="sr-from" type="time" value="12:00"></div>
-            <div class="frw"><label class="fl">終了</label><input class="fi" id="sr-to" type="time" value="15:44"></div>
-            <div class="fs2">例: 12:00〜15:44 → この時間帯の勤務開始は打刻通り（フリー）</div>
-          </div>
-          <button class="ab" style="margin-top:8px;" onclick="addStartRule()">＋ ルールを追加</button>
-        </div>
-        <div id="sr-list"></div>
-      </div>
+      <!-- 「勤務ルール（選択肢の作成）」カードは削除（ユーザー指示・2026-06-10）。
+           勤務開始ルールの計算ロジック/スタッフ編集の選択欄は維持。 -->
       </div>
     </div>
     <div class="asc" id="asc-report">
@@ -6755,9 +6733,10 @@ function snapStartMin(min,ruleIds,co){
   return min;
 }
 function srKindChange(){
-  const k=document.getElementById('sr-kind').value;
-  document.getElementById('sr-anchor-fields').style.display=k==='anchor'?'':'none';
-  document.getElementById('sr-free-fields').style.display=k==='free'?'':'none';
+  const sel=document.getElementById('sr-kind');if(!sel)return; // カード削除済みのとき安全に無視
+  const k=sel.value;
+  const a=document.getElementById('sr-anchor-fields');if(a)a.style.display=k==='anchor'?'':'none';
+  const f=document.getElementById('sr-free-fields');if(f)f.style.display=k==='free'?'':'none';
 }
 function addStartRule(){
   const list=ensureStartRules(CO);
