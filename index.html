@@ -7684,10 +7684,13 @@ const bkRaw=parseInt(document.getElementById('fbk').value);const bk=isNaN(bkRaw)
     const remote=await fbGetStaffArray();
     if(remote){ DB.staff=mergeStaffById(DB.staff,remote); }
     let nid;
+    const eidN=Number(eid);
     if(CO==='koyokai' && eid && !DB.staff.some(s=>Number(s.id)===Number(eid))){
       nid=eid; // 香庸会は社員番号と一致させる（その番号が未使用の場合のみ）
+    }else if(CO==='fulllife' && eid && eidN>=1 && eidN<10000 && !DB.staff.some(s=>Number(s.id)===10000+eidN)){
+      nid=10000+eidN; // フルラフは id=10000+社員番号 の規約に合わせる（打刻番号・個人ログイン番号と一致。番号1→10001）
     }else{
-      nid=nextStaffId(CO,DB.staff); // 衝突しない一意id（香庸会で番号衝突時もここで安全に採番）
+      nid=nextStaffId(CO,DB.staff); // 衝突しない一意id（番号衝突時もここで安全に採番）
     }
     const newSt={id:nid,name,employeeId:eid||nid,company:CO,type,workFormId,stdMin,dowShifts:ds,breakMin:bk,fare,freeEnd,free1Min,hireDate,paidMode,weeklyDays,jobs,licenses,commuteRoute,commuteOnce,commutePass,...masterFields};
     if(isCurrSuper&&adminRole){
