@@ -6659,7 +6659,7 @@ function updateAppsBadge(){
 //        }},
 const CALC_METHODS={
   contract:{label:'契約時間から算出'}, // builtin（従来・終了はstaff.freeEnd準拠／フルラフ用）
-  contractFE:{label:'契約型1（開始厳守・終了フリー）'},        // builtin（終了フリー固定）
+  contractFE:{label:'契約型（開始厳守・終了フリー）'},        // builtin（終了フリー固定）
   contractSE:{label:'契約型（開始終了厳守）'},                 // builtin（終了厳守固定）
   contract2:{label:'契約型（亀田/前田：1回目厳守・2回目フリー・終了フリー）'}, // builtin（2段・実区間）
   free:    {label:'フリー/年俸型（開始終了フリー・打刻そのまま）'}, // builtin
@@ -6677,7 +6677,7 @@ function fulllifeWorkForms(){return [
 ];}
 // 香庸会：契約型4種類（労務確定の運用）
 function koyokaiWorkForms(){return [
-  {id:'ko_c1', name:'契約型1（開始厳守・終了フリー）', calc:'contractFE', note:'予定勤務開始時刻から計算（開始1時間前〜開始の打刻は予定開始から）。終了は打刻まで。早出は申請（承認制）で打刻時刻から。'},
+  {id:'ko_c1', name:'契約型（開始厳守・終了フリー）', calc:'contractFE', note:'予定勤務開始時刻から計算（開始1時間前〜開始の打刻は予定開始から）。終了は打刻まで。早出は申請（承認制）で打刻時刻から。'},
   {id:'ko_cse',name:'契約型（開始終了厳守）',          calc:'contractSE', note:'予定勤務開始・終了時刻で計算。'},
   {id:'ko_c2', name:'契約型（亀田/前田）',             calc:'contract2',  note:'1回目開始厳守・2回目開始フリー（昼休憩明けの再開打刻そのまま）・終了フリー。'},
   {id:'ko_free',name:'フリー/年俸型（開始終了フリー）',calc:'free',       note:'打刻時刻そのまま。'},
@@ -7393,8 +7393,12 @@ function renderAL(){
   const list=DB.staff.filter(s=>s.company===CO).sort((a,b)=>(a.employeeId||a.id)-(b.employeeId||b.id));
   if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:12px;padding:14px;text-align:center;">スタッフが登録されていません</div>';return;}
   el.innerHTML=list.map(s=>{
-    let ss='';if(s.type==='contract'&&s.dowShifts){const wds=['mon','tue','wed','thu','fri'];const wdA=wds.map(d=>(s.dowShifts[d]||[]).map(sh=>sh.s+'〜'+sh.e).join(',')).filter(Boolean);const uniq=[...new Set(wdA)];if(uniq.length===1)ss='<br><b>平日:</b> '+uniq[0];else if(uniq.length>1)ss='<br><b>平日:</b> 曜日別設定あり';if(s.dowShifts.sat){const sa=Object.entries(s.dowShifts.sat).filter(([_,v])=>v&&v.length>0);if(sa.length)ss+='<br><b>土曜:</b> 第'+sa.map(([k,v])=>k+'('+v.map(x=>x.s+'〜'+x.e).join(')')).join(' 第');}}
-    return`<div class="si"><div class="sh"><div class="sav">${ini(s.name)}</div><div><div class="sni">${s.name}</div><div class="sdp">${tl[s.type]||''} / 社員番号:${s.employeeId||'-'} / 所定${Math.floor((s.stdMin||480)/60)}h${(s.stdMin||480)%60?(s.stdMin||480)%60+'m':''}</div></div><button class="fe" onclick="openEdit(${s.id})">編集</button><button class="fd" onclick="delSt(${s.id})">削除</button></div><div class="sde"><b>タイプ:</b> ${tl[s.type]||''}${s.freeEnd?'<span style="color:var(--bl);font-size:9px;font-weight:600;margin-left:4px;">終了フリー</span>':''}${s.type==='contract'?'<br><b>休憩:</b> '+s.breakMin+'分':''}${ss}</div></div>`;
+    // 勤務形態の表示名：選択中の基本勤務形態の名称→計算方式ラベル→旧タイプ名 の順でフォールバック
+    const _wf=(typeof getWorkForm==='function')?getWorkForm(s.workFormId,CO):null;
+    const wfLbl=(_wf&&_wf.name)||(typeof WF_CALC_LABEL!=='undefined'&&WF_CALC_LABEL[s.type])||tl[s.type]||s.type||'';
+    const isCF=(s.type==='contract'||s.type==='contractFE'||s.type==='contractSE'||s.type==='contract2');
+    let ss='';if(isCF&&s.dowShifts){const wds=['mon','tue','wed','thu','fri'];const wdA=wds.map(d=>(s.dowShifts[d]||[]).map(sh=>sh.s+'〜'+sh.e).join(',')).filter(Boolean);const uniq=[...new Set(wdA)];if(uniq.length===1)ss='<br><b>平日:</b> '+uniq[0];else if(uniq.length>1)ss='<br><b>平日:</b> 曜日別設定あり';if(s.dowShifts.sat){const sa=Object.entries(s.dowShifts.sat).filter(([_,v])=>v&&v.length>0);if(sa.length)ss+='<br><b>土曜:</b> 第'+sa.map(([k,v])=>k+'('+v.map(x=>x.s+'〜'+x.e).join(')')).join(' 第');}}
+    return`<div class="si"><div class="sh"><div class="sav">${ini(s.name)}</div><div><div class="sni">${s.name}</div><div class="sdp">${esc(wfLbl)} / 社員番号:${s.employeeId||'-'} / 所定${Math.floor((s.stdMin||480)/60)}h${(s.stdMin||480)%60?(s.stdMin||480)%60+'m':''}</div></div><button class="fe" onclick="openEdit(${s.id})">編集</button><button class="fd" onclick="delSt(${s.id})">削除</button></div><div class="sde"><b>勤務形態:</b> ${esc(wfLbl)}${s.freeEnd?'<span style="color:var(--bl);font-size:9px;font-weight:600;margin-left:4px;">終了フリー</span>':''}${isCF?'<br><b>休憩:</b> '+(s.breakMin||0)+'分':''}${ss}</div></div>`;
   }).join('');
 }
 function selDow(dow,btn){document.querySelectorAll('.dow-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.dow-panel').forEach(p=>p.classList.remove('active'));document.getElementById('dp-'+dow).classList.add('active');}
@@ -7546,7 +7550,7 @@ function onTC(){
     let html;
     if(_koy){
       const koDesc={
-        contractFE:'<div style="font-weight:700;margin-bottom:3px;">契約型1（開始厳守・終了フリー）</div>'
+        contractFE:'<div style="font-weight:700;margin-bottom:3px;">契約型（開始厳守・終了フリー）</div>'
           +'・出勤打刻は予定勤務開始時刻の1時間前から可能。1時間前〜開始時刻の打刻は<b>予定勤務開始時刻から</b>計算（例: 8:45開始→8:45から）。<br>'
           +'・終了時刻はフリー（打刻時刻まで計算）。<br>'
           +'・もっと早く始めたい人（昼休憩を早めたい等）は<b>「早出申請」</b>→承認で<b>打刻時刻から</b>計算。',
