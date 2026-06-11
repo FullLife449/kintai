@@ -245,7 +245,7 @@ console.log('Firebase initialized (compat)');
       <button class="at" id="atab-report" onclick="showAS('report')">レポート</button>
       <button class="at" id="atab-paydef" onclick="showAS('paydef')" style="background:#EDE7F6;">📋 項目定義</button>
       <button class="at" id="atab-workrules" onclick="showAS('workrules')" style="background:#EDE7F6;">📖 就業規則</button>
-      <button class="at ko-only" id="atab-startrules" onclick="showAS('startrules')" style="background:#E0F2F1;">🧩 勤務形態</button>
+      <button class="at" id="atab-startrules" onclick="showAS('startrules')" style="background:#E0F2F1;">🧩 勤務形態</button>
       <button class="at" id="atab-notice" onclick="showAS('notice')" style="background:#FFF8E1;">📢 注意事項</button>
       <button class="at" id="atab-data" onclick="showAS('data')">データ移行</button><button class="at" id="atab-pw" onclick="showAS('pw')">PW管理</button><button class="at" id="atab-devset" onclick="showAS('devset')">端末表示設定</button><button class="at" id="atab-other" onclick="showAS('other')" style="display:none;">その他</button>
       <!-- シフト管理（両社共通） -->
@@ -819,12 +819,12 @@ console.log('Firebase initialized (compat)');
       <div class="pad">
       <div class="card">
         <div class="cl" style="color:#00695C;">🧩 勤務形態（編集）　<span id="sr-co-label" style="font-size:11px;color:#1565C0;">-</span></div>
-        <div class="fs2" style="margin-bottom:8px;"><b>会社ごとに別々に運用します。</b>スタッフ編集の「勤務形態」で選べる形態を作成・編集します。<b>計算方式が給与計算に反映されます</b>。計算方式を変更すると、その形態を使うスタッフの計算にも反映されます。</div>
+        <div class="fs2" style="margin-bottom:8px;" id="sr-desc"><b>会社ごとに別々に運用します。</b>スタッフ編集の「勤務形態」で選べる形態を作成・編集します。<b>計算方式が給与計算に反映されます</b>。計算方式を変更すると、その形態を使うスタッフの計算にも反映されます。</div>
         <div id="wf-list" style="margin-bottom:8px;"></div>
         <button class="ab" onclick="addWorkForm()">＋ 勤務形態を追加</button>
       </div>
-      <!-- 勤務形態メモ（一番下）：契約型1〜4の内容と「開始厳守」の定義 -->
-      <div class="card" style="background:#FFFDE7;border:1px solid #FFE082;">
+      <!-- 勤務形態メモ（一番下）：契約型1〜4の内容と「開始厳守」の定義（香庸会のみ） -->
+      <div class="card" id="sr-memo" style="background:#FFFDE7;border:1px solid #FFE082;">
         <div class="cl" style="color:#F57F17;font-size:12px;">📝 勤務形態メモ</div>
         <div style="font-size:11px;line-height:1.9;color:#5D4037;">
           <b>契約型1（開始厳守・終了フリー）</b>：開始は厳守。終了は打刻時刻まで。<br>
@@ -1924,6 +1924,7 @@ function fbLoadAndSync(co) {
     DB.startRules= (DB.startRules&&typeof DB.startRules==='object'&&!Array.isArray(DB.startRules))?DB.startRules:{};
     DB.notices   = (DB.notices&&typeof DB.notices==='object'&&!Array.isArray(DB.notices))?DB.notices:{};
     DB.workForms[co] = pickL(DB.workForms[co], s.workForms);
+    if(co==='fulllife') DB.flForms = pickL(DB.flForms, s.flForms); // フルラフ独自の勤務形態（給与計算非連動）
     DB.startRules[co]= pickL(DB.startRules[co], s.startRules);
     DB.notices[co]   = pickL(DB.notices[co], s.notices);
     DB.workRules       = pickO(DB.workRules, s.workRules);
@@ -2040,6 +2041,7 @@ function fbSaveSettings() {
     patternUsage: DB.patternUsage||[],
     staffOrder: DB.staffOrder||[],
     workForms: (DB.workForms&&DB.workForms[currentCompany])||[],
+    flForms: DB.flForms||[], // フルラフ独自の勤務形態（給与計算非連動）
     startRules: (DB.startRules&&DB.startRules[currentCompany])||[],
     workRules: DB.workRules||{},
     workRulesVer: DB.workRulesVer||{},
@@ -6481,7 +6483,7 @@ function applyFulllifeTabsVisibility(){
   // 香庸会以外で香庸会専用タブ（リハ臨勤・外来勤務表）が開いていたらマスタ管理へ戻す
   if(!isKoyokai){
     const active=document.querySelector('.asc.active');
-    if(active&&(active.id==='asc-special'||active.id==='asc-outpat'||active.id==='asc-early'||active.id==='asc-startrules')){
+    if(active&&(active.id==='asc-special'||active.id==='asc-outpat'||active.id==='asc-early')){
       active.classList.remove('active');
       ['atab-special','atab-outpat'].forEach(id=>{const tab=document.getElementById(id);if(tab)tab.classList.remove('active');});
       const sc=document.getElementById('asc-staff');if(sc)sc.classList.add('active');
@@ -6495,7 +6497,7 @@ function showAS(sub){
   // 香庸会ではフルラフ専用タブを開かせない（混在防止）
   if(CO!=='fulllife'&&typeof FL_ONLY_SUBS!=='undefined'&&FL_ONLY_SUBS.includes(sub))sub='staff';
   // リハ臨勤は香庸会のみ
-  if(CO!=='koyokai'&&(sub==='special'||sub==='outpat'||sub==='early'||sub==='startrules'))sub='staff';
+  if(CO!=='koyokai'&&(sub==='special'||sub==='outpat'||sub==='early'))sub='staff';
   // 警告も再描画
   if(typeof renderPunchWarnings==='function')renderPunchWarnings();
   // 管理画面の会社名更新（CO同期）
@@ -6738,6 +6740,7 @@ function renderWorkFormSelect(selectedId){
 // 管理タブ：勤務形態の一覧・追加・編集・削除（現在会社）
 function initWorkForms(){ensureWorkForms(CO);renderWorkFormsList();}
 function renderWorkFormsList(){
+  if(CO==='fulllife'){renderFlFormsList();return;} // フルラフは独立リスト（給与計算非連動）
   const wrap=document.getElementById('wf-list');if(!wrap)return;
   const list=ensureWorkForms(CO);
   // 計算方式は形態ごとに確定（選択不可・固定表示）。名前＋計算方式の2項目のみ表示。
@@ -6747,6 +6750,7 @@ function renderWorkFormsList(){
   </div><button class="fd" onclick="delWorkForm('${f.id}')" style="margin-left:6px;">削除</button></div>`).join('');
 }
 function addWorkForm(){
+  if(CO==='fulllife'){addFlForm();return;} // フルラフは独立リスト（給与計算非連動）
   const list=ensureWorkForms(CO);
   list.push({id:'wf'+Date.now(),name:'契約'+(list.length+1),calc:'contract',note:''});
   sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();renderWorkFormsList();showToast('勤務形態を追加しました');
@@ -6766,6 +6770,33 @@ function delWorkForm(id){
   if(!confirm('この勤務形態を削除しますか？'+(used.length?'\n※'+used.length+'名が使用中（その人は計算方式が保持されます）':'')))return;
   DB.workForms[CO]=list.filter(f=>String(f.id)!==String(id));
   sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();renderWorkFormsList();showToast('削除しました');
+}
+
+// ═══ フルラフ専用 勤務形態（独立・初期空・名称のみ・給与計算には非連動） ═══
+// DB.flForms: [{id,name}] フルラフが一から登録する勤務形態の一覧。
+// 香庸会の workForms とは完全に別系統。staff.type / 給与計算 / スタッフ編集の#ft には一切影響しない。
+function ensureFlForms(){DB.flForms=DB.flForms||[];return DB.flForms;}
+function renderFlFormsList(){
+  const wrap=document.getElementById('wf-list');if(!wrap)return;
+  const list=ensureFlForms();
+  if(!list.length){wrap.innerHTML='<div style="color:var(--t2);font-size:12px;text-align:center;padding:14px;">登録なし（下の「＋ 勤務形態を追加」から作成）</div>';return;}
+  wrap.innerHTML=list.map(f=>`<div class="spit" style="align-items:center;"><div class="sii" style="flex:1;">
+    <input value="${esc(f.name)}" onchange="updFlForm('${f.id}',this.value)" style="width:100%;font-weight:600;border:1px solid var(--br);border-radius:5px;padding:4px 6px;font-family:inherit;">
+  </div><button class="fd" onclick="delFlForm('${f.id}')" style="margin-left:6px;">削除</button></div>`).join('');
+}
+function addFlForm(){
+  const list=ensureFlForms();
+  list.push({id:'fl'+Date.now(),name:'勤務形態'+(list.length+1)});
+  sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();renderFlFormsList();showToast('勤務形態を追加しました');
+}
+function updFlForm(id,val){
+  const f=ensureFlForms().find(x=>String(x.id)===String(id));if(!f)return;
+  f.name=val;sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();showToast('保存しました');
+}
+function delFlForm(id){
+  if(!confirm('この勤務形態を削除しますか？'))return;
+  DB.flForms=ensureFlForms().filter(f=>String(f.id)!==String(id));
+  sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();renderFlFormsList();showToast('削除しました');
 }
 
 // ═══ 勤務ルール（会社ごと・出勤時刻の丸め／フリー時間帯） ═══
@@ -6835,7 +6866,13 @@ function renderStartRules(){
   if(!list.length){wrap.innerHTML='<div class="fs2" style="text-align:center;padding:12px;">ルールがありません</div>';return;}
   wrap.innerHTML=list.map(r=>`<div class="spit"><div class="sii"><span style="font-weight:600;color:${r.kind==='free'?'#00695C':'#E65100'};">${r.kind==='free'?'フリー':'丸め'}</span>　${esc(startRuleLabel(r))}</div><button class="fd" onclick="delStartRule('${r.id}')">削除</button></div>`).join('');
 }
-function initStartRules(){const lbl=document.getElementById('sr-co-label');if(lbl)lbl.textContent=(CO==='koyokai'?'香庸会':'フルラフ');ensureWorkForms(CO);renderWorkFormsList();ensureStartRules(CO);srKindChange();renderStartRules();}
+function initStartRules(){const lbl=document.getElementById('sr-co-label');if(lbl)lbl.textContent=(CO==='koyokai'?'香庸会':'フルラフ');
+  // フルラフは独立リスト（給与計算に非連動）。説明文を差し替え、香庸会向けの契約型メモは隠す。
+  const isFl=(CO==='fulllife');
+  const desc=document.getElementById('sr-desc');if(desc)desc.innerHTML=isFl?'<b>フルラフ独自の勤務形態を一から登録します。</b>ここで作成した形態は<b>給与計算には連動しません</b>（名称のみの管理）。香庸会の内容は含まれません。':'<b>会社ごとに別々に運用します。</b>スタッフ編集の「勤務形態」で選べる形態を作成・編集します。<b>計算方式が給与計算に反映されます</b>。計算方式を変更すると、その形態を使うスタッフの計算にも反映されます。';
+  const memo=document.getElementById('sr-memo');if(memo)memo.style.display=isFl?'none':'';
+  if(isFl){ensureFlForms();renderFlFormsList();return;}
+  ensureWorkForms(CO);renderWorkFormsList();ensureStartRules(CO);srKindChange();renderStartRules();}
 // スタッフ編集フォームの5つの選択欄を描画（現在会社COの選択肢）
 function renderStaffStartRules(selectedIds){
   const wrap=document.getElementById('f-startrules');if(!wrap)return;
