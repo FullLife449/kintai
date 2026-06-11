@@ -2094,7 +2094,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-09 会社切替の整合性改善(世代トークン+設定リアルタイム)'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-12 出張日当クラスが申請画面に反映されない不具合を修正(クラス表未初期化)'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -4585,7 +4585,11 @@ function btVal(id){const e=document.getElementById(id);return e?e.value:'';}
 // 申請者の出張日当クラスの日当（円）。クラス未設定や日当未入力ならnull
 function bizTripStaffPerDiemRate(staff){
   if(!staff||staff.perDiemClass===''||staff.perDiemClass==null)return null;
-  const pc=(DB.perDiemClasses||{})[String(staff.perDiemClass)];
+  // クラス金額テーブルは「その他」タブを開くまで未初期化（空{}）。
+  // 申請画面はそのタブを経由しないため、ここで必ずデフォルトを用意してから参照する
+  // （でないと割当済みクラスが空判定→規程の共通単価にフォールバックして反映されない）。
+  const classes=(typeof ensurePerDiemClasses==='function')?ensurePerDiemClasses():(DB.perDiemClasses||{});
+  const pc=classes[String(staff.perDiemClass)];
   if(!pc)return null;
   const v=pc.perDiem;
   if(v===''||v==null||isNaN(Number(v)))return null;
