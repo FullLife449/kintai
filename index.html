@@ -1035,7 +1035,11 @@ console.log('Firebase initialized (compat)');
           <div style="font-size:11px;font-weight:600;">領収書を添付・提出済み（任意）</div>
         </div>
         <div class="frw"><label class="fl">備考<br>（任意）</label><input class="fi" type="text" id="pi-bt-memo" placeholder="補足があれば"></div>
-        <button class="fb" style="width:100%;margin-top:7px;" onclick="submitPIBizTrip()">申請する</button>
+        <div id="pi-bt-edit-banner" style="display:none;margin:7px 0 0;padding:8px 11px;background:#FFF3E0;border:1px solid #FFB74D;border-radius:8px;font-size:11px;font-weight:700;color:#E65100;align-items:center;justify-content:space-between;gap:8px;">
+          <span>✏️ 申請を修正中（保存で上書き・再申請されます）</span>
+          <button class="bg" onclick="cancelPiBizTripEdit()" style="font-size:10px;padding:3px 8px;">修正をやめる</button>
+        </div>
+        <button class="fb" id="pi-bt-submit-btn" style="width:100%;margin-top:7px;" onclick="submitPIBizTrip()">申請する</button>
         <div style="margin-top:14px;border-top:1px solid var(--br);padding-top:10px;">
           <div style="font-size:11px;font-weight:700;margin-bottom:6px;">申請履歴</div>
           <div id="pi-bt-list" style="max-height:260px;overflow-y:auto;"></div>
@@ -2094,7 +2098,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-12 出張日当クラスが申請画面に反映されない不具合を修正(クラス表未初期化)'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-12b 個人の出張申請に「修正」機能を追加(未承認のみ・一覧から編集)'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -4647,6 +4651,7 @@ function toggleBtReceipt(){
   if(btReceiptChecked){box.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#0C447C" stroke-width="3" stroke-linecap="round"/></svg>';box.style.borderColor='#0C447C';}
   else{box.innerHTML='';box.style.borderColor='var(--br)';}
 }
+let btEditId=null; // 修正中の申請id（null＝新規申請）
 function submitPIBizTrip(){
   if(!piStaff){showToast('ログインしてください');return;}
   const purpose=(document.getElementById('pi-bt-purpose').value||'').trim();
@@ -4660,11 +4665,7 @@ function submitPIBizTrip(){
   const total=feeConf+feeTransport+feeLodging+feePerDiem+feeOther;
   const nv=bizTripNights(startDate,endDate);
   if(!DB.bizTrips)DB.bizTrips=[];
-  DB.bizTrips.push({
-    id:Date.now()+Math.random(),
-    staffId:piStaff.id,
-    staffName:piStaff.name,
-    company:piStaff.company,
+  const fields={
     purpose,
     departure:(document.getElementById('pi-bt-departure').value||'香里園駅').trim(),
     place:(document.getElementById('pi-bt-place').value||'').trim(),
@@ -4679,20 +4680,60 @@ function submitPIBizTrip(){
     feeOther,otherNote:(document.getElementById('pi-bt-othernote').value||'').trim(),
     total,
     receipt:btReceiptChecked,
-    memo:(document.getElementById('pi-bt-memo').value||'').trim(),
-    status:'pending',approvedBy:null,
-    createdAt:new Date().toISOString()
-  });
+    memo:(document.getElementById('pi-bt-memo').value||'').trim()
+  };
+  if(btEditId!=null){
+    // 修正：本人の未承認申請のみ上書き（承認済みは不可）。再申請として承認待ちに戻す
+    const t=DB.bizTrips.find(x=>String(x.id)===String(btEditId)&&x.staffId===piStaff.id);
+    if(!t){showToast('対象の申請が見つかりません');cancelPiBizTripEdit();return;}
+    if(t.status==='approved'){showToast('承認済みのため修正できません');cancelPiBizTripEdit();return;}
+    Object.assign(t,fields,{status:'pending',approvedBy:null,updatedAt:new Date().toISOString()});
+  }else{
+    DB.bizTrips.push(Object.assign({
+      id:Date.now()+Math.random(),
+      staffId:piStaff.id,
+      staffName:piStaff.name,
+      company:piStaff.company
+    },fields,{status:'pending',approvedBy:null,createdAt:new Date().toISOString()}));
+  }
+  const wasEdit=btEditId!=null;
   sDB();
+  cancelPiBizTripEdit(); // 入力欄クリア＋修正状態の解除
   renderPiBizTripList(); // 先に履歴を即時更新（保存の成否に関わらず反映）
   fbSaveSettings();
-  // 入力欄クリア（出発地は香里園駅に戻す）
+  updateBizTripTotal();updateBizTripMeta();
+  showToast(wasEdit?'申請を修正しました ✓（承認待ち）':'出張申請しました ✓（承認待ち）');
+}
+// 一覧の「修正」：未承認の申請をフォームに読み込み、修正モードにする
+function editPiBizTrip(id){
+  const t=(DB.bizTrips||[]).find(x=>String(x.id)===String(id));
+  if(!t){showToast('対象の申請が見つかりません');return;}
+  if(piStaff&&t.staffId!==piStaff.id){showToast('本人の申請のみ修正できます');return;}
+  if(t.status==='approved'){showToast('承認済みのため修正できません');return;}
+  btEditId=t.id;
+  const sv=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v==null?'':v;};
+  sv('pi-bt-purpose',t.purpose);sv('pi-bt-departure',t.departure||'香里園駅');sv('pi-bt-place',t.place);
+  sv('pi-bt-address',t.address);sv('pi-bt-station',t.station);
+  sv('pi-bt-start',t.startDate);sv('pi-bt-end',(t.endDate&&t.endDate!==t.startDate)?t.endDate:'');
+  sv('pi-bt-transport',t.transport);sv('pi-bt-lodging',t.lodging);sv('pi-bt-companion',t.companion);
+  sv('pi-bt-fee',t.feeConf||'');sv('pi-bt-transfee',t.feeTransport||'');sv('pi-bt-lodgefee',t.feeLodging||'');
+  sv('pi-bt-otherfee',t.feeOther||'');sv('pi-bt-othernote',t.otherNote);sv('pi-bt-memo',t.memo);
+  btReceiptChecked=!!t.receipt;const rb=document.getElementById('pi-bt-receipt-box');
+  if(rb){if(btReceiptChecked){rb.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#0C447C" stroke-width="3" stroke-linecap="round"/></svg>';rb.style.borderColor='#0C447C';}else{rb.innerHTML='';rb.style.borderColor='var(--br)';}}
+  const banner=document.getElementById('pi-bt-edit-banner');if(banner)banner.style.display='flex';
+  const btn=document.getElementById('pi-bt-submit-btn');if(btn)btn.textContent='修正を保存';
+  updateBizTripMeta();
+  const card=document.getElementById('pi-view-biztrip');if(card&&card.scrollIntoView)card.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function cancelPiBizTripEdit(){
+  btEditId=null;
   ['pi-bt-purpose','pi-bt-place','pi-bt-address','pi-bt-station','pi-bt-transport','pi-bt-lodging','pi-bt-companion','pi-bt-fee','pi-bt-transfee','pi-bt-lodgefee','pi-bt-otherfee','pi-bt-othernote','pi-bt-memo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
-  document.getElementById('pi-bt-end').value='';
+  const endEl=document.getElementById('pi-bt-end');if(endEl)endEl.value='';
   const dep=document.getElementById('pi-bt-departure');if(dep)dep.value='香里園駅';
   btReceiptChecked=false;const rb=document.getElementById('pi-bt-receipt-box');if(rb){rb.innerHTML='';rb.style.borderColor='var(--br)';}
+  const banner=document.getElementById('pi-bt-edit-banner');if(banner)banner.style.display='none';
+  const btn=document.getElementById('pi-bt-submit-btn');if(btn)btn.textContent='申請する';
   updateBizTripTotal();updateBizTripMeta();
-  showToast('出張申請しました ✓（承認待ち）');
 }
 function btStatusBadge(st){
   if(st==='approved')return '<span style="color:#2E7D32;font-weight:700;">承認済</span>';
@@ -4717,6 +4758,7 @@ function renderPiBizTripList(){
         <span>${btStatusBadge(t.status)}</span>
         <span style="display:flex;gap:5px;">
           <button class="bg" onclick="printBizTrip('${t.id}')" style="font-size:10px;padding:3px 8px;">🖨 帳票</button>
+          ${canDel?`<button class="bg" onclick="editPiBizTrip('${t.id}')" style="font-size:10px;padding:3px 8px;">✏️ 修正</button>`:''}
           ${canDel?`<button class="fd" onclick="delPiBizTrip('${t.id}')" style="font-size:10px;padding:3px 8px;">削除</button>`:''}
         </span>
       </div>
