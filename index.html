@@ -2103,7 +2103,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-12c 個人ログインID欄に番号ルール注記(フルラフ=10000+社員番号)'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-12d 個人ログイン:職員の会社へ枕とデータを自動切替(ログアウトで端末の元会社に復帰)'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
@@ -9266,6 +9266,20 @@ function resetToActionView(){
 
 // ═══ 個人ページ（インライン） ═══
 let piStaff = null;
+let piDeviceHomeCO = null; // 個人ログインで別会社へ切替えた際の、端末の元会社（ログアウトで戻す）
+// 指定会社のFirebase名簿を取得（横断ログイン用）。未接続/空はnull/[]を返す
+function fbGetCompanyStaff(co){
+  return new Promise(res=>{
+    try{
+      if(!window.firebaseReady||!window.fbDB||!co){res(null);return;}
+      const ref=window.fbRef(window.fbDB,co+'/staff');
+      window.fbGet(ref).then(snap=>{
+        if(!snap.exists()){res([]);return;}
+        const v=snap.val();res(Array.isArray(v)?v:Object.values(v));
+      }).catch(()=>res(null));
+    }catch(e){res(null);}
+  });
+}
 
 
 
@@ -9320,7 +9334,7 @@ function updatePiPunchUI(){
   outBtn.disabled=!canOut;
 }
 
-function loginPersonalInline(){
+async function loginPersonalInline(){
   const eid=document.getElementById('pi-id').value.trim();
   const pw=document.getElementById('pi-pw').value;
   if(!eid||!pw){document.getElementById('pi-err').textContent='入力してください';return;}
@@ -9330,16 +9344,35 @@ function loginPersonalInline(){
   // 職員が見ている番号(punchNo=内部id)でもログインできるよう employeeId・内部id・punchNo のいずれか一致で候補に含める。
   const norm=v=>String(v==null?'':v).replace(/^f/,'');
   const ne=norm(eid);
-  const matches=DB.staff.filter(s=>{
+  const matchIn=arr=>(arr||[]).filter(s=>{
     const cands=[norm(s.employeeId), String(s.id), String(typeof punchNo==='function'?punchNo(s):s.id)];
     return cands.includes(ne);
   });
+  // まず現在会社の名簿で照合
+  let matches=matchIn(DB.staff);
+  let staff = matches.find(s=>s.company===currentCompany&&(s.pw||'0000')===pw)
+           || matches.find(s=>(s.pw||'0000')===pw);
+  // PW一致が無ければ、もう一方の会社のFirebase名簿も横断検索（どの会社の職員でも、どの端末からでもログイン可）
+  if(!staff){
+    const other=currentCompany==='fulllife'?'koyokai':'fulllife';
+    const arr=await fbGetCompanyStaff(other);
+    if(arr&&arr.length){
+      const om=matchIn(arr.map(s=>({...s,company:s.company||other})));
+      matches=matches.concat(om);
+      staff=om.find(s=>(s.pw||'0000')===pw)||staff;
+    }
+  }
   if(!matches.length){document.getElementById('pi-err').textContent='スタッフが見つかりません';return;}
-  const staff = matches.find(s=>s.company===currentCompany&&(s.pw||'0000')===pw)
-             || matches.find(s=>(s.pw||'0000')===pw)
-             || matches.find(s=>s.company===currentCompany)
-             || matches[0];
+  if(!staff)staff=matches.find(s=>s.company===currentCompany)||matches[0];
   if((staff.pw||'0000')!==pw){document.getElementById('pi-err').textContent='PWが違います';return;}
+  // 職員の会社が現在の端末会社と異なれば、その会社へ切替（枕・打刻・個人データを一致させる）。
+  // 端末の元会社を控え、ログアウト時に自動で戻す（共有タッチ端末対策）。
+  const targetCo=staff.company||currentCompany;
+  const switchedCo=(targetCo&&targetCo!==currentCompany);
+  if(switchedCo){
+    if(piDeviceHomeCO==null)piDeviceHomeCO=currentCompany;
+    if(typeof selectCompany==='function')selectCompany(targetCo);
+  }
   piStaff=staff;
   if(typeof applyPiFlOnlyVisibility==='function')applyPiFlOnlyVisibility();
   if(typeof applyPiRehabVisibility==='function')applyPiRehabVisibility();
@@ -9354,6 +9387,15 @@ function loginPersonalInline(){
   initPILogMonth();
   showPITab('log');
     if(typeof renderPersonalPunchWarnings==="function")renderPersonalPunchWarnings();
+  // 会社を切替えた場合、その会社のデータはFirebaseから非同期で届くため、到着後に個人画面を再描画
+  if(switchedCo){
+    setTimeout(()=>{
+      if(!piStaff)return;
+      initPILogMonth();
+      if(typeof renderPILog==='function')renderPILog();
+      if(typeof renderPersonalPunchWarnings==='function')renderPersonalPunchWarnings();
+    },550);
+  }
 }
 
 function logoutPersonalInline(){
@@ -9363,6 +9405,10 @@ function logoutPersonalInline(){
   document.getElementById('pi-id').value='';
   document.getElementById('pi-pw').value='';
   document.getElementById('pi-err').textContent='';
+  // ログイン時に別会社へ切替えていたら、端末の元会社へ自動で戻す
+  const home=piDeviceHomeCO;
+  piDeviceHomeCO=null;
+  if(home!=null&&home!==currentCompany&&typeof selectCompany==='function')selectCompany(home);
 }
 
 function showPITab(tab){
