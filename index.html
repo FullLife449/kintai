@@ -879,6 +879,11 @@ console.log('Firebase initialized (compat)');
         <div class="frw"><label class="fl">社員番号</label>
           <input class="fi" id="pi-id" type="text" placeholder="例: 3" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
+        <div style="font-size:10.5px;color:var(--t2);line-height:1.6;margin:-2px 0 8px;padding:7px 9px;background:#F5F5F5;border:1px solid var(--br);border-radius:7px;">
+          ・社員番号をそのままIDとして入力してください。<br>
+          ・<b>株式会社フルラフの職員は「10000＋社員番号」がID</b>です（例：三上さん 社員番号2 → ID <b>10002</b>）。<br>
+          ※この番号は勤怠タッチ画面に表示される番号と同じです。
+        </div>
         <div class="frw"><label class="fl">パスワード（初期: 0000）</label>
           <input class="fi" id="pi-pw" type="password" maxlength="8" placeholder="パスワード" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
@@ -2098,7 +2103,7 @@ function initJobLicenseMasters(){
 
 function sDB(){try{localStorage.setItem('kintai_ky_v3',JSON.stringify(DB));}catch(e){}}
 const STAFF_VER='v2002'; // Book1名簿取込（職員番号・氏名）
-const APP_VER='2026-06-12b 個人の出張申請に「修正」機能を追加(未承認のみ・一覧から編集)'; // 画面表示用ビルド識別（更新確認用）
+const APP_VER='2026-06-12c 個人ログインID欄に番号ルール注記(フルラフ=10000+社員番号)'; // 画面表示用ビルド識別（更新確認用）
 function lDB(){
   try{
     const d=JSON.parse(localStorage.getItem('kintai_ky_v3'));
