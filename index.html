@@ -152,11 +152,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sa
 .op-ins{min-width:30px;padding:4px 8px;border:1px solid #90CAF9;border-radius:6px;background:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
 .op-ins:hover{background:#E3F2FD;}
 #op-table input{border:none;width:100%;box-sizing:border-box;text-align:center;font-size:11px;font-family:inherit;background:transparent;padding:1px;}
-#op-table input:focus{outline:2px solid #1565C0;background:#FFFDE7;}
-#op-table td,#op-table th{border:1px solid #bbb;padding:0;}
-#op-table .op-hdr input{font-weight:700;font-size:10px;color:#1a1a2e;}
-#op-table input.op-sel{background:#BBDEFB !important;outline:2px solid #1565C0;}
-#op-table.op-multi input{cursor:pointer;}
+#op-table input:focus,#op-pat-table input:focus{outline:2px solid #1565C0;background:#FFFDE7;}
+#op-table td,#op-table th,#op-pat-table td,#op-pat-table th{border:1px solid #bbb;padding:0;}
+#op-table .op-hdr input,#op-pat-table .op-hdr input{font-weight:700;font-size:10px;color:#1a1a2e;}
+#op-table input.op-sel,#op-pat-table input.op-sel{background:#BBDEFB !important;outline:2px solid #1565C0;}
+#op-table.op-multi input,#op-pat-table.op-multi input{cursor:pointer;}
 </style>
 
 
@@ -597,6 +597,25 @@ console.log('Firebase initialized (compat)');
             <button class="bn" onclick="opPatAddStaffCol()" style="background:#fff;color:#1565C0;border:1px solid #90CAF9;font-size:11px;">＋スタッフ列</button>
             <button class="bn" onclick="opPatAddDutyCol()" style="background:#fff;color:#1565C0;border:1px solid #90CAF9;font-size:11px;">＋係欄</button>
             <button class="bn" onclick="opImportMonthToPattern()" style="background:#fff;color:#33691E;border:1px solid #A5D6A7;font-size:11px;">⤵ 表示中の月から取り込む</button>
+          </div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;align-items:center;background:#F1F8E9;border:1px solid #C5E1A5;border-radius:7px;padding:6px;">
+            <span style="font-size:10px;color:#33691E;font-weight:700;">選択セルへ挿入:</span>
+            <button id="op-pat-multi-btn" class="bn" onclick="opToggleMulti()" style="background:#fff;color:#1565C0;border:1px solid #1565C0;font-size:11px;padding:4px 9px;">複数選択</button>
+            <span id="op-pat-sel-count" style="font-size:10px;color:#1565C0;font-weight:700;"></span>
+            <button class="op-ins" onclick="opInsert('◎')" title="早帰り">◎</button>
+            <button class="op-ins" onclick="opInsert('○')" title="通常勤務">○</button>
+            <button class="op-ins" onclick="opInsert('▲')" title="居残り(MRI対応)">▲</button>
+            <button class="op-ins" onclick="opInsert('◆')" title="居残り(14時以降予約)">◆</button>
+            <button class="op-ins" onclick="opInsert('✕')" title="勤務不可">✕</button>
+            <button class="op-ins" onclick="opInsert('有給')" style="color:#C62828;">有給</button>
+            <button class="op-ins" onclick="opInsert('有給AM')" style="color:#C62828;">有給AM</button>
+            <button class="op-ins" onclick="opInsert('有給PM')" style="color:#C62828;">有給PM</button>
+            <button class="op-ins" onclick="opInsert('代休')" style="color:#C62828;">代休</button>
+            <button class="op-ins" onclick="opInsert('欠勤')" style="color:#C62828;">欠勤</button>
+            <button class="op-ins" onclick="opInsert('欠勤AM')" style="color:#C62828;">欠勤AM</button>
+            <button class="op-ins" onclick="opInsert('欠勤PM')" style="color:#C62828;">欠勤PM</button>
+            <button class="op-ins" onclick="opInsert('代理出勤')">代理出勤</button>
+            <button class="op-ins" onclick="opInsert('')" style="color:#999;">クリア</button>
           </div>
           <div style="overflow:auto;max-height:520px;border:1px solid var(--br);border-radius:7px;background:#fff;">
             <table id="op-pat-table" style="border-collapse:collapse;font-size:10px;"></table>
@@ -6049,8 +6068,7 @@ function opToggleMulti(){
   opState.multi=!opState.multi;
   if(!opState.multi)opClearSel();
   ['op-table','op-pat-table'].forEach(id=>{const tbl=document.getElementById(id);if(tbl)tbl.classList.toggle('op-multi',opState.multi);});
-  const b=document.getElementById('op-multi-btn');
-  if(b){b.style.background=opState.multi?'#1565C0':'#fff';b.style.color=opState.multi?'#fff':'#1565C0';b.textContent=opState.multi?'複数選択 ON':'複数選択';}
+  ['op-multi-btn','op-pat-multi-btn'].forEach(id=>{const b=document.getElementById(id);if(b){b.style.background=opState.multi?'#1565C0':'#fff';b.style.color=opState.multi?'#fff':'#1565C0';b.textContent=opState.multi?'複数選択 ON':'複数選択';}});
   opUpdateSelCount();
 }
 function opFindInput(key){return document.querySelector('input[data-opkey="'+key+'"]');}
@@ -6058,7 +6076,7 @@ function opClearSel(){
   if(opState.sel)opState.sel.forEach(k=>{const inp=opFindInput(k);if(inp)inp.classList.remove('op-sel');});
   opState.sel=new Set();opUpdateSelCount();
 }
-function opUpdateSelCount(){const el=document.getElementById('op-sel-count');if(el)el.textContent=opState.multi?('選択 '+opState.sel.size+'件'):'';}
+function opUpdateSelCount(){const txt=opState.multi?('選択 '+opState.sel.size+'件'):'';['op-sel-count','op-pat-sel-count'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=txt;});}
 function opCellDown(e,key){
   if(!opState.multi)return true; // 通常編集
   e.preventDefault(); // フォーカス/編集を抑止して選択トグル
