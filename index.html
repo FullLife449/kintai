@@ -3134,10 +3134,11 @@ function renderPunchGrid(){
     const firstName=parts.length>1?parts.slice(1).join(''):'';
     const initial=firstName?firstName.charAt(0):'';
     // 本日の最終打刻状態
-    const recs=DB.records.filter(r=>r.staffId===s.id&&r.date===todayStr()&&(r.type==='in'||r.type==='out')).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
+    const recs=DB.records.filter(r=>r.staffId===s.id&&r.date===todayStr()&&(r.type==='in'||r.type==='out'||r.type==='early'||r.type==='resume')).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
     const last=recs[recs.length-1];
     let stateBg='#fff',stateColor='var(--nv)',stateLabel='';
-    if(last&&last.type==='in'){stateBg='#E8F5E9';stateColor='#2E7D32';stateLabel='勤務中';}
+    if(last&&last.type==='early'){stateBg='#EDE7F6';stateColor='#5E35B1';stateLabel='早出勤務中';}
+    else if(last&&(last.type==='in'||last.type==='resume')){stateBg='#E8F5E9';stateColor='#2E7D32';stateLabel='勤務中';}
     else if(last&&last.type==='out'){stateBg='#FFEBEE';stateColor='#C62828';stateLabel='退勤済';}
     return `<button onclick="punchStaff(${s.id})" style="padding:10px 6px;border:1.5px solid var(--br);border-radius:10px;background:${stateBg};color:${stateColor};cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:75px;">
       <div style="font-size:13px;font-weight:700;opacity:0.9;line-height:1;">${punchNo(s)}</div>
@@ -3156,12 +3157,11 @@ function punchStaff(sid){
   const s=DB.staff.find(x=>x.id===sid);
   if(!s)return;
   // 本日の最終打刻
-  const recs=DB.records.filter(r=>r.staffId===sid&&r.date===todayStr()&&(r.type==='in'||r.type==='out')).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
+  const recs=DB.records.filter(r=>r.staffId===sid&&r.date===todayStr()&&(r.type==='in'||r.type==='out'||r.type==='early'||r.type==='resume')).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
   const last=recs[recs.length-1];
+  // 早出/出勤/再開で勤務中 → 次のタップは退勤
   let action='in';
-  if(!last)action='in';
-  else if(last.type==='in')action='out';
-  else action='in';
+  if(last&&(last.type==='in'||last.type==='early'||last.type==='resume'))action='out';
   // 打刻
   const n=new Date();
   DB.records.unshift({id:Date.now(),staffId:sid,staffName:s.name,company:s.company||CO,type:action,date:todayStr(),ts:nowStr(),tsISO:n.toISOString()});
@@ -9262,7 +9262,9 @@ function updatePiPunchUI(){
   let status='未出勤';
   let canIn=true,canOut=false;
   if(last){
-    if(last.type==='in'||last.type==='resume'){status='勤務中（'+last.ts.substring(0,5)+'〜）';canIn=false;canOut=true;}
+    if(last.type==='early'){status='早出勤務中（'+last.ts.substring(0,5)+'〜）';canIn=false;canOut=true;}
+    else if(last.type==='in'||last.type==='resume'){status='勤務中（'+last.ts.substring(0,5)+'〜）';canIn=false;canOut=true;}
+    else if(last.type==='break'){status='休憩中（'+last.ts.substring(0,5)+'〜）';canIn=false;canOut=true;}
     else if(last.type==='out'){status='退勤済（最終: '+last.ts.substring(0,5)+'）';canIn=true;canOut=false;}
   }
   statusEl.textContent=status;
