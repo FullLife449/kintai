@@ -3184,7 +3184,7 @@ function showPunchFlash(s,action){
   nameEl.textContent=s.name+' さん';
   idEl.textContent='社員番号 '+punchNo(s);
   flash.style.display='flex';
-  setTimeout(()=>{flash.style.display='none';},2000);
+  setTimeout(()=>{flash.style.display='none';},1500);
 }
 
 function showPg(p){
@@ -6568,13 +6568,19 @@ function renderNoticeAdmin(){
 }
 function addNotice(){
   ensureNotices(CO);
-  const inp=document.getElementById('notice-input');const raw=(inp.value||'');
+  const inp=document.getElementById('notice-input');let raw=(inp&&inp.value)||'';
+  // テキスト欄に入力できない端末向けのフォールバック：空のまま押されたら入力ダイアログで受け取る
+  if(!raw.trim()){
+    const p=prompt('注意事項を入力してください（1項目）');
+    if(p===null)return; // キャンセル
+    raw=p;
+  }
   // 箇条書き：改行で区切り1行＝1項目（●）として複数追加。先頭の「・- ● * •」記号は自動除去。
   const lines=raw.split(/\r?\n/).map(l=>l.replace(/^\s*[・\-●*•‐－]\s*/,'').trim()).filter(l=>l);
   if(!lines.length){showToast('注意事項を入力してください');return;}
   const base=Date.now();
   lines.forEach((text,i)=>DB.notices[CO].push({id:'nt'+base+'_'+i,text}));
-  sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();inp.value='';renderNoticeAdmin();
+  sDB();if(typeof fbSaveSettings==='function')fbSaveSettings();if(inp)inp.value='';renderNoticeAdmin();
   showToast(lines.length>1?lines.length+'件を追加しました':'追加しました');
 }
 function updNotice(id,text){
