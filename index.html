@@ -7797,7 +7797,7 @@ function delR(id){if(!confirm('この打刻を削除しますか？'))return;DB.
 // ═══ 有給履歴 ═══
 function initPH(){const sel=document.getElementById('ph-s');sel.innerHTML='<option value="">全スタッフ</option>';let staffList=DB.staff.slice();
   if(currentAdmin&&currentAdmin.role!=='super')staffList=staffList.filter(s=>s.company===currentAdmin.company);
-  staffList.sort((a,b)=>a.id-b.id).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.id} ${s.name}</option>`);const ms=document.getElementById('ph-m');if(ms.options.length>1)return;const n=new Date();for(let i=0;i<6;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);ms.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}renderPH();}
+  staffList.sort((a,b)=>a.id-b.id).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.id} ${s.name}</option>`);const ms=document.getElementById('ph-m');if(ms.options.length>1)return;const n=new Date();for(let i=2;i>=-5;i--){const d=new Date(n.getFullYear(),n.getMonth()+i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);const fut=i>0?(i===1?'（翌月）':'（翌々月）'):'';ms.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月${fut}</option>`;}renderPH();}
 
 // ═══ 管理画面：有給/代休 追加モーダル ═══
 let paidEditId=null; // 有給：編集中の申請id（nullなら新規追加）
@@ -7970,7 +7970,7 @@ function initKekkin(){
   if(currentAdmin&&currentAdmin.role!=='super')staffList=staffList.filter(s=>s.company===currentAdmin.company);
   staffList.sort((a,b)=>a.id-b.id).forEach(s=>sel.innerHTML+=`<option value="${s.id}">${s.id} ${s.name}</option>`);
   const ms=document.getElementById('ke-m');
-  if(ms&&ms.options.length===0){const n=new Date();for(let i=0;i<6;i++){const d=new Date(n.getFullYear(),n.getMonth()-i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);ms.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月</option>`;}}
+  if(ms&&ms.options.length===0){const n=new Date();for(let i=2;i>=-5;i--){const d=new Date(n.getFullYear(),n.getMonth()+i,1);const val=d.getFullYear()+'-'+pad(d.getMonth()+1);const fut=i>0?(i===1?'（翌月）':'（翌々月）'):'';ms.innerHTML+=`<option value="${val}"${i===0?' selected':''}>${d.getFullYear()}年${d.getMonth()+1}月${fut}</option>`;}}
   renderKE();
 }
 function renderKE(){
