@@ -6191,9 +6191,11 @@ function applyPiFlOnlyVisibility(){
 function piEarlyPunch(){
   if(!piStaff){showToast('ログインしてください');return;}
   const today=todayStr();
-  const recs=DB.records.filter(r=>r.staffId===piStaff.id&&r.date===today);
-  if(recs.some(r=>r.type==='in'||r.type==='early'||r.type==='resume')){
-    showToast('本日はすでに勤務開始の打刻があります');
+  const recs=DB.records.filter(r=>r.staffId===piStaff.id&&r.date===today).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
+  // 早出は出勤代わり。初回・2回目・3回目いずれもOK。ただし現在勤務中（最後の打刻が開始系）の重複だけ防ぐ
+  const last=recs[recs.length-1];
+  if(last&&(last.type==='in'||last.type==='early'||last.type==='resume')){
+    showToast('現在勤務中です。退勤後にもう一度早出を打刻してください');
     return;
   }
   doP(piStaff.id,'early');
@@ -6205,16 +6207,22 @@ function renderPiEarlyView(){
   if(!piStaff)return;
   const today=todayStr();
   const recs=DB.records.filter(r=>r.staffId===piStaff.id&&r.date===today).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
-  const early=recs.find(r=>r.type==='early');
-  const started=recs.some(r=>r.type==='in'||r.type==='early'||r.type==='resume');
+  const earlies=recs.filter(r=>r.type==='early');
+  const last=recs[recs.length-1];
+  const working=last&&(last.type==='in'||last.type==='early'||last.type==='resume');
   const stEl=document.getElementById('pi-early-status');
   if(stEl){
-    if(early)stEl.innerHTML='本日 <b>'+early.ts.substring(0,5)+'</b> に早出（勤務開始）を打刻済みです';
-    else if(started)stEl.textContent='本日はすでに通常の出勤打刻があります';
-    else stEl.textContent='本日の早出打刻はまだありません';
+    if(working){
+      stEl.textContent='現在勤務中です（退勤後にもう一度早出を打刻できます）';
+    }else if(earlies.length){
+      const t=earlies[earlies.length-1].ts.substring(0,5);
+      stEl.innerHTML='本日 <b>'+t+'</b> に早出（勤務開始）を打刻済み（計'+earlies.length+'回）。退勤後はもう一度早出できます';
+    }else{
+      stEl.textContent='本日の早出打刻はまだありません';
+    }
   }
   const btn=document.getElementById('pi-early-btn');
-  if(btn){btn.disabled=started;btn.style.opacity=started?'0.4':'1';btn.style.cursor=started?'not-allowed':'pointer';}
+  if(btn){btn.disabled=!!working;btn.style.opacity=working?'0.4':'1';btn.style.cursor=working?'not-allowed':'pointer';}
   const el=document.getElementById('pi-early-list');
   if(!el)return;
   const list=DB.records.filter(r=>r.staffId===piStaff.id&&r.type==='early').sort((a,b)=>a.date<b.date?1:-1).slice(0,30);
