@@ -238,7 +238,6 @@ console.log('Firebase initialized (compat)');
       <button class="at" id="atab-apps" onclick="showAS('apps')" style="background:#FFEBEE;">📥 申請一覧<span id="apps-badge" style="color:#C62828;font-weight:700;"></span></button>
       <button class="at" id="atab-paid" onclick="showAS('paid')">有給・代休</button>
       <button class="at" id="atab-biztrip" onclick="showAS('biztrip')">出張承認</button>
-      <button class="at ko-only" id="atab-early" onclick="showAS('early')" style="background:#EDE7F6;">🌅 早出承認</button>
 
       <button class="at ko-only" id="atab-special" onclick="showAS('special')" style="background:#E3F2FD;">リハ臨勤</button>
       <button class="at" id="atab-log" onclick="showAS('log')">ログ</button>
@@ -626,24 +625,6 @@ console.log('Firebase initialized (compat)');
       </div>
     </div>
     <!-- 早出承認（香庸会専用） -->
-    <div class="asc" id="asc-early">
-      <div class="card" style="border:2px solid #B39DDB;background:#EDE7F6;">
-        <div class="cl" style="color:#4527A0;">🌅 早出承認（香庸会専用）</div>
-        <div class="fs2" style="margin-bottom:9px;">提出された早出申請を承認・却下します。<b>承認すると、その日は打刻時刻から勤務時間を計算</b>します（契約開始時刻より早い時間も勤務に加算）。</div>
-        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;">
-          <select id="early-month" onchange="renderEarlyReqs()"></select>
-          <select id="early-status" onchange="renderEarlyReqs()">
-            <option value="all">全状態</option>
-            <option value="pending">承認待ち</option>
-            <option value="approved">承認済</option>
-            <option value="rejected">却下</option>
-          </select>
-        </div>
-        <div style="overflow-x:auto;">
-          <table class="rt2"><thead><tr><th>日付</th><th>名前</th><th>理由</th><th>状態</th><th>操作</th></tr></thead><tbody id="early-tb"></tbody></table>
-        </div>
-      </div>
-    </div>
     <!-- 出張承認 -->
     <div class="asc" id="asc-biztrip">
       <div class="card">
@@ -910,7 +891,7 @@ console.log('Firebase initialized (compat)');
         <button class="ptab" id="pi-tab-notice" onclick="showPITab('notice')" style="background:#FFF8E1;">📢 注意事項</button>
         <button class="ptab" id="pi-tab-paid" onclick="showPITab('paid')">有給</button>
         <button class="ptab" id="pi-tab-sub" onclick="showPITab('sub')">代休</button>
-        <button class="ptab pi-ko-only" id="pi-tab-early" onclick="showPITab('early')" style="background:#EDE7F6;">早出申請</button>
+        <button class="ptab pi-ko-only" id="pi-tab-early" onclick="showPITab('early')" style="background:#EDE7F6;">早出</button>
         <button class="ptab pi-fl-only" id="pi-tab-ot" onclick="showPITab('ot')" style="background:#FFF3E0;">時間外</button>
         <button class="ptab pi-rehab-only" id="pi-tab-rehab" onclick="showPITab('rehab')">リハビリ</button>
         <button class="ptab pi-ko-only" id="pi-tab-rehab2" onclick="showPITab('rehab2')" style="background:#E3F2FD;">リハ臨勤</button>
@@ -1111,15 +1092,14 @@ console.log('Firebase initialized (compat)');
           <div id="pi-ot-list" style="max-height:280px;overflow-y:auto;"></div>
         </div>
       </div>
-      <!-- 早出申請（香庸会専用・承認制） -->
+      <!-- 早出（香庸会専用・打刻式） -->
       <div id="pi-view-early" class="card pi-ko-only" style="display:none;">
-        <div class="cl">🌅 早出申請</div>
-        <div class="fs2">契約開始時刻より早く勤務を始めたい日を申請します。承認されると、その日は打刻時刻から勤務時間を計算します（昼休憩を早めにとりたい場合など）。<br>※申請なしで早く打刻した場合は、予定勤務開始時刻からの計算になります。</div>
-        <div class="frw"><label class="fl">日付</label><input class="fi" type="date" id="pi-early-date"></div>
-        <div class="frw"><label class="fl">理由</label><input class="fi" type="text" id="pi-early-reason" placeholder="例: 昼休憩を早めにとりたい"></div>
-        <button class="fb" style="width:100%;margin-top:7px;" onclick="submitPIRequest('early')">早出を申請</button>
+        <div class="cl">🌅 早出</div>
+        <div class="fs2">契約開始時刻より早く勤務を始める日に押します。<b>押した時刻から勤務開始（早出）として記録</b>され、その日は打刻時刻から勤務時間を計算します。</div>
+        <div id="pi-early-status" style="background:var(--gy);border-radius:9px;padding:11px 13px;margin:9px 0;font-size:12px;font-weight:600;text-align:center;"></div>
+        <button class="fb" id="pi-early-btn" style="width:100%;margin-top:4px;font-size:15px;padding:13px;" onclick="piEarlyPunch()">🌅 早出（勤務開始）を打刻</button>
         <div style="margin-top:14px;border-top:1px solid var(--br);padding-top:10px;">
-          <div style="font-size:11px;font-weight:700;margin-bottom:6px;">申請履歴</div>
+          <div style="font-size:11px;font-weight:700;margin-bottom:6px;">早出打刻の履歴</div>
           <div id="pi-early-list" style="max-height:280px;overflow-y:auto;"></div>
         </div>
       </div>
@@ -6207,19 +6187,39 @@ function applyPiFlOnlyVisibility(){
 }
 
 // 個人画面：早出申請の履歴（香庸会）
-function renderPiEarlyList(){
+// 早出（打刻式・香庸会）：押した時刻から勤務開始（type='early'）として記録
+function piEarlyPunch(){
+  if(!piStaff){showToast('ログインしてください');return;}
+  const today=todayStr();
+  const recs=DB.records.filter(r=>r.staffId===piStaff.id&&r.date===today);
+  if(recs.some(r=>r.type==='in'||r.type==='early'||r.type==='resume')){
+    showToast('本日はすでに勤務開始の打刻があります');
+    return;
+  }
+  doP(piStaff.id,'early');
+  showToast('早出（勤務開始）を打刻しました ✓');
+  renderPiEarlyView();
+  if(typeof renderPersonalPunchWarnings==='function')renderPersonalPunchWarnings();
+}
+function renderPiEarlyView(){
   if(!piStaff)return;
+  const today=todayStr();
+  const recs=DB.records.filter(r=>r.staffId===piStaff.id&&r.date===today).sort((a,b)=>a.tsISO<b.tsISO?-1:1);
+  const early=recs.find(r=>r.type==='early');
+  const started=recs.some(r=>r.type==='in'||r.type==='early'||r.type==='resume');
+  const stEl=document.getElementById('pi-early-status');
+  if(stEl){
+    if(early)stEl.innerHTML='本日 <b>'+early.ts.substring(0,5)+'</b> に早出（勤務開始）を打刻済みです';
+    else if(started)stEl.textContent='本日はすでに通常の出勤打刻があります';
+    else stEl.textContent='本日の早出打刻はまだありません';
+  }
+  const btn=document.getElementById('pi-early-btn');
+  if(btn){btn.disabled=started;btn.style.opacity=started?'0.4':'1';btn.style.cursor=started?'not-allowed':'pointer';}
   const el=document.getElementById('pi-early-list');
   if(!el)return;
-  const list=(DB.earlyReqs||[]).filter(r=>r.staffId===piStaff.id).sort((a,b)=>a.date<b.date?1:-1);
+  const list=DB.records.filter(r=>r.staffId===piStaff.id&&r.type==='early').sort((a,b)=>a.date<b.date?1:-1).slice(0,30);
   if(!list.length){el.innerHTML='<div style="color:var(--t2);font-size:11px;text-align:center;padding:14px;">履歴なし</div>';return;}
-  el.innerHTML=list.map(r=>{
-    let statusLbl='';
-    if(r.status==='pending')statusLbl='<span style="color:#F57C00;font-weight:700;">承認待ち</span>';
-    else if(r.status==='approved')statusLbl='<span style="color:#2E7D32;font-weight:700;">承認済</span>';
-    else statusLbl='<span style="color:#C62828;font-weight:700;">却下</span>';
-    return `<div style="padding:6px 8px;border-bottom:1px solid #f0f0f0;font-size:11px;">${r.date} ${statusLbl}<br><span style="color:var(--t2);font-size:10px;">${esc(r.reason||'')}</span></div>`;
-  }).join('');
+  el.innerHTML=list.map(r=>`<div style="padding:6px 8px;border-bottom:1px solid #f0f0f0;font-size:11px;">${r.date} <span style="color:#2E7D32;font-weight:700;">早出 ${r.ts.substring(0,5)}</span></div>`).join('');
 }
 
 function renderPiOTList(){
@@ -6350,77 +6350,6 @@ function revertOT(id){
   showToast('承認待ちに戻しました');
 }
 
-// ═══ 管理画面：早出承認（香庸会専用） ═══
-function initEarlyAdmin(){
-  const ms=document.getElementById('early-month');
-  if(ms&&!ms.options.length){
-    const now=new Date();
-    for(let i=-6;i<=6;i++){
-      const dt=new Date(now.getFullYear(),now.getMonth()+i,1);
-      const v=dt.getFullYear()+'-'+pad(dt.getMonth()+1);
-      const o=document.createElement('option');o.value=v;
-      o.textContent=dt.getFullYear()+'年'+(dt.getMonth()+1)+'月';
-      if(i===0)o.selected=true;
-      ms.appendChild(o);
-    }
-  }
-  renderEarlyReqs();
-}
-function renderEarlyReqs(){
-  const tb=document.getElementById('early-tb');
-  if(!tb)return;
-  const ym=document.getElementById('early-month')?document.getElementById('early-month').value:null;
-  const st=document.getElementById('early-status')?document.getElementById('early-status').value:'all';
-  let list=(DB.earlyReqs||[]).filter(r=>r.company==='koyokai');
-  if(ym)list=list.filter(r=>r.date.startsWith(ym));
-  if(st!=='all')list=list.filter(r=>r.status===st);
-  list.sort((a,b)=>a.date<b.date?1:-1);
-  if(!list.length){
-    tb.innerHTML='<tr><td colspan="5" style="color:var(--t2);text-align:center;padding:14px;">該当なし</td></tr>';
-    return;
-  }
-  tb.innerHTML=list.map(r=>{
-    const s=DB.staff.find(x=>x.id===r.staffId);
-    let statusLbl='',ops='';
-    if(r.status==='pending'){
-      statusLbl='<span style="color:#F57C00;font-weight:700;">承認待ち</span>';
-      ops=`<button class="bg" onclick="approveEarly('${r.id}')">承認</button> <button class="fd" onclick="rejectEarly('${r.id}')">却下</button>`;
-    }else if(r.status==='approved'){
-      statusLbl='<span style="color:#2E7D32;font-weight:700;">承認済</span>';
-      ops=`<button class="bn" onclick="revertEarly('${r.id}')">取消</button>`;
-    }else{
-      statusLbl='<span style="color:#C62828;font-weight:700;">却下</span>';
-      ops=`<button class="bn" onclick="revertEarly('${r.id}')">取消</button>`;
-    }
-    return `<tr><td>${r.date}</td><td>${s?s.name:'?'}</td><td style="font-size:10px;">${esc(r.reason||'')}</td><td>${statusLbl}</td><td>${ops}</td></tr>`;
-  }).join('');
-}
-function approveEarly(id){
-  const r=(DB.earlyReqs||[]).find(x=>String(x.id)===String(id));
-  if(!r)return;
-  r.status='approved';
-  r.approvedBy=currentAdmin?currentAdmin.name:'admin';
-  sDB();fbSaveSettings();
-  renderEarlyReqs();
-  showToast('承認しました ✓（その日は打刻時刻から計算されます）');
-}
-function rejectEarly(id){
-  const r=(DB.earlyReqs||[]).find(x=>String(x.id)===String(id));
-  if(!r)return;
-  r.status='rejected';
-  sDB();fbSaveSettings();
-  renderEarlyReqs();
-  showToast('却下しました');
-}
-function revertEarly(id){
-  const r=(DB.earlyReqs||[]).find(x=>String(x.id)===String(id));
-  if(!r)return;
-  r.status='pending';
-  sDB();fbSaveSettings();
-  renderEarlyReqs();
-  showToast('承認待ちに戻しました');
-}
-
 // ═══ 管理画面：出張承認 ═══
 function saveBizTripRates(){
   if(!DB.bizTripRates)DB.bizTripRates={};
@@ -6534,7 +6463,7 @@ function applyFulllifeTabsVisibility(){
   // 香庸会以外で香庸会専用タブ（リハ臨勤・外来勤務表）が開いていたらマスタ管理へ戻す
   if(!isKoyokai){
     const active=document.querySelector('.asc.active');
-    if(active&&(active.id==='asc-special'||active.id==='asc-outpat'||active.id==='asc-early')){
+    if(active&&(active.id==='asc-special'||active.id==='asc-outpat')){
       active.classList.remove('active');
       ['atab-special','atab-outpat'].forEach(id=>{const tab=document.getElementById(id);if(tab)tab.classList.remove('active');});
       const sc=document.getElementById('asc-staff');if(sc)sc.classList.add('active');
@@ -6548,14 +6477,14 @@ function showAS(sub){
   // 香庸会ではフルラフ専用タブを開かせない（混在防止）
   if(CO!=='fulllife'&&typeof FL_ONLY_SUBS!=='undefined'&&FL_ONLY_SUBS.includes(sub))sub='staff';
   // リハ臨勤は香庸会のみ
-  if(CO!=='koyokai'&&(sub==='special'||sub==='outpat'||sub==='early'))sub='staff';
+  if(CO!=='koyokai'&&(sub==='special'||sub==='outpat'))sub='staff';
   // 警告も再描画
   if(typeof renderPunchWarnings==='function')renderPunchWarnings();
   // 管理画面の会社名更新（CO同期）
   if(typeof updateCompanyHeader==='function')updateCompanyHeader();
   // フルラフ専用タブの表示/非表示をCOに同期（毎回再適用）
   if(typeof applyFulllifeTabsVisibility==='function')applyFulllifeTabsVisibility();
-  ['staff','shift','rec','apps','paid','special','biztrip','early','log','report','paydef','workrules','startrules','notice','data','pw','devset','pattern','shiftcal','allshift','group','ot','outpat','other'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
+  ['staff','shift','rec','apps','paid','special','biztrip','log','report','paydef','workrules','startrules','notice','data','pw','devset','pattern','shiftcal','allshift','group','ot','outpat','other'].forEach(s=>{document.getElementById('asc-'+s)&&document.getElementById('asc-'+s).classList.toggle('active',s===sub);document.getElementById('atab-'+s)&&document.getElementById('atab-'+s).classList.toggle('active',s===sub);});if(sub==='paid'){initPH();initPaidGrantUI();renderPaidGrants();setPhcTab('paid');}
   if(sub==='pw')initPwmStaffSelect();
   if(sub==='devset')initDevset();
   if(sub==='pattern')initWPAdmin();
@@ -6565,7 +6494,6 @@ function showAS(sub){
   if(sub==='outpat')initOutpat();
   if(sub==='ot')initOTAdmin();
   if(sub==='biztrip')initBizTripAdmin();
-  if(sub==='early')initEarlyAdmin();
   if(sub==='other')initPerDiemClasses();
   if(sub==='rehab')initRehabAdmin();if(sub==='lunch')initLunch();if(sub==='data')openDataTab();if(sub==='log'){initLogYM();}if(sub==='report'){initMS();updIS();renderRep();}
   if(sub==='workrules')initWorkRules();
@@ -6671,10 +6599,6 @@ function pendingApps(co){
   (DB.bizTrips||[]).filter(t=>t.status==='pending'&&(inCo(t.staffId)||t.company===co)).forEach(t=>{
     const dt=(t.startDate||'')+(t.endDate&&t.endDate!==t.startDate?'〜'+t.endDate:'');
     out.push({icon:'🚄',label:'出張',tab:'biztrip',name:t.staffName||nameOf(t.staffId),date:dt,detail:t.place||t.purpose||''});
-  });
-  // 早出（香庸会のみ）
-  if(co==='koyokai')(DB.earlyReqs||[]).filter(r=>r.status==='pending'&&inCo(r.staffId)).forEach(r=>{
-    out.push({icon:'🌅',label:'早出',tab:'early',name:nameOf(r.staffId),date:r.date||'',detail:r.reason||''});
   });
   // 時間外（フルラフのみ）
   if(co==='fulllife')(DB.otRequests||[]).filter(r=>r.status==='pending'&&(inCo(r.staffId)||r.company==='fulllife')).forEach(r=>{
@@ -9426,7 +9350,7 @@ function showPITab(tab){
   if(tab==='expense')renderPIList('expense');
   if(tab==='sub'){renderPiSubRemain();renderPiSubList();setPiSubMode('substitute');}
   if(tab==='ot'){renderPiOTList();const dEl=document.getElementById('pi-ot-date');if(dEl&&!dEl.value)dEl.value=todayStr();}
-  if(tab==='early'){renderPiEarlyList();const dE=document.getElementById('pi-early-date');if(dE&&!dE.value)dE.value=todayStr();}
+  if(tab==='early')renderPiEarlyView();
   if(tab==='rehab'){renderPiRehabList();const dEl2=document.getElementById('pi-rh-date');if(dEl2&&!dEl2.value)dEl2.value=todayStr();}
   if(tab==='rehab2'){renderPiRehabSlotList();const dEl4=document.getElementById('pi-rs-date');if(dEl4&&!dEl4.value)dEl4.value=todayStr();}
   if(tab==='biztrip'){renderPiBizTripList();updateBizTripTotal();renderBizTripRule();const nm=document.getElementById('pi-bt-name');if(nm&&piStaff)nm.value=piStaff.name;const dEl5=document.getElementById('pi-bt-start');if(dEl5&&!dEl5.value)dEl5.value=todayStr();updateBizTripMeta();}
@@ -9710,21 +9634,6 @@ function renderPiSubList(){
 
 function submitPIRequest(type){
   if(!piStaff)return;
-  if(type==='early'){
-    const date=document.getElementById('pi-early-date').value;
-    const reason=document.getElementById('pi-early-reason').value.trim();
-    if(!date){showToast('日付を入力してください');return;}
-    if(!DB.earlyReqs)DB.earlyReqs=[];
-    const dup=DB.earlyReqs.find(x=>x.staffId===piStaff.id&&x.date===date);
-    if(dup){showToast('この日は既に申請済みです');return;}
-    DB.earlyReqs.push({id:Date.now()+Math.random(),staffId:piStaff.id,date,reason,status:'pending',company:piStaff.company});
-    sDB();
-    renderPiEarlyList();
-    showToast('早出を申請しました ✓');
-    document.getElementById('pi-early-reason').value='';
-    fbSaveSettings();
-    return;
-  }
   if(type==='ot'){
     const date=document.getElementById('pi-ot-date').value;
     const start=document.getElementById('pi-ot-start').value;
