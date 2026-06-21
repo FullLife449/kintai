@@ -2268,7 +2268,7 @@ function showToast(m){
     t.classList.remove('show');
     t.style.opacity='0';
     t.style.transform='translateX(-50%) translateY(60px)';
-  },1200);
+  },1000);
 }
 function makeTimeOpts(sel=''){
   let h='<option value="">-</option>';
@@ -3184,7 +3184,7 @@ function showPunchFlash(s,action){
   nameEl.textContent=s.name+' さん';
   idEl.textContent='社員番号 '+punchNo(s);
   flash.style.display='flex';
-  setTimeout(()=>{flash.style.display='none';},1200);
+  setTimeout(()=>{flash.style.display='none';},1000);
 }
 
 function showPg(p){
